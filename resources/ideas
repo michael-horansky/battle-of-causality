@@ -1,0 +1,22 @@
+
+normally:
+    you move all your stones from t=0 to t=T. Then by one you add their time jumps.
+
+flags:
+    dark map: you only see certain squares
+    PTSD: you can do a move "time jump" which prematurely ends the stone's path, as if its T was smaller
+    open timeline: (automatically flags PTSD): there is no automatic time jump activation and the timeline is infinite, but you can only jump by a certain amount of seconds
+
+
+
+proposed change:
+storing stones:
+    player A:
+        [
+            0: [stone1, stone1_kid, stone1_grandkid...]
+            1: [stone2, stone2_kid, stone2_grandkid...]
+        ]
+        
+        
+give the player the option to view a paradox to play out ("why didnt this happen as i planned it??")
+
