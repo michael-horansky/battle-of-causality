@@ -12,11 +12,10 @@ class stone():
         
         self.moves = []
         
-        # 'position' = (x, y, a)
+        # 'position' = (x, y), acts as a primary key together with t (indistinguishable particles)
         
         self.position = [(self.pos_x_0, self.pos_y_0)] #[time: (x, y)]
         self.azimuth = [self.a_0]
-        # the same with orientation
         
         self.parent = my_parent
         self.child  = my_child
@@ -25,6 +24,16 @@ class stone():
         return("Stone; x_0=%i, y_0=%i" % (self.pos_x_0, self.pos_y_0))
     def __repr__(self):
         return("Stone; x_0=%i, y_0=%i" % (self.pos_x_0, self.pos_y_0))
+    
+    def reset_stone(self):
+        if self.parent == None:
+            self.position = [(self.pos_x_0, self.pos_y_0)] #[time: (x, y)]
+            self.azimuth = [self.a_0]
+            return('original')
+        else:
+            self.position = []
+            self.azimuth = []
+            return('child')
     
     def get_position(self, t=-1):
         if t == -1 or (t >= 0 and t < len(self.position)):
