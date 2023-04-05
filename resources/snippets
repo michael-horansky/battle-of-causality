@@ -1,0 +1,16 @@
+
+
+
+input loop for arbitrary inputs:
+                        try:
+                            player_move_raw = input(f"Player {faction}, input your move at t = {t} in the form \"x1 y1 x2 y2 a2\": ")
+                            if player_move_raw in 'exit':
+                                return(-1)
+                            player_move_list = player_move_raw.split(' ')
+                            add_move_msg = self.add_spatial_move(t + 1, (int(player_move_list[0]), int(player_move_list[1])), (int(player_move_list[2]), int(player_move_list[3])), int(player_move_list[4]), faction)
+                            if add_move_msg == -1:
+                                print("Illegal move. Try again.")
+                            else:
+                                break
+                        except:
+                            print("Your input couldn't be parsed")

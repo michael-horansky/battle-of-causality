@@ -20,3 +20,20 @@ storing stones:
         
 give the player the option to view a paradox to play out ("why didnt this happen as i planned it??")
 
+
+consistency check:
+    we keep two lists of flags: flags of time jump out (with target time), and flags of time jump in (anonymous). We check all possible variations of turning off jumps in (so we
+    don't spawn the stone when it should) and check two conditions:
+        - every time jump out flag reached points to a spawned stone at time jump in
+        - if two or more time jump out flags point at the same flag in (anonymization of time travel), only up to one of them is reached
+
+
+board_move paradigm: a move changes the property of the stone AT THE TIME t ASSOCIATED WITH THE MOVE:
+        change                      change
+    a  ->  b  ->  b      NOT    a  ->  a  ->  b
+players see board at t and add commands to t+1
+
+move execution up to time T-1:
+    iterate over t
+        
+
