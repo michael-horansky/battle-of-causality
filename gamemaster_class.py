@@ -99,6 +99,7 @@ class gamemaster():
         # we abolishing thr MOVES system in favour of the HISTORY system
         self.flag_types = ['add_stone', 'spatial_move', 'time_jump_out', 'time_jump_in'] #the order matters in here, actually! spawns first, then moves and shootings (although those happen simultaneously)
         self.history = []
+        self.causal_freedom_progression_list = [] # [t] = [ID1, ID2...]
         # self.history[time] = {'add_stone' : [add_stone1, add_stone2...], 'spatial_move' : [move1, move2...]}
         self.setup_moves = []
         
@@ -138,10 +139,12 @@ class gamemaster():
         
         self.T = int(board_lines[0])
         self.history = []
+        self.causal_freedom_progression_list = []
         for t in range(self.T):
             self.history.append({})
             for flag_type in self.flag_types:
                 self.history[t][flag_type] = []
+            self.causal_freedom_progression_list.append([])
         #self.stones = {'A' : [], 'B' : []}
         self.stones = {}
         for faction in self.factions:
@@ -509,7 +512,7 @@ class gamemaster():
                     if a1 != -1:
                         target_stone.azimuth[t] = a1
             
-            for mt in self.flag_types:
+            """for mt in self.flag_types:
                 for move in self.history[t][mt]:
                     for faction in self.factions:
                         for stone in self.stones[faction]:
@@ -517,7 +520,11 @@ class gamemaster():
             for player_viewed_causality_t in range(self.which_t_just_progressed+1):
                 for faction in self.factions:
                     for stone in self.stones[faction]:
-                        stone.progress_causal_freedom(player_viewed_causality_t, self.T, self.round_number)
+                        stone.progress_causal_freedom(player_viewed_causality_t, self.T, self.round_number)"""
+            
+            causally_affected_stones = self.get_stones_by_IDs(self.causal_freedom_progression_list[t])
+            for stone in causally_affected_stones:
+                stone.progress_causal_freedom(t, self.T, 1000)
             
                 #break
         """
@@ -535,6 +542,21 @@ class gamemaster():
     # ----------------------------------------------------
     # --------------- game loop functions ----------------
     # ----------------------------------------------------
+    
+    def get_stones_by_IDs(self, ID_list):
+        result_list = []
+        for faction in self.factions:
+            for stone in self.stones[faction]:
+                if stone.ID in ID_list:
+                    result_list.append(stone)
+        return(result_list)
+    
+    def mark_causally_free_stones(self, t):
+        # adds all stone IDs of stones that are causally free at t ATM to causal_freedom_progression_list
+        for faction in self.factions:
+            for stone in self.stones[faction]:
+                if stone.is_causally_free(t) and not (stone.ID in self.causal_freedom_progression_list[t]):
+                    self.causal_freedom_progression_list[t].append(stone.ID)
     
     def standard_game_loop(self):
         """
@@ -603,6 +625,7 @@ class gamemaster():
                                 break
                         except:
                             print("Your input couldn't be parsed")
+                self.mark_causally_free_stones(t+1)
                 # a move at t means that all the stones that were causally free at t are now linked to t+1 and they're causally free at t
                 """for faction in self.factions:
                     for stone in self.stones[faction]:
