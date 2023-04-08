@@ -62,7 +62,7 @@ class Stone():
         print(f"checking {t} against {self.causal_freedom_time}")
         for key, item in self.events.items():
             if len(item) > 0:
-                result = False
+                return(False)
         if self.causal_freedom_time == t:
             return(True)
         return(False)

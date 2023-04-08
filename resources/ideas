@@ -35,5 +35,20 @@ players see board at t and add commands to t+1
 
 move execution up to time T-1:
     iterate over t
-        
+
+
+
+causal freedom:
+    you can only add moves to stones that are causally free at that specific time
+    when you create a move, it has a list of all the stones for which it advances their causal freedom time by 1
+    this list contains all causally free stones at that specific time
+    so if a stone B time-jumps in and is killed at t, its causal freedom time stops progressing (since dead stones aren't cuasally free)
+    if its killing is reversed by a later time jump, it will become playable when the game time reaches t again.
+    basically, every stone is playable EXACTLY once at each specific time if it reaches it.
+
+
+
+move conflict clearup:
+    for time-travellers, if there's a conflict between stones with different round numbers, the stone with the higher number (added later) is just destroyed (no blocking of path)
+    OR should they both be destroyed? interesting mechanic? (plus symmetrical)
 
