@@ -61,6 +61,8 @@ class board_move():
             str_rep = f"Time jump IN (P. '{self.player_faction}', ID {self.stone_ID}): at {self.pos}"
         if self.move_type == 'spatial_move':
             str_rep = f"Spatial move (P. '{self.player_faction}', ID {self.stone_ID}): {self.pos} -> {self.move_args[0]} [{human_readable_azimuth(self.move_args[1])}]"
+        if self.move_type == 'attack':
+            str_rep = f"Attack (P. '{self.player_faction}', ID {self.stone_ID}): at {self.pos}"
         
         return(str_rep)
     
@@ -80,6 +82,9 @@ class board_move():
         if self.move_type == 'spatial_move':
             # args = [pos_target, a_target]
             return(self.move_args[0], self.move_args[1])
+        if self.move_type == 'attack':
+            # args = [allow_friendly_fire]
+            return(self.move_args[0])
 
 class gamemaster():
     
@@ -97,7 +102,7 @@ class gamemaster():
         
         self.moves = []
         # we abolishing thr MOVES system in favour of the HISTORY system
-        self.flag_types = ['add_stone', 'spatial_move', 'time_jump_out', 'time_jump_in'] #the order matters in here, actually! spawns first, then moves and shootings (although those happen simultaneously)
+        self.flag_types = ['add_stone', 'time_jump_out', 'time_jump_in', 'spatial_move', 'attack'] #the order matters in here, actually! spawns first, then moves and shootings
         self.history = []
         self.causal_freedom_progression_list = [] # [t] = [ID1, ID2...]
         # self.history[time] = {'add_stone' : [add_stone1, add_stone2...], 'spatial_move' : [move1, move2...]}
@@ -180,16 +185,28 @@ class gamemaster():
             board_lines[cur_y][cur_x] = stone_symbol
             if stone_a == 0:
                 cur_y -= 1
-                board_lines[cur_y][cur_x] = '^'
+                if board_lines[cur_y][cur_x] == 'v':
+                    board_lines[cur_y][cur_x] = 'X'
+                else:
+                    board_lines[cur_y][cur_x] = '^'
             if stone_a == 1:
                 cur_x += 1
-                board_lines[cur_y][cur_x] = '>'
+                if board_lines[cur_y][cur_x] == '<':
+                    board_lines[cur_y][cur_x] = 'X'
+                else:
+                    board_lines[cur_y][cur_x] = '>'
             if stone_a == 2:
                 cur_y += 1
-                board_lines[cur_y][cur_x] = 'v'
+                if board_lines[cur_y][cur_x] == '^':
+                    board_lines[cur_y][cur_x] = 'X'
+                else:
+                    board_lines[cur_y][cur_x] = 'v'
             if stone_a == 3:
                 cur_x -= 1
-                board_lines[cur_y][cur_x] = '<'
+                if board_lines[cur_y][cur_x] == '>':
+                    board_lines[cur_y][cur_x] = 'X'
+                else:
+                    board_lines[cur_y][cur_x] = '<'
         
         # board lines: list of rows
         board_lines = repeated_list(self.y_dim * 2 - 1, repeated_list(self.x_dim * 2 - 1, ' '))
@@ -246,10 +263,6 @@ class gamemaster():
         for faction in self.factions:
             for faction_stone_i in range(len(self.stones[faction])):
                 del self.stones[faction][0]
-        """faction_stone = self.stones[faction][faction_stone_i]
-                reset_msg = faction_stone.reset_stone()
-                if reset_msg == 'child':
-                    del self.stones[faction][faction_stone_i]"""
     
     def is_board_symbol_available(self, symbol):
         if symbol.upper() in ['X']:
@@ -307,6 +320,17 @@ class gamemaster():
             print(f"No stone found at t = {t}, position = {pos}")
         return(-1)
     
+    def find_stone_in_direction(self, t, pos, a, terminate_at_wall = True):
+        cur_pos = pos
+        while(True):
+            cur_pos = pos_step(cur_pos, a)
+            if (not self.is_board_symbol_available(self.get_square(cur_pos))) and terminate_at_wall:
+                return(-1)
+            target_stone = self.find_stone_at_position(t, cur_pos, debug_msg = False)
+            if target_stone != -1:
+                return(target_stone)
+        
+    
     def change_stone_position(self, t, pos0, pos1, a1 = -1, player_faction = -1):
         # a1 = -1 means we keep the old azimuth
         # player_faction != -1 means we only move the stone if it belongs to a specific faction
@@ -343,7 +367,7 @@ class gamemaster():
             for stone in self.stones[faction]:
                 # dont copy if the stone just died
                 if t in stone.events['death'] or t in stone.events['time_jump']:
-                    stone.position[t+1] = -1 #is this line even needed? or maybe for clarity?
+                    #stone.position[t+1] = -1 #is this line even needed? or maybe for clarity?
                     continue
                 if stone.is_causally_free(t):
                     continue #we don't know where it'll go
@@ -397,19 +421,22 @@ class gamemaster():
             return(-1)
         #if not (pos0 == pos1 or self.is_pos_available(t, pos0, pos1, player_faction = player_faction, allow_box_pushing = True)):
         if not self.is_board_symbol_available(self.get_square(pos1)):
+            print("  Can't move into the wall.")
             return(-1)
         if player_faction != -1 and target_stone.player_faction != player_faction:
             return(-1)
         if not target_stone.is_causally_free(t):
-            print("bugger off")
             return(-1)
         self.history[t]['spatial_move'].append(board_move('spatial_move', self.round_number, target_stone.player_faction, pos0, [pos1, a1], target_stone.ID))
-        
-        """new_move = board_move('spatial_move', player_faction, [t, pos0, pos1, a1])
-        move_msg = self.move_stone(t, pos0, pos1, a1, player_faction)
-        if move_msg != -1:
-            self.moves.append(new_move)
-        return(move_msg)"""
+        return(0)
+    
+    def add_attack(self, t, attacking_stone, allow_friendly_fire = True):
+        pos = attacking_stone.get_position(t)
+        print("YOHOOOO")
+        self.history[t]['attack'].append(board_move('attack', self.round_number, attacking_stone.player_faction, pos, [allow_friendly_fire], attacking_stone.ID))
+        print("HRHLIUGL")
+        return(0)
+                    
     
     def add_time_jump(self, pos, azimuth, t0, t1, player_faction = -1):
         # adds a time jump out, a time jump in, and sets the found stone as causally non-free
@@ -421,7 +448,6 @@ class gamemaster():
         if player_faction != -1 and target_stone.player_faction != player_faction:
             return(-1)
         if not target_stone.is_causally_free(t0):
-            print("bugger off")
             return(-1)
         
         
@@ -433,6 +459,7 @@ class gamemaster():
         self.history[t1]['time_jump_in' ].append(time_jump_in_move )
         
         target_stone.events['time_jump'].append(t0)
+        return(0)
         
         # self.time_jump_stone(pos, t0, t1, player_faction)
     
@@ -544,9 +571,29 @@ class gamemaster():
                 if a1 != -1:
                     target_stone.azimuth[t] = a1
             
-            
             # Resolve conflicts
             self.resolve_conflicts(t)
+            
+            # The stones are now in place. Resolve attacks now.
+            for attack in self.history[t]['attack']:
+                attacking_stone = self.find_stone_at_position(t, attack.pos)
+                if attacking_stone == -1:
+                    if exit_on_illegal_move:
+                        print("gamemaster.execute_moves routine ended due to illegal move flagged as an exit condition")
+                        return(-1)
+                    continue
+                if attacking_stone.ID != attack.stone_ID:
+                    if exit_on_illegal_move:
+                        print("gamemaster.execute_moves routine ended due to illegal move flagged as an exit condition")
+                        return(-1)
+                    continue
+                target_stone = self.find_stone_in_direction(t, attack.pos, attacking_stone.get_azimuth(t), terminate_at_wall = True)
+                if target_stone != -1:
+                    # we shot something
+                    
+                    # check if frienndly fire applicable and allowed:
+                    if not(attack.move_args[0] == False and target_stone.player_faction == attacking_stone.player_faction):
+                        target_stone.events['death'].append(t)
             
             # Update causal freedom
             causally_affected_stones = self.get_stones_by_IDs(self.causal_freedom_progression_list[t])
@@ -611,14 +658,41 @@ class gamemaster():
                 # bring the board to t-1
                 self.which_t_just_progressed = t
                 self.execute_moves()#t + 2) # shouldnt this be the whole thing, so we see which stones are causally linked to the future??
-                #self.print_board_at_time(t)
+                #self.print_board_at_time(t+1)
                 self.print_board_horizontally()
                 
                 # add one spatial move per player
                 for faction in self.factions:
                     while(True):
                         try:
-                            player_move_raw = input(f"Player {faction}, input your move at t = {t} in the form \"x1 y1 fwd/bwd/turn a2\": ")
+                            select_stone_pos_raw = input(f"Player {faction}, select a stone at t = {t+1} by inputting its position (\"x1 y1\"): ")
+                            if select_stone_pos_raw in ['']:
+                                break # pass
+                            if select_stone_pos_raw in ['exit']:
+                                return(-1) # exit the program
+                            select_stone_pos = (int(select_stone_pos_raw.split(' ')[0]), int(select_stone_pos_raw.split(' ')[1]))
+                            target_stone = self.find_stone_at_position(t + 1, select_stone_pos)
+                            if target_stone == -1:
+                                print(f"  No stone found at the specified position {select_stone_pos}. Try again.")
+                                continue
+                            if faction != target_stone.player_faction:
+                                print("  Selected stone doesn't belong to your faction. Try again.")
+                                continue
+                            if not target_stone.is_causally_free(t+1):
+                                print("  Selected stone is not causally free. Try again.")
+                                continue
+                            
+                            move_msg = target_stone.parse_move_cmd(self, t+1)
+                            if move_msg == -1:
+                                # move failed
+                                #print("  Your move is illegal. Try again")
+                                continue
+                            else:
+                                break
+                            
+                            """player_move_raw = input(f"Player {faction}, input your move at t = {t+1} in the form \"x1 y1 fwd/bwd/turn/atk a2\": ")
+                            #TODO: different pieces would have different mechanics. first select a stone by position, then do its sequence of move adding
+                            # for standard tanks, this is either move or fire
                             if player_move_raw in '':
                                 break
                             if player_move_raw in 'exit':
@@ -637,7 +711,7 @@ class gamemaster():
                             if add_move_msg == -1:
                                 print("Illegal move. Try again.")
                             else:
-                                break
+                                break"""
                         except:
                             print("Your input couldn't be parsed")
                 self.mark_causally_free_stones(t+1)
