@@ -118,6 +118,8 @@ class Stone():
                     added_move_msg = gm.add_spatial_move(t, pos0, pos1, a1, self.player_faction)
                 elif input_cmd_list[0] in ['a', 'atk', 'attack']:
                     added_move_msg = gm.add_attack(t, self, allow_friendly_fire = True)
+                else:
+                    raise Exception("Sus")
                 
                 return(added_move_msg)
                 

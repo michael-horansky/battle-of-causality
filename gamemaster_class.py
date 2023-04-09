@@ -58,7 +58,7 @@ class board_move():
         if self.move_type == 'time_jump_out':
             str_rep = f"Time jump OUT (P. '{self.player_faction}', ID {self.stone_ID}): at {self.pos}, jump into {self.move_args[0]}"
         if self.move_type == 'time_jump_in':
-            str_rep = f"Time jump IN (P. '{self.player_faction}', ID {self.stone_ID}): at {self.pos}"
+            str_rep = f"Time jump IN (P. '{self.player_faction}', ID {self.stone_ID}): at {self.pos}, t = {self.move_args[1]}"
         if self.move_type == 'spatial_move':
             str_rep = f"Spatial move (P. '{self.player_faction}', ID {self.stone_ID}): {self.pos} -> {self.move_args[0]} [{human_readable_azimuth(self.move_args[1])}]"
         if self.move_type == 'attack':
@@ -77,8 +77,8 @@ class board_move():
             # args = [t_target]
             return(self.move_args[0])
         if self.move_type == 'time_jump_in':
-            # args = [is_active, azimuth]
-            return(self.move_args[0], self.move_args[1])
+            # args = [is_active, t, azimuth]
+            return(self.move_args[0], self.move_args[1], self.move_args[2])
         if self.move_type == 'spatial_move':
             # args = [pos_target, a_target]
             return(self.move_args[0], self.move_args[1])
@@ -287,11 +287,8 @@ class gamemaster():
         
         for stone_generating_move_type in board_move.stone_generating_move_types:
             for move in self.history[t][stone_generating_move_type]:
-                print("LALALA", move, "HOHOHO", generating_move)
                 if generating_move != move:
-                    print("||||", move.pos, pos1, move.pos == pos1)
                     if move.pos == pos1:
-                        print("generating move conflicf")
                         return(False)
                     # a stone will be spawned in here
         
@@ -305,7 +302,7 @@ class gamemaster():
         """
         return(True)
     
-    def find_stone_at_position(self, t, pos, player_faction = -1, debug_msg = True):
+    def find_stone_at_position(self, t, pos, player_faction = -1, debug_msg = False):
         
         if player_faction == -1:
             for faction in self.factions:
@@ -432,9 +429,7 @@ class gamemaster():
     
     def add_attack(self, t, attacking_stone, allow_friendly_fire = True):
         pos = attacking_stone.get_position(t)
-        print("YOHOOOO")
         self.history[t]['attack'].append(board_move('attack', self.round_number, attacking_stone.player_faction, pos, [allow_friendly_fire], attacking_stone.ID))
-        print("HRHLIUGL")
         return(0)
                     
     
@@ -452,8 +447,10 @@ class gamemaster():
         
         
         
-        time_jump_out_move = board_move('time_jump_out', self.round_number, player_faction, pos, [t1], target_stone.ID)
-        time_jump_in_move  = board_move('time_jump_in' , self.round_number+1, player_faction, pos, [True, azimuth])
+        # NOTE time jump out is special because its ID is not tied to the stone that performs the move, but to the ID of
+        # the corresponding time jump in -> hence, time jumping can be anonymised
+        time_jump_in_move  = board_move('time_jump_in' , self.round_number+1, player_faction, pos, [True, t1, azimuth])
+        time_jump_out_move = board_move('time_jump_out', self.round_number, player_faction, pos, [t1], time_jump_in_move.stone_ID)
         
         self.history[t0]['time_jump_out'].append(time_jump_out_move)
         self.history[t1]['time_jump_in' ].append(time_jump_in_move )
@@ -538,7 +535,7 @@ class gamemaster():
                 
             # TODO for the time jumps, we need to implement the PICK A CONSISTENT HISTORY SCENARIO
             for time_jump_out_move in self.history[t]['time_jump_out']:
-                target_stone = self.find_stone_at_position(t, spatial_move.pos)
+                target_stone = self.find_stone_at_position(t, time_jump_out_move.pos)
                 if target_stone == -1:
                     if exit_on_illegal_move:
                         print("gamemaster.execute_moves routine ended due to illegal move flagged as an exit condition")
@@ -548,9 +545,10 @@ class gamemaster():
                 target_stone.events['time_jump'].append(t)
             
             for time_jump_in_move in self.history[t]['time_jump_in']:
-                pos_0 = get_position_list_for_spawn(t, time_jump_in_move.pos)
-                a_0   = get_position_list_for_spawn(t, time_jump_in_move.move_args[1])
-                self.stones[time_jump_in_move.player_faction].append(Stone(time_jump_in_move.stone_ID, time_jump_in_move.round_number, time_jump_in_move.player_faction, pos_0, a_0))
+                if time_jump_in_move.move_args[0] == True:
+                    pos_0 = get_position_list_for_spawn(t, time_jump_in_move.pos)
+                    a_0   = get_position_list_for_spawn(t, time_jump_in_move.move_args[2])
+                    self.stones[time_jump_in_move.player_faction].append(Stone(time_jump_in_move.stone_ID, time_jump_in_move.round_number, time_jump_in_move.player_faction, pos_0, a_0))
                 
             
             for spatial_move in self.history[t]['spatial_move']:
@@ -601,6 +599,100 @@ class gamemaster():
                 stone.progress_causal_freedom(t, self.T, 1000)
     
     
+    # ------------- causal consistency functions ---------
+    
+    def collect_time_jump_in_moves(self):
+        time_jump_in_list = []
+        for t in range(self.T):
+            for move in self.history[t]['time_jump_in']:
+                time_jump_in_list.append(move)
+        
+        # sort the moves by ID descendically
+        time_jump_in_list = sorted(time_jump_in_list, key = lambda move : move.stone_ID, reverse=True)
+        
+        return(time_jump_in_list)
+    
+    
+    def find_causally_consistent_scenarios(self, time_jump_in_moves):
+        causally_consistent_scenarios = []
+        activity_map = [False] * len(time_jump_in_moves)
+        for n in range(int(np.power(2, len(time_jump_in_moves)))):
+            # TODO perform that scenario
+            
+            # first, prepare the moves
+            how_many_TJOs_required = []
+            for i in range(len(time_jump_in_moves)):
+                time_jump_in_moves[i].move_args[0] = activity_map[i]
+                if activity_map[i] == True:
+                    how_many_TJOs_required.append(1)
+                if activity_map[i] == False:
+                    how_many_TJOs_required.append(0)
+                
+            # now, execute them
+            self.execute_moves()
+            
+            # now, we want all inactive TJIs to be matched by ZERO TJOs, and all active TJIs to be matched by ONE TJO exactly.
+            for t in range(self.T):
+                for time_jump_out_move in self.history[t]['time_jump_out']:
+                    target_stone = self.find_stone_at_position(t, time_jump_out_move.pos)
+                    if target_stone == -1:
+                        continue
+                    if target_stone.player_faction != time_jump_out_move.player_faction:
+                        continue
+                    # A willing stone exists at the TJO flag, and the time jump will be performed. Find which TJI is this supposed to match (it can only be one)
+                    target_TJI = -1
+                    for i in range(len(time_jump_in_moves)):
+                        if time_jump_in_moves[i].stone_ID == time_jump_out_move.stone_ID:
+                        #if time_jump_in_moves[i].move_args[1] == time_jump_out_move.move_args[0] and time_jump_in_moves[i].pos == time_jump_out_move.pos and time_jump_in_moves[i].player_faction == time_jump_out_move.player_faction:
+                            # no checking of ID: time jumping can be anonymised!
+                            how_many_TJOs_required[i] -= 1
+                            break
+            # if there exists a 1 or a -1 in how_many_TJOs_required, the scenario is inconsistent
+            # if they're all 0, it is consistent
+            is_scenario_consistent = True
+            for i in range(len(time_jump_in_moves)):
+                if how_many_TJOs_required[i] != 0:
+                    is_scenario_consistent = False
+                    break
+            if is_scenario_consistent:
+                causally_consistent_scenarios.append(activity_map.copy())
+            
+            # find the next activity map
+            for i in range(len(time_jump_in_moves)):
+                if activity_map[i] == False:
+                    activity_map[i] = True
+                    break
+                else:
+                    activity_map[i] = False
+        return(causally_consistent_scenarios)
+    
+    def select_scenario(self, time_jump_in_moves, causally_consistent_scenarios):
+        # THE PARADIGM HERE: We prioritize more recent TJIs: the bigger the associated stone ID, the earlier will this break a tie
+        # We assume time_jump_in_moves are sorted by IDs in a descending order
+        if len(causally_consistent_scenarios) == 1:
+            return(causally_consistent_scenarios[0])
+        for i in range(len(time_jump_in_moves)):
+            if len(causally_consistent_scenarios) == 1:
+                return(causally_consistent_scenarios[0])
+            is_TJI_filtering = False
+            first_val = causally_consistent_scenarios[0][i]
+            for j in range(1, len(causally_consistent_scenarios)):
+                if causally_consistent_scenarios[j][i] != first_val:
+                    is_TJI_filtering = True
+            if is_TJI_filtering:
+                # we delete all the scenarios that turn set TJI inactive
+                j = 0
+                while(j < len(causally_consistent_scenarios)):
+                    if causally_consistent_scenarios[j][i] == False:
+                        causally_consistent_scenarios.pop(j)
+                    else:
+                        j += 1
+        print("The causally_consistent_scenarios list obviously wasn't sane, please check the remainder:")
+        print(causally_consistent_scenarios)
+        print("Returning the first element...")
+        return(causally_consistent_scenarios[0])
+                        
+    
     # ----------------------------------------------------
     # --------------- game loop functions ----------------
     # ----------------------------------------------------
@@ -647,7 +739,6 @@ class gamemaster():
             
             self.round_number += 1
             
-            # PHASE 1
             if self.round_number > 0:
                 print("Select causally free stones to travel back in time HERE")
             
@@ -720,6 +811,18 @@ class gamemaster():
                     for stone in self.stones[faction]:
                         stone.progress_causal_freedom(t+1, self.T)"""
             
+            # PHASE 3
+            # Here, we look at the path the stones took and choose which time jumps IN will be activated to get a self-consistent scenario
+            # NOTE: stones whose death is negated here (which are therefore causally free in the past) are treated as if they vanished in the time of their death
+            # and the death is only erased at the very beginning of PHASE 1 (therefore they don't stand idly there, blocking paths - they are as if they didn't exist)
+            time_jump_in_moves = self.collect_time_jump_in_moves()
+            causally_consistent_scenarios = self.find_causally_consistent_scenarios(time_jump_in_moves)
+            selected_scenario = self.select_scenario(time_jump_in_moves, causally_consistent_scenarios)
+            for i in range(len(time_jump_in_moves)):
+                time_jump_in_moves[i].move_args[0] = selected_scenario[i]
+            
+            
+            # PHASE 1
             # WE ARE NOW AT t = T-1, and it's time to select causally free stones that will travel back in time
             t = self.T - 2
             self.which_t_just_progressed = t
