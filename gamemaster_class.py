@@ -345,6 +345,8 @@ class gamemaster():
                 if t in stone.events['death'] or t in stone.events['time_jump']:
                     stone.position[t+1] = -1 #is this line even needed? or maybe for clarity?
                     continue
+                if stone.is_causally_free(t):
+                    continue #we don't know where it'll go
                 if stone.get_position(t+1) == -1 and stone.get_position(t) == -1:
                     continue
                 if stone.get_position(t+1) == -1 and stone.get_position(t) != -1:
@@ -393,7 +395,8 @@ class gamemaster():
         target_stone = self.find_stone_at_position(t, pos0)
         if target_stone == -1:
             return(-1)
-        if not (pos0 == pos1 or self.is_pos_available(t, pos0, pos1, player_faction = player_faction, allow_box_pushing = True)):
+        #if not (pos0 == pos1 or self.is_pos_available(t, pos0, pos1, player_faction = player_faction, allow_box_pushing = True)):
+        if not self.is_board_symbol_available(self.get_square(pos1)):
             return(-1)
         if player_faction != -1 and target_stone.player_faction != player_faction:
             return(-1)
@@ -433,6 +436,63 @@ class gamemaster():
         
         # self.time_jump_stone(pos, t0, t1, player_faction)
     
+    
+    
+    def resolve_conflicts(self, t, allow_stone_pushing = True, stone_push_locations = []):
+        # this function takes a realised board at time t and changes it so that no space is occupied by more than 1 stone
+        # and no stone is on a forbidden space.
+        # it assumes the board is conflict-less at t-1
+        # it should eventually fully replace the clunky is_pos_available checking
+        
+        conflict_encountered = False
+        encountered_stone_push_locations = []
+        # First, we find positions where multiple stones conflict
+        unchecked_stones = []
+        for faction in self.factions:
+            for stone in self.stones[faction]:
+                unchecked_stones.append(stone)
+        for x in range(self.x_dim):
+            for y in range(self.y_dim):
+                stones_here = []
+                i = 0
+                while(i < len(unchecked_stones)):
+                    if unchecked_stones[i].get_position(t) == (x, y):
+                        stones_here.append(unchecked_stones.pop(i))
+                    else:
+                        i += 1
+                if len(stones_here) > 1:
+                    # conflict here!
+                    conflict_encountered = True
+                    # if length == 2, we attempt a sokoban push; otherwise, we move all stones to where they came from
+                    # to forbid chaining, sokoban pushing is only attempted on the first iteration or if such solution was already used here in a previous iteration
+                    if len(stones_here) == 2 and ((x, y) in stone_push_locations or allow_stone_pushing):
+                        approach_azimuth_1 = get_azimuth_from_delta_pos(stones_here[0].get_position(t - 1), stones_here[0].get_position(t))
+                        approach_azimuth_2 = get_azimuth_from_delta_pos(stones_here[1].get_position(t - 1), stones_here[1].get_position(t))
+                        if approach_azimuth_1 == -1:
+                            pos_to_push_into = pos_step((x, y), approach_azimuth_2)
+                            if self.is_board_symbol_available(self.get_square(pos_to_push_into)):
+                                # first stone gets pushed
+                                encountered_stone_push_locations.append((x, y))
+                                stones_here[0].position[t] = pos_to_push_into
+                                continue
+                        elif approach_azimuth_2 == -1:
+                            pos_to_push_into = pos_step((x, y), approach_azimuth_1)
+                            if self.is_board_symbol_available(self.get_square(pos_to_push_into)):
+                                # second stone gets pushed
+                                encountered_stone_push_locations.append((x, y))
+                                stones_here[1].position[t] = pos_to_push_into
+                                continue
+                    # all stones return where they came from
+                    for j in range(len(stones_here)):
+                        stones_here[j].position[t] = stones_here[j].get_position(t-1)
+        # If no conflict encountered, we exit. Otherwise, we call itself:
+        if conflict_encountered == False:
+            return(0)
+        else:
+            return(self.resolve_conflicts(t, False, encountered_stone_push_locations))
+    
+    
+    
     def execute_moves(self, max_t = -1, exit_on_illegal_move = False):
         # resets the board, executes all the moves in order: transforms history into stone evolution
         if max_t == -1:
@@ -444,15 +504,11 @@ class gamemaster():
             # TODO SIMULTANEOUS CONFLICT RESOLUTION!!! (what if two stones want to go to the same spot at the same time? first come first serve is bad)
             
             for add_stone_move in self.history[t]['add_stone']:
-                if self.is_pos_available(t, add_stone_move.pos, add_stone_move.pos, add_stone_move.player_faction, allow_box_pushing = False, generating_move = add_stone_move):
-                    pos_0 = get_position_list_for_spawn(t, add_stone_move.pos)
-                    a_0   = get_position_list_for_spawn(t, add_stone_move.move_args[0])
-                    #print("keheeee", stone)
-                    self.stones[add_stone_move.player_faction].append(Stone(add_stone_move.stone_ID, add_stone_move.round_number, add_stone_move.player_faction, pos_0, a_0))
-                elif exit_on_illegal_move:
-                    print("gamemaster.execute_moves routine ended due to illegal move flagged as an exit condition")
-                    return(-1)
-            
+                pos_0 = get_position_list_for_spawn(t, add_stone_move.pos)
+                a_0   = get_position_list_for_spawn(t, add_stone_move.move_args[0])
+                #print("keheeee", stone)
+                self.stones[add_stone_move.player_faction].append(Stone(add_stone_move.stone_ID, add_stone_move.round_number, add_stone_move.player_faction, pos_0, a_0))
+                
             # TODO for the time jumps, we need to implement the PICK A CONSISTENT HISTORY SCENARIO
             for time_jump_out_move in self.history[t]['time_jump_out']:
                 target_stone = self.find_stone_at_position(t, spatial_move.pos)
@@ -461,31 +517,13 @@ class gamemaster():
                         print("gamemaster.execute_moves routine ended due to illegal move flagged as an exit condition")
                         return(-1)
                     continue
-                #if target_stone.ID != spatial_move.stone_ID:
-                #    if exit_on_illegal_move:
-                #        print("gamemaster.execute_moves routine ended due to illegal move flagged as an exit condition")
-                #        return(-1)
-                #    continue
                 # NOTE time jumping should be anonymous!!
                 target_stone.events['time_jump'].append(t)
             
             for time_jump_in_move in self.history[t]['time_jump_in']:
-                print("resolving time jump in")
-                if self.is_pos_available(t, time_jump_in_move.pos, time_jump_in_move.pos, time_jump_in_move.player_faction, allow_box_pushing = False, generating_move = time_jump_in_move):
-                    print("worked")
-                    pos_0 = get_position_list_for_spawn(t, time_jump_in_move.pos)
-                    a_0   = get_position_list_for_spawn(t, time_jump_in_move.move_args[1])
-                    #print("keheeee", stone)
-                    self.stones[time_jump_in_move.player_faction].append(Stone(time_jump_in_move.stone_ID, time_jump_in_move.round_number, time_jump_in_move.player_faction, pos_0, a_0))
-                elif exit_on_illegal_move:
-                    print("gamemaster.execute_moves routine ended due to illegal move flagged as an exit condition")
-                    return(-1)
-                print("didn't work")
-            
-            
-                
-            # note; if spawning moves will be executed BEFORE the spatial move in this paradigm,
-            # stones won't spawn in freshly available places
+                pos_0 = get_position_list_for_spawn(t, time_jump_in_move.pos)
+                a_0   = get_position_list_for_spawn(t, time_jump_in_move.move_args[1])
+                self.stones[time_jump_in_move.player_faction].append(Stone(time_jump_in_move.stone_ID, time_jump_in_move.round_number, time_jump_in_move.player_faction, pos_0, a_0))
                 
             
             for spatial_move in self.history[t]['spatial_move']:
@@ -502,41 +540,18 @@ class gamemaster():
                     continue
                 pos1 = spatial_move.move_args[0]
                 a1   = spatial_move.move_args[1]
-                if not (spatial_move.pos == pos1 or self.is_pos_available(t, spatial_move.pos, pos1, player_faction = spatial_move.player_faction, allow_box_pushing = True)):
-                    if exit_on_illegal_move:
-                        print("gamemaster.execute_moves routine ended due to illegal move flagged as an exit condition")
-                        return(-1)
-                    continue
-                else:
-                    target_stone.position[t] = pos1
-                    if a1 != -1:
-                        target_stone.azimuth[t] = a1
+                target_stone.position[t] = pos1
+                if a1 != -1:
+                    target_stone.azimuth[t] = a1
             
-            """for mt in self.flag_types:
-                for move in self.history[t][mt]:
-                    for faction in self.factions:
-                        for stone in self.stones[faction]:
-                            stone.progress_causal_freedom(t, self.T, move.round_number)
-            for player_viewed_causality_t in range(self.which_t_just_progressed+1):
-                for faction in self.factions:
-                    for stone in self.stones[faction]:
-                        stone.progress_causal_freedom(player_viewed_causality_t, self.T, self.round_number)"""
             
+            # Resolve conflicts
+            self.resolve_conflicts(t)
+            
+            # Update causal freedom
             causally_affected_stones = self.get_stones_by_IDs(self.causal_freedom_progression_list[t])
             for stone in causally_affected_stones:
                 stone.progress_causal_freedom(t, self.T, 1000)
-            
-                #break
-        """
-        for move in self.moves:
-            move_msg = -1
-            if move.move_type == 'spatial_move':
-                move_msg = self.move_Stone(*move.move_args, move.player_faction)
-            #if move.move_type == 'time_jump':
-            #    move_msg = self.time_jump_Stone(*move.move_args, move.player_faction)
-            if move_msg == -1 and exit_on_illegal_move == True:
-                print("gamemaster.execute_moves routine ended due to illegal move flagged as an exit condition")
-                return(-1)"""
     
     
     # ----------------------------------------------------
