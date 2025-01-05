@@ -1,0 +1,8 @@
+first line: temporal dimension T (should be a multiple of len(factions))
+rest of lines: board squares
+    'X': immovable wall; forbidden square to access
+    '0': empty square
+    'M': movable box
+    'a': Player A stone (facing to the right)
+    'b': Player B stone (facing to the left)
+    

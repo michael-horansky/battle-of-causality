@@ -6,6 +6,14 @@ def uniform_str(x, l=3):
     x_str = str(x)
     return('0'*(l-len(x_str))+x_str)
 
+# Centered string of length w
+def st(a, w, f = ' '):
+    if len(str(a)) >= w:
+        return(str(a))
+    else:
+        diff = w - len(str(a))
+        return(f * int(np.floor(diff / 2.0)) + str(a) + f * int(np.ceil(diff / 2.0)))
+
 # This generates a list [element, element, element...]
 def repeated_list(length, element=''):
     result = []
@@ -59,5 +67,16 @@ def decode_tank_controls(pos0, a0, direction, a1=-1):
     elif direction == 't' or direction == 'turn':
         pos1 = pos0
     return(pos1, a1)
+
+def human_readable_azimuth(a):
+    if a == 0:
+        return('up')
+    if a == 1:
+        return('right')
+    if a == 2:
+        return('down')
+    if a == 3:
+        return('left')
+    return('jump')
     
 
