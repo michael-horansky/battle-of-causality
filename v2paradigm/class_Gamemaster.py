@@ -35,7 +35,7 @@ class Gamemaster():
 
     def __init__(self, board_number):
 
-        # players and stones
+        # players and stones. The lists are updated when flags are placed, and do not depend on which stones are actually present on the board dynamically.
         self.stones = {} #[ID] = Stone()
         self.faction_armies = {} #[faction] = [ID_1, ID_2 ... ]
         self.factions = ['A', 'B']
@@ -46,6 +46,9 @@ class Gamemaster():
 
         #self.flag_types = ['add_stone', 'time_jump_out', 'time_jump_in', 'spatial_move', 'attack'] #the order matters in here, actually! spawns first, then moves and shootings
         self.setup_squares = [] # this acts as board_dynamic with t = -1, and only accepts stone creating flags
+
+        # TUI elements
+        self.board_delim = ' | '
 
         self.load_board(board_number)
 
@@ -117,32 +120,43 @@ class Gamemaster():
                 for y in range(self.y_dim):
                     self.board_dynamic[t][x].append(Board_square(STPos(t, x, y)))
 
+        # Calculate TUI parameters for printing
+        self.single_board_width = self.x_dim * 2 + len(str(self.y_dim - 1))
+        self.header_width = self.single_board_width * self.t_dim + len(self.board_delim) * (self.t_dim - 1)
+
     # ----------------- Print functions -------------------------
 
     def print_heading_message(self, msg, level):
         # smaller the level, bigger the header
-        header_size = (self.x_dim * 2 - 1) * self.t_dim + 3 * (self.t_dim - 1)
+        header_size = self.header_width#(self.x_dim * 2 - 1) * self.t_dim + 3 * (self.t_dim - 1)
         if level == 0:
-            print('-' * header_size)
-            print(st(' ' + msg + ' ', header_size, '-'))
-            print('-' * header_size)
+            print(color.BOLD + '-' * header_size + color.LIGHT)
+            print(color.BOLD + st(' ' + msg + ' ', header_size, '-') + color.LIGHT)
+            print(color.BOLD + '-' * header_size + color.LIGHT)
         if level == 1:
-            print(st(' ' + msg + ' ', header_size, '-'))
+            print(color.BOLD + st(' ' + msg + ' ', header_size, '-') + color.LIGHT)
         if level == 2:
-            print('-' * int(header_size / 4) + ' ' + msg)
+            print('-' * int(header_size / 4) + ' ' + color.BOLD + msg + color.LIGHT)
         if level >= 3:
-            print("# " + msg)
+            print("# " + color.BOLD + msg + color.LIGHT)
 
-    def print_board_at_time(self, t, print_to_output = True, include_header_line = False):
+    def print_board_at_time(self, t, print_to_output = True, include_header_line = False, is_active = False):
 
-        def print_stone(board_lines, stone_symbol, stone_position, stone_azimuth):
+        def print_stone(board_lines, stone_symbol, stone_position, stone_azimuth, highlight = False):
             if stone_position == -1 or stone_azimuth == -1:
                 return(-1)
             stone_x, stone_y = stone_position
             stone_a = stone_azimuth
             cur_x = stone_x * 2
             cur_y = stone_y * 2
-            board_lines[cur_y][cur_x] = stone_symbol
+
+            stone_formatting_pre = ''
+            stone_formatting_suf = ''
+            if highlight:
+                stone_formatting_pre = color.BOLD
+                stone_formatting_suf = color.LIGHT
+
+            board_lines[cur_y][cur_x] = stone_formatting_pre + stone_symbol + stone_formatting_suf
             if stone_a == 0:
                 cur_y -= 1
                 if board_lines[cur_y][cur_x] == 'v':
@@ -177,18 +191,48 @@ class Gamemaster():
                 # Dynamic board properties
                 if self.board_dynamic[t][x][y].occupied:
                     occupant_ID = self.board_dynamic[t][x][y].stones[0]
-                    print_stone(board_lines, self.stones[occupant_ID].player_faction, (x, y), self.board_dynamic[t][x][y].stone_properties[occupant_ID][0])
+                    is_occupant_causally_free = occupant_ID in self.board_dynamic[t][x][y].causally_free_stones
+                    print_stone(board_lines, self.stones[occupant_ID].player_faction, (x, y), self.board_dynamic[t][x][y].stone_properties[occupant_ID][0], highlight = is_occupant_causally_free)
 
         for i in range(len(board_lines)):
             board_lines[i] = ''.join(board_lines[i])
 
+        # if active, we highlight the board in green
+
+        if is_active:
+            for i in range(len(board_lines)):
+                board_lines[i] = color.GREEN + board_lines[i] + color.END
+
+        # If header line included, we inscribe t on top and x,y labels on the left and bottom.
+
         if include_header_line:
+            # First, the y labels
+            max_y_width = len(str(self.y_dim - 1))
+            for i in range(len(board_lines)):
+                board_lines[i] = " " * (max_y_width + 1) + board_lines[i]
+            for y in range(self.y_dim):
+                board_lines[2 * y] = color.RED + uniform_str(str(y), max_y_width, ' ') + color.END + board_lines[2 * y][max_y_width:]
+
+            # Then, the x labels
+            max_x_width = len(str(self.x_dim - 1))
+            if max_x_width == 1:
+                #board_lines.append(" " * self.single_board_width)
+                x_label_string = " " * (max_y_width + 1)
+                for x in range(self.x_dim):
+                    x_label_string += str(x) + " "
+                board_lines.append(color.RED + x_label_string[:-1] + color.END)
+            if max_x_width == 2:
+                x_label_str = [" " * (max_y_width)]*2
+                for x in range(self.x_dim):
+                    x_label_str[ x      % 2] += " " * 2
+                    x_label_str[(x + 1) % 2] += uniform_str(str(x), 2, " ")
+                board_lines.append(color.RED + x_label_str[0] + color.END)
+                board_lines.append(color.RED + x_label_str[1] + color.END)
+
+
+
             header_info = f't = {t}'
-            leftover_length = (self.x_dim * 2 - 1) - len(header_info)
-            left_padding = int(math.floor(leftover_length / 2))
-            right_padding = leftover_length - left_padding
-            full_header_str = ' ' * left_padding + header_info + ' ' * right_padding
-            board_lines.insert(0, full_header_str)
+            board_lines.insert(0, st(header_info, self.single_board_width))
 
         board_string = '\n'.join(board_lines)
 
@@ -196,16 +240,17 @@ class Gamemaster():
             print(board_string)
         return(board_lines)
 
-    def print_board_horizontally(self, include_header_line = True):
-        board_delim = ' | '
-        total_board_lines = self.print_board_at_time(0, print_to_output = False, include_header_line = include_header_line)
+    def print_board_horizontally(self, highlight_t = -1):
+        # Causally free stones are BOLD
+        # if highlight_t selected, the corresponding board is in GREEN
+        total_board_lines = self.print_board_at_time(0, print_to_output = False, include_header_line = True, is_active = (highlight_t == 0))
         for t in range(1, self.t_dim):
-            cur_board_lines = self.print_board_at_time(t, print_to_output = False, include_header_line = include_header_line)
+            cur_board_lines = self.print_board_at_time(t, print_to_output = False, include_header_line = True, is_active = (highlight_t == t))
             for i in range(len(cur_board_lines)):
-                total_board_lines[i] += board_delim + cur_board_lines[i]
+                total_board_lines[i] += self.board_delim + cur_board_lines[i]
         board_string = '\n'.join(total_board_lines)
         print(board_string)
-        print("-" * ((self.x_dim * 2 - 1) * self.t_dim + len(board_delim) * (self.t_dim - 1)))
+        print("-" * self.header_width)
 
 
     # ----------------------------------------------------
@@ -221,7 +266,7 @@ class Gamemaster():
         for t in range(self.t_dim):
             for x in range(self.x_dim):
                 for y in range(self.y_dim):
-                    self.board_dynamic[t][x][y].remove_stone
+                    self.board_dynamic[t][x][y].remove_stones()
 
     def execute_moves(self):
         # This function populates Board_squares with stones according to all flags
@@ -238,6 +283,36 @@ class Gamemaster():
 
         # Then, we execute flags for each time slice sequantially
         # TODO
+        for t in range(self.t_dim):
+            # At t, we are treating the state of the board at t as canonical, and we use it to
+            # calculate the state of the board at t + 1. We do this by first naively resolving
+            # the flags at t and then executing a conflict resolution routine which reverts
+            # moves which result in conflict.
+
+            # Naive flag execution
+            for x in range(self.x_dim):
+                for y in range(self.y_dim):
+                    for cur_flag in self.board_dynamic[t][x][y].flags:
+                        # Flag switch here
+
+                        # These flags propagate the stone into the next time-slice, and as such are forbidden at t = self.t_dim - 1
+                        if t < self.t_dim - 1:
+                            if cur_flag.flag_type == "add_stone":
+                                self.board_dynamic[t+1][x][y].add_stone(cur_flag.stone_ID, cur_flag.flag_args)
+                            if cur_flag.flag_type == "time_jump_in":
+                                self.board_dynamic[t+1][x][y].add_stone(cur_flag.stone_ID, [cur_flag.flag_args[1]])
+                            # For the following flags, the stone has to be present in the current time-slice
+                            if cur_flag.stone_ID in self.board_dynamic[t][x][y].stones:
+                                if cur_flag.flag_type == "spatial_move":
+                                    # Check if the stone is present
+                                    self.board_dynamic[t+1][cur_flag.flag_args[0]][cur_flag.flag_args[1]].add_stone(cur_flag.stone_ID, [cur_flag.flag_args[2]])
+                                if cur_flag.flag_type == "attack":
+                                    self.board_dynamic[t+1][x][y].add_stone(cur_flag.stone_ID, cur_flag.flag_args)
+                                    # TODO resolve attack here
+
+
+
+
 
 
 
@@ -267,8 +342,12 @@ class Gamemaster():
             self.print_heading_message(f"Round {self.round_number} commences", 0)
 
             for self.current_time in range(self.t_dim):
+                # First, we find the canonical state of the board
+                self.execute_moves()
+
+                # Second, we display the board state
                 self.print_heading_message(f"Time = {self.current_time}", 1)
-                self.print_board_horizontally()
+                self.print_board_horizontally(self.current_time)
 
             break
 
@@ -278,8 +357,7 @@ class Gamemaster():
 
 lol = Gamemaster(1)
 
-lol.execute_moves()
-lol.print_board_horizontally()
+#lol.execute_moves()
 #print(lol.causally_free_stones_at_time(0))
 #print(lol.causally_free_stones_at_time(1))
 lol.standard_game_loop()

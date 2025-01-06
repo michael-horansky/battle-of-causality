@@ -2,9 +2,9 @@
 import numpy as np
 
 # Automatic string trimming
-def uniform_str(x, l=3):
+def uniform_str(x, l=3, pad_c='0'):
     x_str = str(x)
-    return('0'*(l-len(x_str))+x_str)
+    return(pad_c*(l-len(x_str))+x_str)
 
 # Centered string of length w
 def st(a, w, f = ' '):
@@ -78,5 +78,18 @@ def human_readable_azimuth(a):
     if a == 3:
         return('left')
     return('jump')
+
+class color:
+   PURPLE = '\033[95m'
+   CYAN = '\033[96m'
+   DARKCYAN = '\033[36m'
+   BLUE = '\033[94m'
+   GREEN = '\033[92m'
+   YELLOW = '\033[93m'
+   RED = '\033[91m'
+   BOLD = '\033[1m'
+   UNDERLINE = '\033[4m'
+   LIGHT = '\033[22m' # removes BOLD without resetting color
+   END = '\033[0m'
     
 

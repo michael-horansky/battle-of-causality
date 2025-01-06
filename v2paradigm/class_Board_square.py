@@ -20,10 +20,10 @@ class Board_square():
             self.causally_free_stones.remove(new_flag.stone_ID)
         self.causally_locked_stones.append(new_flag.stone_ID)
 
-    def remove_stone(self):
+    def remove_stones(self):
         self.stones = []
         self.occupied = False
-        self.stone_properties = []
+        self.stone_properties = {}
         self.causally_free_stones = []
         # We do NOT clear causally_locked_stones, as this is just a descriptor of present flags
 

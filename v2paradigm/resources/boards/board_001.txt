@@ -1,8 +1,8 @@
 6
 XXXXXXX
-X00000X
-X00000X
+X     X
+X     X
 XaaXbbX
-X00000X
-X00000X
+X     X
+X     X
 XXXXXXX
