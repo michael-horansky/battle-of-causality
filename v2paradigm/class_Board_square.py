@@ -20,6 +20,24 @@ class Board_square():
             self.causally_free_stones.remove(new_flag.stone_ID)
         self.causally_locked_stones.append(new_flag.stone_ID)
 
+    def remove_flag(self, ID):
+        # Does the associated stone become causally free?
+        flag_index = 0
+        while(flag_index < len(self.flags)):
+            if self.flags[flag_index].flag_ID == ID:
+                break
+            flag_index += 1
+        if flag_index == len(self.flags):
+            # The flag wasn't found
+            print(f"Error: You have attempted to delete a Flag with ID {ID} at ({self.pos.t},{self.pos.x},{self.pos.y}), but it isn't here.")
+            return(-1)
+        associated_stone_ID = self.flags[flag_index]
+        if associated_stone_ID in self.causally_locked_stones:
+            self.causally_locked_stones.remove(associated_stone_ID)
+        if associated_stone_ID in self.stones:
+            self.causally_free_stones.append(associated_stone_ID)
+        del self.flags[flag_index]
+
     def remove_stones(self):
         self.stones = []
         self.occupied = False

@@ -21,11 +21,21 @@ class Flag():
     # The following is used to generate IDs for Flags which create new stones.
     # These flags are not anonymous, but are not provided with an ID, as it doesn't exist yet.
     stone_generating_flag_types = ['add_stone', 'time_jump_in']
-    max_ID = 0
+
+    # For tracking created stones
+    max_stone_ID = 0
     @staticmethod
-    def get_ID_tag():
-        new_tag = Flag.max_ID
-        Flag.max_ID += 1
+    def get_stone_ID_tag():
+        new_tag = Flag.max_stone_ID
+        Flag.max_stone_ID += 1
+        return(new_tag)
+
+    # For tracking flags
+    max_flag_ID = 0
+    @staticmethod
+    def get_flag_ID_tag():
+        new_tag = Flag.max_flag_ID
+        Flag.max_flag_ID += 1
         return(new_tag)
 
     # ----------------------------------------------------
@@ -38,7 +48,9 @@ class Flag():
         self.flag_args = flag_args.copy()
         self.stone_ID = stone_ID #-1 for anonymous flags, a non-negative integer otherwise
         if self.flag_type in Flag.stone_generating_flag_types:
-            self.stone_ID = Flag.get_ID_tag()
+            self.stone_ID = Flag.get_stone_ID_tag()
+
+        self.flag_ID = Flag.get_flag_ID_tag()
 
     def __str__(self):
         str_rep = 'UNDEFINED_MOVE'

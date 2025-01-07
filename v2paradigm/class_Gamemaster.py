@@ -288,6 +288,14 @@ class Gamemaster():
         self.board_dynamic[t][new_x][new_y].add_stone(stone_ID, self.board_dynamic[t][old_x][old_y].stone_properties[stone_ID])
         self.board_dynamic[t][old_x][old_y].remove_stone(stone_ID)
 
+    # -------------- Flag management
+    # Methods which add new Flags always return the Flag ID
+
+    def add_spatial_move(self, stone_ID, t, old_x, old_y, new_x, new_y, new_a):
+        new_flag = Flag("spatial_move", self.stones[stone_ID].player_faction, [new_x, new_y, new_a], stone_ID)
+        self.board_dynamic[t][old_x][old_y].add_flag(new_flag)
+        return(new_flag.flag_ID)
+
     def resolve_conflicts(self, t):
         # Resolves conflicts in a specified time-slice
         # Assumes all previous time-slices are canonical (void of conflicts)
@@ -360,16 +368,16 @@ class Gamemaster():
                     if previous_pos == None:
                         # The stone was just added onto the board.
                         continue
-                    prev_x, prev_y = previous_pos
+                    prev_x, prev_y, prev_a = previous_pos
                     if prev_x == x and prev_y == y:
                         # The stone was waiting in the previous time-slice, and is not to be moved.
                         continue
                     # We move the stone back. If the previous square is occupied or unavailable, we add it to squares_to_be_checked
                     if self.board_dynamic[t][prev_x][prev_y].occupied or (not self.is_square_available(prev_x, prev_y)):
-                        if not previous_pos in squares_to_be_checked:
-                            squares_to_be_checked.append(previous_pos)
-                        if not previous_pos in self.conflicting_squares[t]:
-                            self.conflicting_squares[t].append(previous_pos)
+                        if not (prev_x, prev_y) in squares_to_be_checked:
+                            squares_to_be_checked.append((prev_x, prev_y))
+                        if not (prev_x, prev_y) in self.conflicting_squares[t]:
+                            self.conflicting_squares[t].append((prev_x, prev_y))
                     self.change_stone_pos(self, cur_ID, t, x, y, prev_x, prev_y)
                 # We check if the square is no longer conflicting. If not, we remove it from self.conflicting_squares[t]
                 if self.is_square_available(x, y):
@@ -490,6 +498,39 @@ class Gamemaster():
                 # Second, we display the board state
                 self.print_heading_message(f"Time = {self.current_time}", 1)
                 self.print_board_horizontally(self.current_time)
+
+                # Third, for every causally free stone, we ask its owner to place a flag
+                currently_causally_free_stones = self.causally_free_stones_at_time(self.current_time)
+                for player in self.factions:
+                    self.print_heading_message(f"Player {player}, it is your turn to command your stones now.", 2)
+                    if len(currently_causally_free_stones[player]) == 0:
+                        self.print_heading_message("No causally free stones to command.", 3)
+                    stone_index = 0
+                    flags_added_this_turn = repeated_list(len(currently_causally_free_stones[player]), None)
+                    while(stone_index < len(currently_causally_free_stones[player])):
+                        cur_stone = currently_causally_free_stones[player][stone_index]
+                        cur_pos = self.stones[cur_stone].history[self.current_time]
+                        x, y, a = cur_pos
+                        self.print_heading_message(f"Command your stone at ({x},{y}).", 3)
+
+                        move_msg = self.stones[cur_stone].parse_move_cmd(self, self.current_time)
+                        if move_msg == "quit":
+                            return(-1)
+                        if move_msg == "undo":
+                            # We revert back to the previous stone
+                            stone_index = max(stone_index-1, 0)
+                            # We delete the Flag we added to this stone if any
+                            if flags_added_this_turn[stone_index] != None:
+                                prev_x, prev_y, prev_a = self.stones[currently_causally_free_stones[player][stone_index]].history[self.current_time]
+                                self.board_dynamic[self.current_time][prev_x][prev_y].remove_flag(flags_added_this_turn[stone_index])
+                            continue
+
+                        move_msg_split = move_msg.split(" ")
+                        if move_msg_split[0] == "flag_added":
+                            # A new Flag was added
+                            flags_added_this_turn[stone_index] = int(move_msg_split[1])
+
+                        stone_index += 1
 
             break
 
