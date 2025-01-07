@@ -27,10 +27,20 @@ class Board_square():
         self.causally_free_stones = []
         # We do NOT clear causally_locked_stones, as this is just a descriptor of present flags
 
+    def remove_stone(self, stone_ID):
+        # Removes a specific stone if present
+        if stone_ID in self.stones:
+            self.stones.remove(stone_ID)
+            del self.stone_properties[stone_ID]
+        if stone_ID in self.causally_free_stones:
+            self.causally_free_stones.remove(stone_ID)
+        if len(self.stones) == 0:
+            self.occupied = False
+
     def add_stone(self, new_stone_ID, new_stone_properties):
         # This function does allow for multiple stones to be here; but we expect the Gamemaster to resolve this before the display
         self.stones.append(new_stone_ID)
-        self.stone_properties[new_stone_ID] = new_stone_properties
+        self.stone_properties[new_stone_ID] = new_stone_properties.copy()
         if not new_stone_ID in self.causally_locked_stones:
             self.causally_free_stones.append(new_stone_ID)
         self.occupied = True

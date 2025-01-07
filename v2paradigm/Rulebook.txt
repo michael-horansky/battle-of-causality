@@ -44,11 +44,23 @@ The conflict resolution routine represents the physicality of the stones. Its co
     2. 'Impasse': Now, for every square occupied by more than one stone, all the stones on this square which have NOT been placed on this square in this time-slice (i.e. they are present in the previous time-slice) are moved back to the square which they occupied in the previous time-slice, as well as the stones they pushed through the 'Sokoban push' rule. This rule chains, and is applied repeatedly until all stones which are still placed on squares which are occupied by more than one stone have already been moved by this rule.
     3. 'Explosion': Finally, for every square occupied by more than one stone, all stones on this square are deleted.
 
-Notice the order of these rules. We see that sokoban pushes only happen to stones which have not moved between this and the previous time-slice, or were placed onto the board, but rather chose a waiting action, such as 'wait', 'rotate', 'attack' etc. Notably, two stones moving onto the same square, be it in opposing or perpendicular directions, are returned back onto their original squares due to the 'impasse' rule. This means that no stone has 'priority' in movement. Also, if a stone time-jumps-in at time t on the same square a stone moves onto from time-slice t-1, the spatial movement of the second stone is blocked. Hence, opening time portals are treated as momentary blockades.
+Notice the order of these rules. We see that sokoban pushes only happen to stones which have not moved between this and the previous time-slice, or were placed onto the board, but rather chose a waiting action, such as 'wait', 'rotate', 'attack' etc. Notably, two stones moving onto the same square, be it in opposing or perpendicular directions, are returned back onto their original squares due to the 'impasse' rule. This means that no stone has 'priority' in movement. Also, if a stone time-jumps-in at time t on the same square a stone moves onto from time-slice t-1, the spatial movement of the second stone is blocked. Hence, opening time portals are treated as momentary blockades. Finally, since the 'Sokoban push' rule doesn't apply if the waiting stone would be pushed onto an occupied square, this means that sokoban-like movement does have a lower priority than regular movement (you can think of this as the fact stones are "slowed down" by pushing a stone in front of them). For an example, see Fig. 1.
+
+           Example 1                        Example 2
+    -----------------------         -----------------------
+       t = 1   |   t = 2               t = 1   |   t = 2   
+               |                               |           
+               |                               |       ^   
+         A>    |     A>                A>A     |   A>A B   
+           ^   |       ^                 v ^   |     v     
+           B   |       B                   B   |           
+
+    Fig. 1: In Example 1, both stones attempt to move forwards, forming an impasse and halting. In Example 2, however, the A-stone now also attempts to sokoban-push another A-stone (which is performing a waiting action), which does NOT result in an impasse, and the B-stone successfully moves, demonstrating the de facto priority unburdened movement has over sokoban pushing.
+
 
 Note that, unlike the 'Sokoban push' rule, the second rule 'impasse' does chain. Thus, if multiple moving stones form a 'promenade', each moving onto the previous stone's square of origin, a single 'impasse' event at the front blocks all of this movement, halting the promenade.
 
-The third rule specifically addresses situations which arise from placing stones into a time-slice, specifically through time-jumps-in. If a stone at time t-1 chooses to wait and is present on the same square at time t, and another stone time-jumps-in onto the same square at time t, both of these stones are removed. This is treated as two deaths (presumably via an unsightly explosion). This means that time-jumps-in may override Sokoban pushes by creating an additional impasse (see example in Fig. 1)
+The third rule specifically addresses situations which arise from placing stones into a time-slice, specifically through time-jumps-in. If a stone at time t-1 chooses to wait and is present on the same square at time t, and another stone time-jumps-in onto the same square at time t, both of these stones are removed. This is treated as two deaths (presumably via an unsightly explosion). This means that time-jumps-in may override Sokoban pushes by creating an additional impasse (see example in Fig. 2)
 
             Round 1                         Round 2
     -----------------------         -----------------------
@@ -59,7 +71,7 @@ The third rule specifically addresses situations which arise from placing stones
        ^       |                       ^       |   ^       
        A       |                       A       |   A       
 
-    Fig. 1: In the first round, both A-stones move forward, whilst the B-stone chooses to wait. As a result, the B-stone is pushed away. In the second round, the identical scenario plays out, except that a stone (the faction is unimportant) chooses to time-jump-in at time t = 2 onto the square occupied by the B-stone at time t = 1. As a result of a time-jump-in onto the waiting B-stone, both stones explode and are removed. The time jump still creates an impasse which blocks the movement of both A-stones. The game resolves this scenario as follows: 1. The A-stones move forward and the time-jumping stone is placed onto the B-stone square from t = 1; 2. A Sokoban push is rejected, as the disputed square is occupied by more than two stones; 3. An impasse reverts the moves of both A-stones; 4. An explosion occurs, destroying both the B-stone and the time-jumping stone.
+    Fig. 2: In the first round, both A-stones move forward, whilst the B-stone chooses to wait. As a result, the B-stone is pushed away. In the second round, the identical scenario plays out, except that a stone (the faction is unimportant) chooses to time-jump-in at time t = 2 onto the square occupied by the B-stone at time t = 1. As a result of a time-jump-in onto the waiting B-stone, both stones explode and are removed. The time jump still creates an impasse which blocks the movement of both A-stones. The game resolves this scenario as follows: 1. The A-stones move forward and the time-jumping stone is placed onto the B-stone square from t = 1; 2. A Sokoban push is rejected, as the disputed square is occupied by more than two stones; 3. An impasse reverts the moves of both A-stones; 4. An explosion occurs, destroying both the B-stone and the time-jumping stone.
                                     
 
 3 Dictionary

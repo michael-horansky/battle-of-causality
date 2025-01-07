@@ -43,6 +43,7 @@ class Gamemaster():
         # the board
         self.board_static = [] # [x][y] = type
         self.board_dynamic = [] # [t][x][y] = Board_square
+        self.conflicting_squares = [] # [t] = (x,y) of a board square which is occupied by more than one stone at time t
 
         #self.flag_types = ['add_stone', 'time_jump_out', 'time_jump_in', 'spatial_move', 'attack'] #the order matters in here, actually! spawns first, then moves and shootings
         self.setup_squares = [] # this acts as board_dynamic with t = -1, and only accepts stone creating flags
@@ -57,7 +58,7 @@ class Gamemaster():
         new_flag = Flag('add_stone', faction, [a0])
         new_ID = new_flag.stone_ID
         self.setup_squares[x][y].add_flag(new_flag)
-        self.stones[new_ID] = Stone(new_ID, faction)
+        self.stones[new_ID] = Stone(new_ID, faction, self.t_dim)
         self.faction_armies[faction].append(new_ID)
 
     def load_board(self, board_number):
@@ -79,7 +80,7 @@ class Gamemaster():
 
         self.board_static = []
         for i in range(self.x_dim):
-            self.board_static.append(['0']*self.y_dim)
+            self.board_static.append([' ']*self.y_dim)
 
         # Initialize the board initializing flags
         self.setup_squares = []
@@ -102,10 +103,6 @@ class Gamemaster():
         for y in range(self.y_dim):
             for x in range(self.x_dim):
                 cur_char = board_lines[y+1][x]
-                """if cur_char == 'a':
-                    self.stones['A'].append(Stone(x, y, 1))
-                elif cur_char == 'b':
-                    self.stones['B'].append(Stone(x, y, 3))"""
                 if cur_char.upper() in self.factions:
                     self.add_stone_on_setup(cur_char.upper(), x, y, faction_orientations[cur_char.upper()])
                 else:
@@ -119,6 +116,8 @@ class Gamemaster():
                 self.board_dynamic[t].append([])
                 for y in range(self.y_dim):
                     self.board_dynamic[t][x].append(Board_square(STPos(t, x, y)))
+
+        self.conflicting_squares = repeated_list(self.t_dim, [])
 
         # Calculate TUI parameters for printing
         self.single_board_width = self.x_dim * 2 + len(str(self.y_dim - 1))
@@ -232,7 +231,10 @@ class Gamemaster():
 
 
             header_info = f't = {t}'
-            board_lines.insert(0, st(header_info, self.single_board_width))
+            if is_active:
+                board_lines.insert(0, color.GREEN + st(header_info, self.single_board_width) + color.END)
+            else:
+                board_lines.insert(0, st(header_info, self.single_board_width))
 
         board_string = '\n'.join(board_lines)
 
@@ -257,6 +259,11 @@ class Gamemaster():
     # ----------- board manipulation functions -----------
     # ----------------------------------------------------
 
+    # static board functions
+
+    def is_square_available(self, x, y):
+        return(self.board_static[x][y] in [' '])
+
     # board access
 
     def clear_board(self):
@@ -267,6 +274,69 @@ class Gamemaster():
             for x in range(self.x_dim):
                 for y in range(self.y_dim):
                     self.board_dynamic[t][x][y].remove_stones()
+
+    def place_stone_on_board(self, pos, stone_ID, stone_properties):
+        # If the square is already occupied, we track the square in a list of conflicting squares
+        if self.board_dynamic[pos.t][pos.x][pos.y].occupied:
+            self.conflicting_squares[pos.t].append((pos.x,pos.y))
+        self.board_dynamic[pos.t][pos.x][pos.y].add_stone(stone_ID, stone_properties)
+
+    def resolve_conflicts(self, t):
+        # Resolves conflicts in a specified time-slice
+        # Assumes all previous time-slices are canonical (void of conflicts)
+        # The paradigm here is as follows: 1 Sokoban; 2 Impasse; 3 Destruction
+
+        # 1 Sokoban
+        # Sokoban pushes do not occur at t = 0, as they depend on the state of the board in the previous time-slice
+        if t != 0:
+            squares_to_be_checked = self.conflicting_squares[t].copy()
+
+            while(len(squares_to_be_checked) > 0):
+                cur_pos = squares_to_be_checked.pop()
+                x, y = cur_pos
+                if len(self.board_dynamic[t][x][y].stones) != 2:
+                    continue
+                stone_a = self.board_dynamic[t][x][y].stones[0]
+                stone_b = self.board_dynamic[t][x][y].stones[1]
+                # We check if one stone was already present here on the previous time-slice and the other moved in spatially
+                if self.stones[stone_a].history[t-1] == None or self.stones[stone_b].history[t-1] == None:
+                    continue
+                prev_x_a, prev_y_a, prev_a_a = self.stones[stone_a].history[t-1]
+                prev_x_b, prev_y_b, prev_a_b = self.stones[stone_b].history[t-1]
+                # Sokoban push only occurs if the moving stone moved by distance 1 in one of the four cardinal directions
+                if prev_x_a == x and prev_y_a == y:
+                    # First stone was waiting
+                    b_delta = get_azimuth_from_delta_pos((prev_x_b, prev_y_b), (x, y))
+                    if b_delta != -1:
+                        # Sokoban push can occur!
+                        new_pos_x, new_pos_y = pos_step((x, y), b_delta)
+                        if self.is_square_available(new_pos_x, new_pos_y) and not self.board_dynamic[t][new_pos_x][new_pos_y].occupied:
+                            self.board_dynamic[t][new_pos_x][new_pos_y].add_stone(stone_a, self.board_dynamic[t][x][y].stone_properties[stone_a])
+                            self.board_dynamic[t][x][y].remove_stone(stone_a)
+                            # We remove the conflict
+                            self.conflicting_squares[t].remove((x, y))
+                if prev_x_b == x and prev_y_b == y:
+                    # Second stone was waiting
+                    a_delta = get_azimuth_from_delta_pos((prev_x_a, prev_y_a), (x, y))
+                    if a_delta != -1:
+                        # Sokoban push can occur!
+                        new_pos_x, new_pos_y = pos_step((x, y), a_delta)
+                        if self.is_square_available(new_pos_x, new_pos_y) and not self.board_dynamic[t][new_pos_x][new_pos_y].occupied:
+                            self.board_dynamic[t][new_pos_x][new_pos_y].add_stone(stone_b, self.board_dynamic[t][x][y].stone_properties[stone_b])
+                            self.board_dynamic[t][x][y].remove_stone(stone_b)
+                            # We remove the conflict
+                            self.conflicting_squares[t].remove((x, y))
+
+        # 2 Impasse
+        # Since this rule chains, it will keep adding to squares_to_be_checked according to need. Stones which are returned back through an impasse or cannot be returned are tracked in stones_checked,
+        # and the impasse checking stops once all conflicting squares are occupied only by stones present in stones_checked
+        squares_to_be_checked = self.conflicting_squares[t].copy()
+        stones_checked = []
+        while(len(squares_to_be_checked) > 0):
+            break
+
+
+
 
     def execute_moves(self):
         # This function populates Board_squares with stones according to all flags
@@ -289,6 +359,22 @@ class Gamemaster():
             # the flags at t and then executing a conflict resolution routine which reverts
             # moves which result in conflict.
 
+
+            # Conflict resolution
+            self.resolve_conflicts(t)
+
+            # At this moment, the time-slice t is in its canonical state, and stone history may be recorded
+            recorded_stones = []
+            for x in range(self.x_dim):
+                for y in range(self.y_dim):
+                    if self.board_dynamic[t][x][y].occupied:
+                        self.stones[self.board_dynamic[t][x][y].stones[0]].history[t] = (x, y, self.board_dynamic[t][x][y].stone_properties[self.board_dynamic[t][x][y].stones[0]][0])
+                        recorded_stones.append(self.board_dynamic[t][x][y].stones[0])
+            # All stones not recorded are set to position None
+            for cur_ID in self.stones.keys():
+                if not cur_ID in recorded_stones:
+                    self.stones[cur_ID].history[t] = None
+
             # Naive flag execution
             for x in range(self.x_dim):
                 for y in range(self.y_dim):
@@ -296,19 +382,24 @@ class Gamemaster():
                         # Flag switch here
 
                         # These flags propagate the stone into the next time-slice, and as such are forbidden at t = self.t_dim - 1
+                        # If a stone is propagated onto an occupied square, the square is added to self.conflicting_squares
                         if t < self.t_dim - 1:
                             if cur_flag.flag_type == "add_stone":
-                                self.board_dynamic[t+1][x][y].add_stone(cur_flag.stone_ID, cur_flag.flag_args)
+                                self.place_stone_on_board(STPos(t+1, x, y), cur_flag.stone_ID, [cur_flag.flag_args[0]])
                             if cur_flag.flag_type == "time_jump_in":
-                                self.board_dynamic[t+1][x][y].add_stone(cur_flag.stone_ID, [cur_flag.flag_args[1]])
+                                self.place_stone_on_board(STPos(t+1, x, y), cur_flag.stone_ID, [cur_flag.flag_args[1]])
                             # For the following flags, the stone has to be present in the current time-slice
                             if cur_flag.stone_ID in self.board_dynamic[t][x][y].stones:
                                 if cur_flag.flag_type == "spatial_move":
-                                    # Check if the stone is present
-                                    self.board_dynamic[t+1][cur_flag.flag_args[0]][cur_flag.flag_args[1]].add_stone(cur_flag.stone_ID, [cur_flag.flag_args[2]])
+                                    self.place_stone_on_board(STPos(t+1, cur_flag.flag_args[0], cur_flag.flag_args[1]), cur_flag.stone_ID, [cur_flag.flag_args[2]])
                                 if cur_flag.flag_type == "attack":
-                                    self.board_dynamic[t+1][x][y].add_stone(cur_flag.stone_ID, cur_flag.flag_args)
+                                    self.place_stone_on_board(STPos(t+1, x, y), cur_flag.stone_ID, self.board_dynamic[t+1][x][y].stone_properties[cur_flag.stone_ID])
                                     # TODO resolve attack here
+                        # The following flags remove the stone from the board, and as such are the only flags which can be placed at t = t_dim - 1
+                        if cur_flag.stone_ID in self.board_dynamic[t][x][y].stones:
+                            if cur_flag.flag_type == "time_jump_out":
+                                continue
+                                # TODO Does anything need to happen here? Methinks not; this flag is only relevant for finding self-consistent causal scenarios at the end of each round
 
 
 
