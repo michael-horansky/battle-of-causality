@@ -23,6 +23,9 @@
     3.3 TUI elements
 
 
+POZNAMKA:
+flags are executed in the order movement & placement - attacks
+in between of these two things the conflict resolution takes place
 
 2.2.2 Resolving flags - movement
 
@@ -36,13 +39,14 @@ The game avoids these configurations in two ways
     -'Soft' prevention: The game will not allow a player to place a flag which would move a stone into a permanent, static obstacle (i.e. an unavailable square). Instead, the player would be encouraged to place the "wait" flag.
     -'Hard' prevention: After executing all flags, the game runs a conflict resolution routine, which moves the stones into an allowed configuration following a set of rules as outlined below.
 
-The conflict resolution routine represents the physicality of the stones. Its core philosophy is that the stones are "sokoban-like", and hence can be pushed by non-opposing movement of other stones. The rules for conflict resolution are applied in order as follows:
+The conflict resolution routine represents the physicality of the stones. Even though the routine may revert the spatial movement of a stone, note that if the stone also changed its azimuth, this azimuth change does not revert. Its core philosophy is that the stones are "sokoban-like", and hence can be pushed by non-opposing movement of other stones. The rules for conflict resolution are applied in order as follows:
 
     1. 'Sokoban push': For every square occupied by exactly two stones, if one of these stones occupied the same square in the previous time-slice, it will be pushed in the direction of the other stone's approach. This will not occur if
            1.1. the other stone did not move onto this square from the previous time-slice spatially, but rather was placed here, e.g. through a time-jump-in, or
            1.2. the square onto which the stone would be pushed is unavailable or occupied (much like in Sokoban, one cannot push two stones with one move).
-    2. 'Impasse': Now, for every square occupied by more than one stone, all the stones on this square which have NOT been placed on this square in this time-slice (i.e. they are present in the previous time-slice) are moved back to the square which they occupied in the previous time-slice, as well as the stones they pushed through the 'Sokoban push' rule. This rule chains, and is applied repeatedly until all stones which are still placed on squares which are occupied by more than one stone have already been moved by this rule.
-    3. 'Explosion': Finally, for every square occupied by more than one stone, all stones on this square are deleted.
+    2. 'Opposition': For every stone which is tagged as 'opposable', if it moved from position A to position B and there exists another opposable stone which moved from position B to position A, both stones are returned to their origin.
+    3. 'Impasse': Now, for every square occupied by more than one stone, all the stones on this square which have NOT been placed on this square in this time-slice (i.e. they are present in the previous time-slice) are moved back to the square which they occupied in the previous time-slice, as well as the stones they pushed through the 'Sokoban push' rule. This rule chains, and is applied repeatedly until all stones which are still placed on squares which are occupied by more than one stone have already been moved by this rule.
+    4. 'Explosion': Finally, for every square occupied by more than one stone, all stones on this square are deleted.
 
 Notice the order of these rules. We see that sokoban pushes only happen to stones which have not moved between this and the previous time-slice, or were placed onto the board, but rather chose a waiting action, such as 'wait', 'rotate', 'attack' etc. Notably, two stones moving onto the same square, be it in opposing or perpendicular directions, are returned back onto their original squares due to the 'impasse' rule. This means that no stone has 'priority' in movement. Also, if a stone time-jumps-in at time t on the same square a stone moves onto from time-slice t-1, the spatial movement of the second stone is blocked. Hence, opening time portals are treated as momentary blockades. Finally, since the 'Sokoban push' rule doesn't apply if the waiting stone would be pushed onto an occupied square, this means that sokoban-like movement does have a lower priority than regular movement (you can think of this as the fact stones are "slowed down" by pushing a stone in front of them). For an example, see Fig. 1.
 

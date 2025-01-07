@@ -38,6 +38,16 @@ class Board_square():
             self.causally_free_stones.append(associated_stone_ID)
         del self.flags[flag_index]
 
+    def get_flag_arguments(self, flag_ID):
+        for cur_flag in self.flags:
+            if cur_flag.flag_ID == flag_ID:
+                return(cur_flag.flag_args.copy())
+
+    def set_flag_arguments(self, flag_ID, new_arguments):
+        for cur_flag in self.flags:
+            if cur_flag.flag_ID == flag_ID:
+                cur_flag.flag_args = new_arguments.copy()
+
     def remove_stones(self):
         self.stones = []
         self.occupied = False

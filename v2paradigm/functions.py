@@ -79,6 +79,17 @@ def human_readable_azimuth(a):
         return('left')
     return('jump')
 
+def encode_azimuth(human_readable_a):
+    if human_readable_a in ['up', 'u', '^', '0']:
+        return(0)
+    if human_readable_a in ['right', 'r', '>', '1']:
+        return(1)
+    if human_readable_a in ['down', 'd', 'v', '2']:
+        return(2)
+    if human_readable_a in ['left', 'l', '<', '3']:
+        return(3)
+    return(None)
+
 class color:
    PURPLE = '\033[95m'
    CYAN = '\033[96m'

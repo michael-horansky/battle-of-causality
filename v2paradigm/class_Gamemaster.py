@@ -48,6 +48,14 @@ class Gamemaster():
         #self.flag_types = ['add_stone', 'time_jump_out', 'time_jump_in', 'spatial_move', 'attack'] #the order matters in here, actually! spawns first, then moves and shootings
         self.setup_squares = [] # this acts as board_dynamic with t = -1, and only accepts stone creating flags
 
+        self.flag_index = {} # [flag_ID] = STPos
+
+        self.timejump_surjection = {} # [time_jump_out] = time_jump_in
+        self.tjo_index = {} # [time_jump_out] = STPos
+        self.tji_index = {} # [time_jump_out] = STPos
+        self.tji_ID_list = [] # This list is always ordered in an ascending order
+        self.tji_bearing = {} # This updates on every self.execute_moves. [tji_ID] = number of activated matching TJOs
+
         # TUI elements
         self.board_delim = ' | '
 
@@ -58,6 +66,7 @@ class Gamemaster():
         new_flag = Flag('add_stone', faction, [a0])
         new_ID = new_flag.stone_ID
         self.setup_squares[x][y].add_flag(new_flag)
+        self.flag_index[new_flag.flag_ID] = STPos(-1, x, y)
         self.stones[new_ID] = Stone(new_ID, faction, self.t_dim)
         self.faction_armies[faction].append(new_ID)
 
@@ -118,6 +127,12 @@ class Gamemaster():
                     self.board_dynamic[t][x].append(Board_square(STPos(t, x, y)))
 
         self.conflicting_squares = repeated_list(self.t_dim, [])
+
+        self.flag_index = {}
+
+        self.timejump_surjection = {}
+        self.tjo_index = {}
+        self.tji_index = {}
 
         # Calculate TUI parameters for printing
         self.single_board_width = self.x_dim * 2 + len(str(self.y_dim - 1))
@@ -291,10 +306,73 @@ class Gamemaster():
     # -------------- Flag management
     # Methods which add new Flags always return the Flag ID
 
-    def add_spatial_move(self, stone_ID, t, old_x, old_y, new_x, new_y, new_a):
+    def remove_flag_from_game(self, flag_ID):
+        flag_pos = self.flag_index[flag_ID]
+        if flag_pos.t == -1:
+            self.setup_squares[flag_pos.x][flag_pos.y].remove_flag(flag_ID)
+        else:
+            self.board_dynamic[flag_pos.t][flag_pos.x][flag_pos.y].remove_flag(flag_ID)
+        del self.flag_index[flag_ID]
+        if flag_ID in self.tjo_index.keys():
+            del self.tjo_index[flag_ID]
+        if flag_ID in self.tji_index.keys():
+            del self.tji_index[flag_ID]
+        if flag_ID in self.tji_ID_list:
+            self.tji_ID_list.remove(flag_ID)
+        if flag_ID in self.timejump_surjection.keys():
+            del self.timejump_surjection[flag_ID]
+
+    def add_flag_spatial_move(self, stone_ID, t, old_x, old_y, new_x, new_y, new_a):
         new_flag = Flag("spatial_move", self.stones[stone_ID].player_faction, [new_x, new_y, new_a], stone_ID)
         self.board_dynamic[t][old_x][old_y].add_flag(new_flag)
+        self.flag_index[new_flag.flag_ID] = STPos(t, old_x, old_y)
         return(new_flag.flag_ID)
+
+    def add_flag_attack(self, stone_ID, t, x, y, allow_friendly_fire):
+        new_flag = Flag("attack", self.stones[stone_ID].player_faction, [allow_friendly_fire], stone_ID)
+        self.board_dynamic[t][x][y].add_flag(new_flag)
+        self.flag_index[new_flag.flag_ID] = STPos(t, x, y)
+        return(new_flag.flag_ID)
+
+    def add_flag_timejump(self, stone_ID, old_t, old_x, old_y, new_t, new_x, new_y, new_a):
+        tji_flag = Flag("time_jump_in", self.stones[stone_ID].player_faction, [True, new_a])
+        child_ID = tji_flag.flag_ID
+        tjo_flag = Flag("time_jump_out", self.stones[stone_ID].player_faction, [STPos(new_t - 1, new_x, new_y), child_ID], stone_ID)
+
+        # We place the flags.
+        # The time_jump_in flag is actually placed one t lower than specified (-1 is allowed!), so the child can be controlled on the same time-slice it is placed onto.
+        self.board_dynamic[old_t][old_x][old_y].add_flag(tjo_flag)
+        if new_t - 1 >= 0:
+            self.board_dynamic[new_t - 1][new_x][new_y].add_flag(tji_flag)
+        if new_t == 0:
+            # We place the flag into a special time-slice
+            self.setup_squares[new_x][new_y].add_flag(tji_flag)
+        self.flag_index[tjo_flag.flag_ID] = STPos(old_t, old_x, old_y)
+        self.flag_index[tji_flag.flag_ID] = STPos(new_t - 1, new_x, new_y)
+
+        # Trackers
+        self.tjo_index[tjo_flag.flag_ID] = STPos(old_t, old_x, old_y)
+        self.tji_index[tji_flag.flag_ID] = STPos(new_t - 1, new_x, new_y)
+        self.tji_ID_list.append(tji_flag.flag_ID)
+        self.timejump_surjection[tjo_flag.flag_ID] = tji_flag.flag_ID
+
+        # We add the new stone into the army
+        self.stones[tji_flag.stone_ID] = Stone(tji_flag.stone_ID, self.stones[stone_ID].player_faction, self.t_dim)
+        self.faction_armies[self.stones[stone_ID].player_faction].append(tji_flag.stone_ID)
+
+        return(tjo_flag.flag_ID, tji_flag.flag_ID)
+
+    def set_tji_activity(self, tji_ID, new_is_active):
+        tji_pos = self.flag_index[tji_ID]
+        if tji_pos.t == -1:
+            old_arguments = self.setup_squares[tji_pos.x][tji_pos.y].get_flag_arguments(tji_ID)
+            old_arguments[0] = new_is_active
+            self.setup_squares[tji_pos.x][tji_pos.y].set_flag_arguments(tji_ID, old_arguments)
+        else:
+            old_arguments = self.board_dynamic[tji_pos.t][tji_pos.x][tji_pos.y].get_flag_arguments(tji_ID)
+            old_arguments[0] = new_is_active
+            self.board_dynamic[tji_pos.t][tji_pos.x][tji_pos.y].set_flag_arguments(tji_ID, old_arguments)
+
 
     def resolve_conflicts(self, t):
         # Resolves conflicts in a specified time-slice
@@ -331,7 +409,7 @@ class Gamemaster():
                         if self.is_square_available(new_pos_x, new_pos_y) and not self.board_dynamic[t][new_pos_x][new_pos_y].occupied:
                             #self.board_dynamic[t][new_pos_x][new_pos_y].add_stone(stone_a, self.board_dynamic[t][x][y].stone_properties[stone_a])
                             #self.board_dynamic[t][x][y].remove_stone(stone_a)
-                            self.change_stone_pos(self, stone_a, t, x, y, new_pos_x, new_pos_y)
+                            self.change_stone_pos(stone_a, t, x, y, new_pos_x, new_pos_y)
                             # We remove the conflict
                             self.conflicting_squares[t].remove((x, y))
                 if prev_x_b == x and prev_y_b == y:
@@ -343,11 +421,39 @@ class Gamemaster():
                         if self.is_square_available(new_pos_x, new_pos_y) and not self.board_dynamic[t][new_pos_x][new_pos_y].occupied:
                             #self.board_dynamic[t][new_pos_x][new_pos_y].add_stone(stone_b, self.board_dynamic[t][x][y].stone_properties[stone_b])
                             #self.board_dynamic[t][x][y].remove_stone(stone_b)
-                            self.change_stone_pos(self, stone_b, t, x, y, new_pos_x, new_pos_y)
+                            self.change_stone_pos(stone_b, t, x, y, new_pos_x, new_pos_y)
                             # We remove the conflict
                             self.conflicting_squares[t].remove((x, y))
 
-        # 2 Impasse
+        # 2 Opposition
+        # Opposition do not occur at t = 0, as they depend on the state of the board in the previous time-slice
+        if t != 0:
+            for x in range(self.x_dim):
+                for y in range(self.y_dim):
+                    for one_ID in self.board_dynamic[t][x][y].stones:
+                        if not self.stones[one_ID].opposable:
+                            continue
+                        old_pos = self.stones[one_ID].history[t-1]
+                        if old_pos == None:
+                            continue
+                        old_x, old_y, old_a = old_pos
+                        if old_x == x and old_y == y:
+                            # No movement happened
+                            continue
+                        for two_ID in self.board_dynamic[t][old_x][old_y].stones:
+                            if not self.stones[two_ID].opposable:
+                                continue
+                            two_old_pos = self.stones[two_ID].history[t-1]
+                            if two_old_pos == None:
+                                continue
+                            two_old_x, two_old_y, two_old_a = two_old_pos
+                            if x == two_old_x and y == two_old_y:
+                                # Opposition
+                                self.change_stone_pos(one_ID, t, x, y, old_x, old_y)
+                                self.change_stone_pos(two_ID, t, old_x, old_y, x, y)
+                                break
+
+        # 3 Impasse
         # Impasses do not occur at t = 0, as they depend on the state of the board in the previous time-slice
         if t != 0:
             # Since this rule chains, it will keep adding to squares_to_be_checked according to need. Stones which are returned back through an impasse or cannot be returned are tracked in stones_checked,
@@ -359,7 +465,8 @@ class Gamemaster():
                 x, y = cur_pos
                 # We take all the stones present, add them to the stones_checked tracker, and move those which existed in the previous time-slice back
                 # If we move them back into an occupied square, that square is naturally added to squares_to_be_checked AND to self.conflicting_squares
-                for cur_ID in self.board_dynamic[t][x][y].stones:
+                stones_on_current_square = self.board_dynamic[t][x][y].stones.copy()
+                for cur_ID in stones_on_current_square:
                     if cur_ID in stones_checked:
                         # The stone has already been moved back
                         continue
@@ -378,7 +485,7 @@ class Gamemaster():
                             squares_to_be_checked.append((prev_x, prev_y))
                         if not (prev_x, prev_y) in self.conflicting_squares[t]:
                             self.conflicting_squares[t].append((prev_x, prev_y))
-                    self.change_stone_pos(self, cur_ID, t, x, y, prev_x, prev_y)
+                    self.change_stone_pos(cur_ID, t, x, y, prev_x, prev_y)
                 # We check if the square is no longer conflicting. If not, we remove it from self.conflicting_squares[t]
                 if self.is_square_available(x, y):
                     if len(self.board_dynamic[t][x][y].stones) < 2:
@@ -386,12 +493,83 @@ class Gamemaster():
                 elif not self.board_dynamic[t][x][y].occupied:
                     self.conflicting_squares[t].remove(cur_pos)
 
-        # 3 Explosion
+        # 4 Explosion
         # We remove all stones from all remaining conflicting squares
         while(len(self.conflicting_squares[t]) > 0):
             cur_pos = self.conflicting_squares[t].pop(0)
             x, y = cur_pos
             self.board_dynamic[t][x][y].remove_stones()
+
+    # Temporal resolution algorithms
+
+    def find_causally_consistent_scenarios(self):
+        # takes the internal timejump surjection and returns a list of activity maps, where each activity map is a list of booleans,
+        # where the i-th element specifies if the i-th TJI (ordered by flag_ID) should be active.
+
+        # A causally consistent scenario is one such that
+        #   -For every in-active TJI, no stone reaches any corresponding TJO
+        #   -For every active TJI, exactly one stone reaches a corresponding TJO
+
+        causally_consistent_scenarios = []
+        tji_N = len(self.tji_ID_list)
+        activity_map = [False] * tji_N
+
+        for n in range(int(np.power(2, tji_N))):
+            # first, prepare the moves
+            how_many_TJOs_required = {}
+            for i in range(tji_N):
+                # We set the is_active argument according to the activity map
+                self.set_tji_activity(self.tji_ID_list[i], activity_map[i])
+                if activity_map[i] == True:
+                    how_many_TJOs_required[self.tji_ID_list[i]] = 1
+                if activity_map[i] == False:
+                    how_many_TJOs_required[self.tji_ID_list[i]] = 0
+            # execute them
+            self.execute_moves()
+            # Now we just compare self.tji_bearing to how_many_TJOs_required
+            is_scenario_causally_consistent = True
+            for tji_ID in self.tji_ID_list:
+                if how_many_TJOs_required[tji_ID] != self.tji_bearing[tji_ID]:
+                    is_scenario_causally_consistent = False
+                    break
+            if is_scenario_causally_consistent:
+                causally_consistent_scenarios.append(activity_map.copy())
+
+            # find the next activity map
+            for i in range(tji_N):
+                if activity_map[i] == False:
+                    activity_map[i] = True
+                    break
+                else:
+                    activity_map[i] = False
+        return(causally_consistent_scenarios)
+
+    def select_scenario(self, causally_consistent_scenarios):
+        # THE PARADIGM HERE: We prioritize more recent TJIs to be active: the bigger the associated tji flag ID, the earlier will this break a tie
+        if len(causally_consistent_scenarios) == 1:
+            return(causally_consistent_scenarios[0])
+        tji_N = len(self.tji_ID_list)
+        for i in range(tji_N - 1, -1, -1):
+            if len(causally_consistent_scenarios) == 1:
+                return(causally_consistent_scenarios[0])
+            is_TJI_filtering = False
+            first_val = causally_consistent_scenarios[0][i]
+            for j in range(1, len(causally_consistent_scenarios)):
+                if causally_consistent_scenarios[j][i] != first_val:
+                    is_TJI_filtering = True
+                    break
+            if is_TJI_filtering:
+                # we delete all the scenarios that turn set TJI inactive
+                j = 0
+                while(j < len(causally_consistent_scenarios)):
+                    if causally_consistent_scenarios[j][i] == False:
+                        causally_consistent_scenarios.pop(j)
+                    else:
+                        j += 1
+        print("The causally_consistent_scenarios list obviously wasn't sane, please check the remainder:")
+        print(causally_consistent_scenarios)
+        print("Returning the first element...")
+        return(causally_consistent_scenarios[0])
 
 
 
@@ -402,6 +580,9 @@ class Gamemaster():
 
         # First, we clear the board
         self.clear_board()
+        self.tji_bearing = {}
+        for tji_ID in self.tji_index.keys():
+            self.tji_bearing[tji_ID] = 0
 
         # Then, we execute setup flags, i.e. initial stone creation
         for x in range(self.x_dim):
@@ -409,6 +590,9 @@ class Gamemaster():
                 for cur_flag in self.setup_squares[x][y].flags:
                     if cur_flag.flag_type == "add_stone":
                         self.board_dynamic[0][x][y].add_stone(cur_flag.stone_ID, cur_flag.flag_args)
+                    if cur_flag.flag_type == "time_jump_in":
+                        if cur_flag.flag_args[0]:
+                            self.board_dynamic[0][x][y].add_stone(cur_flag.stone_ID, [cur_flag.flag_args[1]])
 
         # Then, we execute flags for each time slice sequantially
         # TODO
@@ -446,19 +630,19 @@ class Gamemaster():
                             if cur_flag.flag_type == "add_stone":
                                 self.place_stone_on_board(STPos(t+1, x, y), cur_flag.stone_ID, [cur_flag.flag_args[0]])
                             if cur_flag.flag_type == "time_jump_in":
-                                self.place_stone_on_board(STPos(t+1, x, y), cur_flag.stone_ID, [cur_flag.flag_args[1]])
+                                if cur_flag.flag_args[0]:
+                                    self.place_stone_on_board(STPos(t+1, x, y), cur_flag.stone_ID, [cur_flag.flag_args[1]])
                             # For the following flags, the stone has to be present in the current time-slice
                             if cur_flag.stone_ID in self.board_dynamic[t][x][y].stones:
                                 if cur_flag.flag_type == "spatial_move":
                                     self.place_stone_on_board(STPos(t+1, cur_flag.flag_args[0], cur_flag.flag_args[1]), cur_flag.stone_ID, [cur_flag.flag_args[2]])
                                 if cur_flag.flag_type == "attack":
-                                    self.place_stone_on_board(STPos(t+1, x, y), cur_flag.stone_ID, self.board_dynamic[t+1][x][y].stone_properties[cur_flag.stone_ID])
+                                    self.place_stone_on_board(STPos(t+1, x, y), cur_flag.stone_ID, self.board_dynamic[t][x][y].stone_properties[cur_flag.stone_ID])
                                     # TODO resolve attack here
                         # The following flags remove the stone from the board, and as such are the only flags which can be placed at t = t_dim - 1
                         if cur_flag.stone_ID in self.board_dynamic[t][x][y].stones:
                             if cur_flag.flag_type == "time_jump_out":
-                                continue
-                                # TODO Does anything need to happen here? Methinks not; this flag is only relevant for finding self-consistent causal scenarios at the end of each round
+                                self.tji_bearing[cur_flag.flag_args[1]] += 1
 
 
 
@@ -512,8 +696,10 @@ class Gamemaster():
                         cur_pos = self.stones[cur_stone].history[self.current_time]
                         x, y, a = cur_pos
                         self.print_heading_message(f"Command your stone at ({x},{y}).", 3)
-
-                        move_msg = self.stones[cur_stone].parse_move_cmd(self, self.current_time)
+                        if self.current_time < self.t_dim - 1:
+                            move_msg = self.stones[cur_stone].parse_move_cmd(self, self.current_time)
+                        else:
+                            move_msg = self.stones[cur_stone].parse_final_move_cmd(self, self.current_time)
                         if move_msg == "quit":
                             return(-1)
                         if move_msg == "undo":
@@ -522,17 +708,31 @@ class Gamemaster():
                             # We delete the Flag we added to this stone if any
                             if flags_added_this_turn[stone_index] != None:
                                 prev_x, prev_y, prev_a = self.stones[currently_causally_free_stones[player][stone_index]].history[self.current_time]
-                                self.board_dynamic[self.current_time][prev_x][prev_y].remove_flag(flags_added_this_turn[stone_index])
+                                for added_flag_ID in flags_added_this_turn[stone_index]:
+                                    self.remove_flag_from_game(added_flag_ID)
+                                    #self.board_dynamic[self.current_time][prev_x][prev_y].remove_flag()
                             continue
 
                         move_msg_split = move_msg.split(" ")
                         if move_msg_split[0] == "flag_added":
                             # A new Flag was added
-                            flags_added_this_turn[stone_index] = int(move_msg_split[1])
+                            flags_added_for_stone = []
+                            for i in range(1, len(move_msg_split)):
+                                flags_added_for_stone.append(int(move_msg_split[i]))
+                            flags_added_this_turn[stone_index] = flags_added_for_stone
 
                         stone_index += 1
 
-            break
+            # We have now spanned the entire temporal length of the board, and must now select a causally consistent scenario
+            self.print_heading_message("Selecting a causally-consistent scenario", 1)
+            causally_consistent_scenarios = self.find_causally_consistent_scenarios()
+            if len(causally_consistent_scenarios) == 0:
+                # And just like that, we have reached a paradoxical situation. What now?
+                self.print_heading_message("A paradox has been reached!", 2)
+            canonical_scenario = self.select_scenario(causally_consistent_scenarios.copy())
+            for i in range(len(self.tji_ID_list)):
+                # We set the is_active argument according to the activity map
+                self.set_tji_activity(self.tji_ID_list[i], canonical_scenario[i])
 
 
 
