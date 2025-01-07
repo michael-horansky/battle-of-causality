@@ -276,10 +276,17 @@ class Gamemaster():
                     self.board_dynamic[t][x][y].remove_stones()
 
     def place_stone_on_board(self, pos, stone_ID, stone_properties):
-        # If the square is already occupied, we track the square in a list of conflicting squares
-        if self.board_dynamic[pos.t][pos.x][pos.y].occupied:
+        # If the square is already occupied or unavailable, we track the square in a list of conflicting squares
+        if self.board_dynamic[pos.t][pos.x][pos.y].occupied or (not self.is_square_available(pos.x, pos.y)):
             self.conflicting_squares[pos.t].append((pos.x,pos.y))
         self.board_dynamic[pos.t][pos.x][pos.y].add_stone(stone_ID, stone_properties)
+
+    def change_stone_pos(self, stone_ID, t, old_x, old_y, new_x, new_y):
+        if not stone_ID in self.board_dynamic[t][old_x][old_y].stones:
+            print(f"Error: Gamemaster.change_stone_pos attempted to move stone {stone_ID} from ({t},{old_x},{old_y}), where it currently isn't.")
+            return(-1)
+        self.board_dynamic[t][new_x][new_y].add_stone(stone_ID, self.board_dynamic[t][old_x][old_y].stone_properties[stone_ID])
+        self.board_dynamic[t][old_x][old_y].remove_stone(stone_ID)
 
     def resolve_conflicts(self, t):
         # Resolves conflicts in a specified time-slice
@@ -292,9 +299,12 @@ class Gamemaster():
             squares_to_be_checked = self.conflicting_squares[t].copy()
 
             while(len(squares_to_be_checked) > 0):
-                cur_pos = squares_to_be_checked.pop()
+                cur_pos = squares_to_be_checked.pop(0)
                 x, y = cur_pos
                 if len(self.board_dynamic[t][x][y].stones) != 2:
+                    continue
+                # Sokoban pushes cannot occur through walls
+                if not self.is_square_available(x, y):
                     continue
                 stone_a = self.board_dynamic[t][x][y].stones[0]
                 stone_b = self.board_dynamic[t][x][y].stones[1]
@@ -311,8 +321,9 @@ class Gamemaster():
                         # Sokoban push can occur!
                         new_pos_x, new_pos_y = pos_step((x, y), b_delta)
                         if self.is_square_available(new_pos_x, new_pos_y) and not self.board_dynamic[t][new_pos_x][new_pos_y].occupied:
-                            self.board_dynamic[t][new_pos_x][new_pos_y].add_stone(stone_a, self.board_dynamic[t][x][y].stone_properties[stone_a])
-                            self.board_dynamic[t][x][y].remove_stone(stone_a)
+                            #self.board_dynamic[t][new_pos_x][new_pos_y].add_stone(stone_a, self.board_dynamic[t][x][y].stone_properties[stone_a])
+                            #self.board_dynamic[t][x][y].remove_stone(stone_a)
+                            self.change_stone_pos(self, stone_a, t, x, y, new_pos_x, new_pos_y)
                             # We remove the conflict
                             self.conflicting_squares[t].remove((x, y))
                 if prev_x_b == x and prev_y_b == y:
@@ -322,18 +333,58 @@ class Gamemaster():
                         # Sokoban push can occur!
                         new_pos_x, new_pos_y = pos_step((x, y), a_delta)
                         if self.is_square_available(new_pos_x, new_pos_y) and not self.board_dynamic[t][new_pos_x][new_pos_y].occupied:
-                            self.board_dynamic[t][new_pos_x][new_pos_y].add_stone(stone_b, self.board_dynamic[t][x][y].stone_properties[stone_b])
-                            self.board_dynamic[t][x][y].remove_stone(stone_b)
+                            #self.board_dynamic[t][new_pos_x][new_pos_y].add_stone(stone_b, self.board_dynamic[t][x][y].stone_properties[stone_b])
+                            #self.board_dynamic[t][x][y].remove_stone(stone_b)
+                            self.change_stone_pos(self, stone_b, t, x, y, new_pos_x, new_pos_y)
                             # We remove the conflict
                             self.conflicting_squares[t].remove((x, y))
 
         # 2 Impasse
-        # Since this rule chains, it will keep adding to squares_to_be_checked according to need. Stones which are returned back through an impasse or cannot be returned are tracked in stones_checked,
-        # and the impasse checking stops once all conflicting squares are occupied only by stones present in stones_checked
-        squares_to_be_checked = self.conflicting_squares[t].copy()
-        stones_checked = []
-        while(len(squares_to_be_checked) > 0):
-            break
+        # Impasses do not occur at t = 0, as they depend on the state of the board in the previous time-slice
+        if t != 0:
+            # Since this rule chains, it will keep adding to squares_to_be_checked according to need. Stones which are returned back through an impasse or cannot be returned are tracked in stones_checked,
+            # and the impasse checking stops once all conflicting squares are occupied only by stones present in stones_checked
+            squares_to_be_checked = self.conflicting_squares[t].copy()
+            stones_checked = []
+            while(len(squares_to_be_checked) > 0):
+                cur_pos = squares_to_be_checked.pop(0)
+                x, y = cur_pos
+                # We take all the stones present, add them to the stones_checked tracker, and move those which existed in the previous time-slice back
+                # If we move them back into an occupied square, that square is naturally added to squares_to_be_checked AND to self.conflicting_squares
+                for cur_ID in self.board_dynamic[t][x][y].stones:
+                    if cur_ID in stones_checked:
+                        # The stone has already been moved back
+                        continue
+                    stones_checked.append(cur_ID)
+                    previous_pos = self.stones[cur_ID].history[t-1]
+                    if previous_pos == None:
+                        # The stone was just added onto the board.
+                        continue
+                    prev_x, prev_y = previous_pos
+                    if prev_x == x and prev_y == y:
+                        # The stone was waiting in the previous time-slice, and is not to be moved.
+                        continue
+                    # We move the stone back. If the previous square is occupied or unavailable, we add it to squares_to_be_checked
+                    if self.board_dynamic[t][prev_x][prev_y].occupied or (not self.is_square_available(prev_x, prev_y)):
+                        if not previous_pos in squares_to_be_checked:
+                            squares_to_be_checked.append(previous_pos)
+                        if not previous_pos in self.conflicting_squares[t]:
+                            self.conflicting_squares[t].append(previous_pos)
+                    self.change_stone_pos(self, cur_ID, t, x, y, prev_x, prev_y)
+                # We check if the square is no longer conflicting. If not, we remove it from self.conflicting_squares[t]
+                if self.is_square_available(x, y):
+                    if len(self.board_dynamic[t][x][y].stones) < 2:
+                        self.conflicting_squares[t].remove(cur_pos)
+                elif not self.board_dynamic[t][x][y].occupied:
+                    self.conflicting_squares[t].remove(cur_pos)
+
+        # 3 Explosion
+        # We remove all stones from all remaining conflicting squares
+        while(len(self.conflicting_squares[t]) > 0):
+            cur_pos = self.conflicting_squares[t].pop(0)
+            x, y = cur_pos
+            self.board_dynamic[t][x][y].remove_stones()
+
 
 
 
