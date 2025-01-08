@@ -1,8 +1,0 @@
-6
-XXXXXXX
-X     X
-X     X
-XaaXbbX
-X     X
-X     X
-XXXXXXX
