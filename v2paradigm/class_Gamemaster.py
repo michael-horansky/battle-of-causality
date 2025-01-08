@@ -314,8 +314,59 @@ class Gamemaster():
         print("-" * self.header_width)
 
     def print_stone_list(self):
-        for stone_ID in self.stones.keys():
-            print(stone_ID)
+        for faction in self.factions:
+            print(f"Player {faction} controls the following stones:")
+            for stone_ID in self.faction_armies[faction]:
+                msg = "  -" + str(self.stones[stone_ID])
+                if stone_ID in self.stone_inheritance.keys():
+                    msg += f" [Time-travels to become {str(self.stones[self.stone_inheritance[stone_ID]])}]"
+                print(msg)
+
+    def print_time_portals(self, t, x, y):
+        TJI_active = []
+        TJI_inactive = []
+        TJO_active = []
+        TJO_inactive = []
+        # Of course, we look for TJIs one time-slice before.
+        if t > 0:
+            tji_square = self.board_dynamic[t-1][x][y]
+        else:
+            tji_square = self.setup_squares[x][y]
+        for flag_ID in tji_square.flags:
+            if self.flags[flag_ID].flag_type == "time_jump_in":
+                if self.flags[flag_ID].flag_args[0]:
+                    TJI_active.append(flag_ID)
+                else:
+                    TJI_inactive.append(flag_ID)
+        for flag_ID in self.board_dynamic[t][x][y].flags:
+            if self.flags[flag_ID].flag_type == "time_jump_out":
+                if flag_ID in self.timejump_bijection.values():
+                    TJO_active.append(flag_ID)
+                else:
+                    TJO_inactive.append(flag_ID)
+
+        if len(TJI_active) + len(TJI_inactive) + len(TJO_active) + len(TJO_inactive) == 0:
+            print(f"The square at ({t},{x},{y}) contains no time-jumps.")
+        else:
+            print(f"The square at ({t},{x},{y}) contains the following time-jumps:")
+            if len(TJI_active) > 0:
+                print("  Active time-jumps-in:")
+                for flag_ID in TJI_active:
+                    print(f"    -Portal ID {flag_ID}: A {str(self.stones[self.flags[flag_ID].stone_ID])} jumps in.")
+            if len(TJI_inactive) > 0:
+                print("  Inactive time-jumps-in:")
+                for flag_ID in TJI_inactive:
+                    print(f"    -Portal ID {flag_ID}: A {str(self.stones[self.flags[flag_ID].stone_ID])} would jump in.")
+            if len(TJO_active) > 0:
+                print("  Used time-jumps-out:")
+                for flag_ID in TJO_active:
+                    print(f"    -Portal ID {flag_ID}: A {str(self.stones[self.flags[flag_ID].stone_ID])} jumps out.")
+            if len(TJO_inactive) > 0:
+                print("  Unused time-jumps-out:")
+                for flag_ID in TJO_inactive:
+                    print(f"    -Portal ID {flag_ID}: A {str(self.stones[self.flags[flag_ID].stone_ID])} would jump out.")
+
+
 
 
     # ----------------------------------------------------
@@ -344,6 +395,11 @@ class Gamemaster():
             self.conflicting_squares[pos.t].append((pos.x,pos.y))
         self.board_dynamic[pos.t][pos.x][pos.y].add_stone(stone_ID, stone_properties)
 
+    def remove_stone_from_game(self, stone_ID):
+        # This is only relevant on undoing a stone-generating flag. Just a complete purge of that stone
+        self.faction_armies[self.stones[stone_ID].player_faction].remove(stone_ID)
+        del self.stones[stone_ID]
+
     def change_stone_pos(self, stone_ID, t, old_x, old_y, new_x, new_y):
         if not stone_ID in self.board_dynamic[t][old_x][old_y].stones:
             print(f"Error: Gamemaster.change_stone_pos attempted to move stone {stone_ID} from ({t},{old_x},{old_y}), where it currently isn't.")
@@ -356,11 +412,17 @@ class Gamemaster():
 
     def remove_flag_from_game(self, flag_ID):
         flag_pos = self.flags[flag_ID].pos
+        # First: If this is a stone generating flag type, we need to remove the generated stone
+        if self.flags[flag_ID].flag_type in Flag.stone_generating_flag_types:
+            self.remove_stone_from_game(self.flags[flag_ID].stone_ID)
+        # Second: Remove flag from its board square
         if flag_pos.t == -1:
             self.setup_squares[flag_pos.x][flag_pos.y].remove_flag(flag_ID)
         else:
             self.board_dynamic[flag_pos.t][flag_pos.x][flag_pos.y].remove_flag(flag_ID)
+        # Third: Purge the flag
         del self.flags[flag_ID]
+        # Fourth: Remove flag from trackers
         if flag_ID in self.tji_ID_list:
             self.tji_ID_list.remove(flag_ID)
         if flag_ID in self.timejump_surjection.keys():
@@ -642,7 +704,6 @@ class Gamemaster():
                             self.board_dynamic[0][x][y].add_stone(cur_flag.stone_ID, [cur_flag.flag_args[1]])
 
         # Then, we execute flags for each time slice sequantially
-        # TODO
         for t in range(self.t_dim):
             # At t, we are treating the state of the board at t as canonical, and we use it to
             # calculate the state of the board at t + 1. We do this by first naively resolving
@@ -693,7 +754,7 @@ class Gamemaster():
                                 if reset_timejump_trackers:
                                     self.tji_bearing[cur_flag.flag_args[1]] += 1
                                     self.timejump_bijection[cur_flag.flag_args[1]] = cur_flag.flag_ID
-                                    #self.stone_inheritance[cur_flag.stone_ID] = self.flags
+                                    self.stone_inheritance[cur_flag.stone_ID] = self.flags[cur_flag.flag_args[1]].stone_ID
 
 
 

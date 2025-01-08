@@ -27,6 +27,14 @@ POZNAMKA:
 flags are executed in the order movement & placement - attacks
 in between of these two things the conflict resolution takes place
 
+POZNAMKA:
+TJIs added in this round shouldnt be considered when choosing causally consistent scenarios at the end of the round and should be forced inactive during choosing and then flipped active
+THis is because these TJIs dont do anything yet, just place a causally free stone on the board.
+BOMBARDIER's attacks are of course an exception
+
+
+
+
 2.2.2 Resolving flags - movement
 
 The game disallows the following board configurations to occur at the beginning of a round:

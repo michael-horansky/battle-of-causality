@@ -41,7 +41,7 @@ class Stone():
                 "quit/exit" : [None, None, "Quit the game."],
                 "undo" : [None, None, "Revert back to commanding the previous stone, erasing the previously placed flag."],
                 "list_stones/ls": [None, None, "List stones belonging to each player."],
-                "list_portals/lp" : ["t, x, y", None, "Lists time-jumps-in on the specified square."],
+                "list_portals/lp" : ["t", "x, y", "Lists time-jumps-in on the specified square. Position defaults to stone position."],
                 "track" : ["ID", None, "Tracks the stone with the specified ID."]
             }
 
@@ -62,6 +62,9 @@ class Stone():
             }
 
         self.opposable = True
+
+    def __str__(self):
+        return("Stone " + color.DARKCYAN + "TANK" + color.END + " (ID " + color.CYAN + str(self.ID) + color.END + ")")
 
     def display_commands_in_helplog(self, commands):
         for cmd, options in commands.items():
@@ -99,6 +102,47 @@ class Stone():
             available_commands = self.type_specific_commands
         self.display_commands_in_helplog(available_commands)
 
+    def parse_generic_move_cmd(self, gm, cmd_raw, x, y):
+        # Generic commands
+        if cmd_raw in ['h', 'help']:
+            self.print_help_message(False)
+            return("success")
+
+        if cmd_raw in ['q', 'quit', 'exit']:
+            print("Quitting the game...")
+            return("quit")
+
+        if cmd_raw in ['u', 'undo']:
+            print("Reverting to the previous stone...")
+            return("undo")
+
+        if cmd_raw in ['list_stones', 'ls']:
+            gm.print_stone_list()
+            return("success")
+
+        cmd_raw_list = cmd_raw.split(" ")
+        if cmd_raw_list[0] in ['list_portals', 'lp']:
+            if len(cmd_raw_list) == 2:
+                try:
+                    target_time = int(cmd_raw_list[1])
+                    gm.print_time_portals(target_time, x, y)
+                    return("success")
+                except:
+                    return("except Submitted argument not formatted like an integer")
+            elif len(cmd_raw_list) == 4:
+                try:
+                    target_time = int(cmd_raw_list[1])
+                    target_x = int(cmd_raw_list[2])
+                    target_y = int(cmd_raw_list[3])
+                    gm.print_time_portals(target_time, target_x, target_y)
+                    return("success")
+                except:
+                    return("except Submitted arguments not formatted like an integer")
+            else:
+                return("except Mismatched number of arguments")
+
+        return("fail")
+
 
 
     def parse_move_cmd(self, gm, t):
@@ -115,23 +159,16 @@ class Stone():
         while(True):
             try:
                 input_cmd_raw = input("Input the command in the form \"[command name] [argument]\", or type \"help\": ")
+
                 # Generic commands
-                if input_cmd_raw in ['h', 'help']:
-                    self.print_help_message(False)
+                generic_msg = self.parse_generic_move_cmd(gm, input_cmd_raw, cur_x, cur_y)
+                generic_msg_list = generic_msg.split(' ')
+                if generic_msg_list[0] == "success":
                     continue
-
-                if input_cmd_raw in ['q', 'quit', 'exit']:
-                    print("Quitting the game...")
-                    return("quit")
-
-                if input_cmd_raw in ['u', 'undo']:
-                    print("Reverting to the previous stone...")
-                    return("undo")
-
-                if input_cmd_raw in ['list_stones', 'ls']:
-                    gm.print_stone_list()
-                    continue
-
+                elif generic_msg_list[0] == "except":
+                    raise Exception(" ".join(generic_msg_list[1:]))
+                elif generic_msg_list[0] != "fail":
+                    return(generic_msg)
 
 
                 if input_cmd_raw in ['', 'w', 'wait']:
@@ -200,18 +237,17 @@ class Stone():
         while(True):
             try:
                 input_cmd_raw = input("Input the command in the form \"[command name] [argument]\", or type \"help\": ")
-                # Inheritable help display
-                if input_cmd_raw in ['h', 'help']:
-                    self.print_help_message(True)
+
+                # Generic commands
+                generic_msg = self.parse_generic_move_cmd(gm, input_cmd_raw, cur_x, cur_y)
+                generic_msg_list = generic_msg.split(' ')
+                if generic_msg_list[0] == "success":
                     continue
+                elif generic_msg_list[0] == "except":
+                    raise Exception(" ".join(generic_msg_list[1:]))
+                elif generic_msg_list[0] != "fail":
+                    return(generic_msg)
 
-                if input_cmd_raw in ['q', 'quit', 'exit']:
-                    print("Quitting the game...")
-                    return("quit")
-
-                if input_cmd_raw in ['u', 'undo']:
-                    print("Reverting to the previous stone...")
-                    return("undo")
 
                 if input_cmd_raw in ['', 'p', 'pass']:
                     return("pass")

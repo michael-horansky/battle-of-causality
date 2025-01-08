@@ -41,5 +41,5 @@
 -Attacks a selected adjanced square
 -Friendly fire on
 -Can time jump any time
--SPECIAL: Can adopt a time-jump-out of any stone type (i.e. can retroactively become a different stone which is time-jumping-in)
+-SPECIAL: Can adopt a time-jump-in of any stone type (i.e. can retroactively become a different stone which is time-jumping-in)
 
