@@ -42,7 +42,8 @@ class Flag():
     # ------ constructors, destructors, descriptors ------
     # ----------------------------------------------------
 
-    def __init__(self, flag_type, player_faction, flag_args, stone_ID = -1):
+    def __init__(self, pos, flag_type, player_faction, flag_args, stone_ID = -1):
+        self.pos = pos
         self.flag_type = flag_type
         self.player_faction = player_faction
         self.flag_args = flag_args.copy()

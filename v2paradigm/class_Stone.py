@@ -35,6 +35,16 @@ class Stone():
 
         self.history = [None] * t_dim # This allows the stone to remember its positions in time, shortening tracking time. [t] = (x,y,a)
 
+        # Generic help-log
+        self.generic_commands = {
+                "help" : [None, None, "Display the help-log."],
+                "quit/exit" : [None, None, "Quit the game."],
+                "undo" : [None, None, "Revert back to commanding the previous stone, erasing the previously placed flag."],
+                "list_stones/ls": [None, None, "List stones belonging to each player."],
+                "list_portals/lp" : ["t, x, y", None, "Lists time-jumps-in on the specified square."],
+                "track" : ["ID", None, "Tracks the stone with the specified ID."]
+            }
+
         # The following is the help-log for type specific commands. Change this when inheriting Stone
         # type_specific_commands[command name] = [required args, optional args, message]
         # Use '/' as an alias delimiter and ', ' as an argument delimiter
@@ -53,18 +63,8 @@ class Stone():
 
         self.opposable = True
 
-
-    def print_help_message(self, is_final_command = False):
-        print("You are now placing a command flag for your stone. Select one from the following options.")
-        print("(The format is \"" + color.GREEN + "command name" + color.END + " [" + color.BLUE + "arguments" + color.END + ", " + color.CYAN + "optional arguments" + color.END + "]\"  Forward slash denotes alias)")
-        print("  -'" + color.GREEN + "help" + color.END + "': Display this message again.")
-        print("  -'" + color.GREEN + "quit" + color.END + "/" + color.GREEN + "exit" + color.END + "': Quit the game.")
-        print("  -'" + color.GREEN + "undo" + color.END + "': Revert back to commanding the previous stone, erasing the previously placed flag.")
-        if is_final_command:
-            available_commands = self.type_specific_final_commands
-        else:
-            available_commands = self.type_specific_commands
-        for cmd, options in available_commands.items():
+    def display_commands_in_helplog(self, commands):
+        for cmd, options in commands.items():
             log_str = "  -'"
             cmd_aliases = cmd.split("/")
             cmd_readable = color.GREEN + (color.END + "/" + color.GREEN).join(cmd_aliases) + color.END
@@ -86,6 +86,19 @@ class Stone():
             log_str += arg_str + ": " + options[2]
             print(log_str)
 
+    def print_help_message(self, is_final_command = False):
+        print("You are now placing a command flag for your stone. Select one from the following options.")
+        print("(The format is \"" + color.GREEN + "command name" + color.END + " [" + color.BLUE + "arguments" + color.END + ", " + color.CYAN + "optional arguments" + color.END + "]\". Forward slash denotes alias.)")
+        #print("  -'" + color.GREEN + "help" + color.END + "': Display this message again.")
+        #print("  -'" + color.GREEN + "quit" + color.END + "/" + color.GREEN + "exit" + color.END + "': Quit the game.")
+        #print("  -'" + color.GREEN + "undo" + color.END + "': Revert back to commanding the previous stone, erasing the previously placed flag.")
+        self.display_commands_in_helplog(self.generic_commands)
+        if is_final_command:
+            available_commands = self.type_specific_final_commands
+        else:
+            available_commands = self.type_specific_commands
+        self.display_commands_in_helplog(available_commands)
+
 
 
     def parse_move_cmd(self, gm, t):
@@ -102,7 +115,7 @@ class Stone():
         while(True):
             try:
                 input_cmd_raw = input("Input the command in the form \"[command name] [argument]\", or type \"help\": ")
-                # Inheritable help display
+                # Generic commands
                 if input_cmd_raw in ['h', 'help']:
                     self.print_help_message(False)
                     continue
@@ -114,6 +127,12 @@ class Stone():
                 if input_cmd_raw in ['u', 'undo']:
                     print("Reverting to the previous stone...")
                     return("undo")
+
+                if input_cmd_raw in ['list_stones', 'ls']:
+                    gm.print_stone_list()
+                    continue
+
+
 
                 if input_cmd_raw in ['', 'w', 'wait']:
                     new_flag_ID = gm.add_flag_spatial_move(self.ID, t, cur_x, cur_y, cur_x, cur_y, cur_a)

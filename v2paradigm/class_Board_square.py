@@ -12,41 +12,21 @@ class Board_square():
         self.flags = [] # this list can be long
 
         self.causally_free_stones = [] # list of IDs of stones which are present and don't have a flag associated with them
-        self.causally_locked_stones = [] # list of IDs of stones which have a flag associated with them - if the stone is added, it is not causally free
+        self.causally_locked_stones = {} # list of IDs of stones which have a flag associated with them - if the stone is added, it is not causally free. [flag_ID] = stone_ID
 
-    def add_flag(self, new_flag):
-        self.flags.append(new_flag) #TODO maybe order matters here?
-        if new_flag.stone_ID in self.causally_free_stones:
-            self.causally_free_stones.remove(new_flag.stone_ID)
-        self.causally_locked_stones.append(new_flag.stone_ID)
+    def add_flag(self, new_flag_ID, new_stone_ID):
+        self.flags.append(new_flag_ID) #TODO maybe order matters here?
+        if new_stone_ID in self.causally_free_stones:
+            self.causally_free_stones.remove(new_stone_ID)
+        self.causally_locked_stones[new_flag_ID] = new_stone_ID
 
     def remove_flag(self, ID):
         # Does the associated stone become causally free?
-        flag_index = 0
-        while(flag_index < len(self.flags)):
-            if self.flags[flag_index].flag_ID == ID:
-                break
-            flag_index += 1
-        if flag_index == len(self.flags):
-            # The flag wasn't found
-            print(f"Error: You have attempted to delete a Flag with ID {ID} at ({self.pos.t},{self.pos.x},{self.pos.y}), but it isn't here.")
-            return(-1)
-        associated_stone_ID = self.flags[flag_index]
-        if associated_stone_ID in self.causally_locked_stones:
-            self.causally_locked_stones.remove(associated_stone_ID)
-        if associated_stone_ID in self.stones:
+        associated_stone_ID = self.causally_locked_stones[ID]
+        del self.causally_locked_stones[ID]
+        if associated_stone_ID in self.stones and associated_stone_ID not in self.causally_locked_stones.values():
             self.causally_free_stones.append(associated_stone_ID)
-        del self.flags[flag_index]
-
-    def get_flag_arguments(self, flag_ID):
-        for cur_flag in self.flags:
-            if cur_flag.flag_ID == flag_ID:
-                return(cur_flag.flag_args.copy())
-
-    def set_flag_arguments(self, flag_ID, new_arguments):
-        for cur_flag in self.flags:
-            if cur_flag.flag_ID == flag_ID:
-                cur_flag.flag_args = new_arguments.copy()
+        self.flags.remove(ID)
 
     def remove_stones(self):
         self.stones = []
@@ -69,6 +49,6 @@ class Board_square():
         # This function does allow for multiple stones to be here; but we expect the Gamemaster to resolve this before the display
         self.stones.append(new_stone_ID)
         self.stone_properties[new_stone_ID] = new_stone_properties.copy()
-        if not new_stone_ID in self.causally_locked_stones:
+        if not new_stone_ID in self.causally_locked_stones.values():
             self.causally_free_stones.append(new_stone_ID)
         self.occupied = True
