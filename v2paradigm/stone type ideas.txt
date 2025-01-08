@@ -1,0 +1,45 @@
+
+
+# TANK
+-Classic
+-Tank controls
+-Opposable
+-Attacks by firing in line of sight
+-Friendly fire on
+-Can only time jump after reaching the end of round
+
+
+# BOMBARDIER
+-Moves in 4 cardinal directions by 1
+-Opposable
+-Attacks by dropping bombs which destroy a larger area back in time
+-Friendly fire on
+-Can only time jump after reaching the end of round
+
+
+# SNIPER
+-Doesn't move on its own, can only be sokoban-pushed
+-Opposable
+-Attacks by firing in line of sight
+-Friendly fire off
+-Can time jump any time
+
+
+# TAGGER
+-Jumps like a horse
+-Unopposable (jumps over stones)
+-Attacks by deploying a tagscreen
+-Tagscreen explodes one turn later, tagging stones on the 4 adjanced squares
+-Tagged stones cannot time-jump anymore, and become causally locked in the final time-slice
+-Friendly fire off, but the Tagger itself cannot be affected by tagscreens (not even by other Taggers)
+-Can only time jump after reaching the end of the round
+
+
+# WILDCARD
+-Moves in 8 directions by 1 horizontally, vertically, or diagonally
+-Unopposable (jumps over stones)
+-Attacks a selected adjanced square
+-Friendly fire on
+-Can time jump any time
+-SPECIAL: Can adopt a time-jump-out of any stone type (i.e. can retroactively become a different stone which is time-jumping-in)
+
