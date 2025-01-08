@@ -1,5 +1,6 @@
 
 from functions import *
+from class_STPos import STPos
 
 # -------------- Custom exceptions ------------
 # We will use these during command parsing, to
@@ -42,12 +43,13 @@ class Stone():
                 "undo" : [None, None, "Revert back to commanding the previous stone, erasing the previously placed flag."],
                 "list_stones/ls": [None, None, "List stones belonging to each player."],
                 "list_portals/lp" : ["t", "x, y", "Lists time-jumps-in on the specified square. Position defaults to stone position."],
-                "track" : ["ID", None, "Tracks the stone with the specified ID."]
+                "track" : ["ID/t, x, y", None, "Tracks the stone with the specified ID. Alternatively, tracks the stone placed at a specific position."]
             }
 
         # The following is the help-log for type specific commands. Change this when inheriting Stone
         # type_specific_commands[command name] = [required args, optional args, message]
         # Use '/' as an alias delimiter and ', ' as an argument delimiter
+        self.stone_type = "tank"
         self.type_specific_commands = {
                 "wait" : [None, None, "The stone will wait in its place. This is also selected on an empty submission!"],
                 "forward/fwd" : [None, "turn", "Moves forward by 1, turning clockwise/cw or anticlockwise/acw by 90 deg. if specified."],
@@ -58,7 +60,7 @@ class Stone():
 
         self.type_specific_final_commands = {
                 "pass" : [None, None, "No plag is placed, and this stone remains causally free. This is also selected on an empty submission!"],
-                "timejump/tj" : ["time", None, "Jumps back into the specified time (spatial position unchanged)."]
+                "timejump/tj" : ["time", "stone ID", "Jumps back into the specified time (spatial position unchanged). If stone ID specified, will adopt a time-jump-in which generates said stone."]
             }
 
         self.opposable = True
@@ -76,9 +78,12 @@ class Stone():
             if not (options[0] == None and options[1] == None):
                 arg_str = " ["
                 if options[0] != None:
-                    req_arg_list = options[0].split(", ")
-                    req_args_readable = color.BLUE + (color.END + ", " + color.BLUE).join(req_arg_list) + color.END
-                    arg_str += req_args_readable
+                    # First we split the aliases (overloading), then each alias into arguments
+                    req_arg_alias_list = options[0].split("/")
+                    for i in range(len(req_arg_alias_list)):
+                        req_arg_list = req_arg_alias_list[i].split(", ")
+                        req_arg_alias_list[i] = color.BLUE + (color.END + ", " + color.BLUE).join(req_arg_list) + color.END
+                    arg_str += "/".join(req_arg_alias_list)
                 if options[1] != None:
                     if options[0] != None:
                         arg_str += '; '
@@ -135,6 +140,26 @@ class Stone():
                     target_x = int(cmd_raw_list[2])
                     target_y = int(cmd_raw_list[3])
                     gm.print_time_portals(target_time, target_x, target_y)
+                    return("success")
+                except:
+                    return("except Submitted arguments not formatted like an integer")
+            else:
+                return("except Mismatched number of arguments")
+
+        if cmd_raw_list[0] in ['track']:
+            if len(cmd_raw_list) == 2:
+                try:
+                    target_ID = int(cmd_raw_list[1])
+                    gm.print_stone_tracking(target_ID)
+                    return("success")
+                except:
+                    return("except Submitted argument not formatted like an integer")
+            elif len(cmd_raw_list) == 4:
+                try:
+                    target_time = int(cmd_raw_list[1])
+                    target_x = int(cmd_raw_list[2])
+                    target_y = int(cmd_raw_list[3])
+                    gm.print_stone_tracking(STPos(target_time, target_x, target_y))
                     return("success")
                 except:
                     return("except Submitted arguments not formatted like an integer")
@@ -257,16 +282,35 @@ class Stone():
                 input_cmd_list = input_cmd_raw.split(' ')
 
                 if input_cmd_list[0] in ['tj', 'timejump']:
-                    if len(input_cmd_list) == 1:
+                    if len(input_cmd_list) == 2:
+                        # Only time specified
+                        target_time = int(input_cmd_list[1])
+                        if target_time < 0:
+                            raise Exception("Lowest target time value is 0")
+                        if target_time >= t:
+                            raise Exception("Target time must be in the past")
+                        tjo_ID, tji_ID = gm.add_flag_timejump(self.ID, t, cur_x, cur_y, target_time, cur_x, cur_y, cur_a)
+                        return(f"flag_added {tjo_ID} {tji_ID}")
+                    elif len(input_cmd_list) == 3:
+                        # Both time and stone_ID specified; an adoption of a TJI is attempted
+                        target_time = int(input_cmd_list[1])
+                        adopted_stone_ID = int(input_cmd_list[2])
+                        if target_time < 0:
+                            raise Exception("Lowest target time value is 0")
+                        if target_time >= t:
+                            raise Exception("Target time must be in the past")
+                        if adopted_stone_ID not in gm.stones:
+                            raise Exception("Stone ID invalid")
+                        created_flags = gm.add_flag_timejump(self.ID, t, cur_x, cur_y, target_time, cur_x, cur_y, cur_a, adopted_stone_ID = adopted_stone_ID)
+                        if isinstance(created_flags, str):
+                            # We got a log instead
+                            cmd_msg_list = created_flags.split(" ")
+                            if cmd_msg_list[0] == "except":
+                                raise Exception(" ".join(cmd_msg_list[1:]))
+                            raise Exception("Unknown log received")
+                        return(f"flag_added {" ".join(str(item_ID) for item_ID in created_flags)}")
+                    else:
                         raise Exception("Required argument missing")
-                    # TODO give an option of "adopting" an inactive (or maybe even an active?) TJI
-                    target_time = int(input_cmd_list[1])
-                    if target_time < 0:
-                        raise Exception("Lowest target time value is 0")
-                    if target_time >= t:
-                        raise Exception("Target time must be in the past")
-                    tjo_ID, tji_ID = gm.add_flag_timejump(self.ID, t, cur_x, cur_y, target_time, cur_x, cur_y, cur_a)
-                    return(f"flag_added {tjo_ID} {tji_ID}")
 
                 raise Exception("Your input couldn't be parsed")
 

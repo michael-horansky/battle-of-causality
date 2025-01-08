@@ -2,26 +2,10 @@
 
 import math
 from functions import *
+from class_STPos import STPos
 from class_Stone import Stone
 from class_Flag import Flag
 from class_Board_square import Board_square
-
-# ---------------------------------------------
-# ---------------- class STPos ----------------
-# ---------------------------------------------
-# A simple structure where every instance encodes a single spacetime position
-
-class STPos():
-    # --- Constructors, destructors, descriptors ---
-    def __init__(self, t, x, y):
-        self.t = t
-        self.x = x
-        self.y = y
-
-    def __str__(self):
-        return(f"{{t:{self.t}, x:{self.x}, y:{self.y}}}")
-    def __repr__(self):
-        return(self.__str__())
 
 # ---------------------------------------------
 # ------------- class Gamemaster --------------
@@ -149,9 +133,9 @@ class Gamemaster():
         if level >= 3:
             print("# " + color.BOLD + msg + color.LIGHT)
 
-    def print_board_at_time(self, t, print_to_output = True, include_header_line = False, is_active = False):
+    def print_board_at_time(self, t, print_to_output = True, include_header_line = False, is_active = False, track_stone_ID = -1):
 
-        def print_stone(board_lines, stone_symbol, stone_position, stone_azimuth, highlight = False):
+        def print_stone(board_lines, stone_symbol, stone_position, stone_azimuth, is_causally_free = False, is_tracked = False):
             if stone_position == -1 or stone_azimuth == -1:
                 return(-1)
             stone_x, stone_y = stone_position
@@ -161,9 +145,15 @@ class Gamemaster():
 
             stone_formatting_pre = ''
             stone_formatting_suf = ''
-            if highlight:
-                stone_formatting_pre = color.BOLD
-                stone_formatting_suf = color.LIGHT
+            if is_causally_free:
+                stone_formatting_pre += color.BOLD
+                stone_formatting_suf += color.LIGHT
+            if is_tracked:
+                stone_formatting_pre += color.CYAN
+                if is_active:
+                    stone_formatting_suf += color.GREEN
+                else:
+                    stone_formatting_suf += color.END
 
             board_lines[cur_y][cur_x] = stone_formatting_pre + stone_symbol + stone_formatting_suf
             if stone_a == 0:
@@ -203,7 +193,7 @@ class Gamemaster():
                 if self.board_dynamic[t][x][y].occupied:
                     occupant_ID = self.board_dynamic[t][x][y].stones[0]
                     is_occupant_causally_free = occupant_ID in self.board_dynamic[t][x][y].causally_free_stones
-                    print_stone(board_lines, self.stones[occupant_ID].player_faction, (x, y), self.board_dynamic[t][x][y].stone_properties[occupant_ID][0], highlight = is_occupant_causally_free)
+                    print_stone(board_lines, self.stones[occupant_ID].player_faction, (x, y), self.board_dynamic[t][x][y].stone_properties[occupant_ID][0], is_causally_free = is_occupant_causally_free, is_tracked = (track_stone_ID == occupant_ID))
 
                 # Timejumps
                 # An active TJI is bg.ORANGE, an active TJO is bg.PURPLE. Inactive portals of either kind are bg.BLACK. Conflicts are bg.RED
@@ -301,12 +291,12 @@ class Gamemaster():
             print(board_string)
         return(board_lines)
 
-    def print_board_horizontally(self, highlight_t = -1):
+    def print_board_horizontally(self, highlight_t = -1, track_stone_ID = -1):
         # Causally free stones are BOLD
         # if highlight_t selected, the corresponding board is in GREEN
-        total_board_lines = self.print_board_at_time(0, print_to_output = False, include_header_line = True, is_active = (highlight_t == 0))
+        total_board_lines = self.print_board_at_time(0, print_to_output = False, include_header_line = True, is_active = (highlight_t == 0), track_stone_ID = track_stone_ID)
         for t in range(1, self.t_dim):
-            cur_board_lines = self.print_board_at_time(t, print_to_output = False, include_header_line = True, is_active = (highlight_t == t))
+            cur_board_lines = self.print_board_at_time(t, print_to_output = False, include_header_line = True, is_active = (highlight_t == t), track_stone_ID = track_stone_ID)
             for i in range(len(cur_board_lines)):
                 total_board_lines[i] += self.board_delim + cur_board_lines[i]
         board_string = '\n'.join(total_board_lines)
@@ -366,7 +356,35 @@ class Gamemaster():
                 for flag_ID in TJO_inactive:
                     print(f"    -Portal ID {flag_ID}: A {str(self.stones[self.flags[flag_ID].stone_ID])} would jump out.")
 
-
+    def print_stone_tracking(self, identifier):
+        # The identifier may either be a stone ID or a position at which the stone is placed.
+        stone_ID = None
+        if isinstance(identifier, STPos):
+            if self.board_dynamic[identifier.t][identifier.x][identifier.y].occupied:
+                stone_ID = self.board_dynamic[identifier.t][identifier.x][identifier.y].stones[0]
+            else:
+                print("The identified square is unoccupied.")
+        elif isinstance(identifier, int):
+            stone_ID = identifier
+        if stone_ID != None:
+            print(f"Tracking the {str(self.stones[stone_ID])}...")
+            self.print_board_horizontally(track_stone_ID = stone_ID)
+            if stone_ID in self.stone_inheritance.values():
+                # TJId
+                for tji_ID in self.tji_ID_list:
+                    if self.flags[tji_ID].stone_ID == stone_ID:
+                        tjo_flag_ID = self.timejump_bijection[tji_ID]
+                        print(f"The stone time-jumped-in at ({self.flags[tji_ID].pos.t + 1}, {self.flags[tji_ID].pos.x}, {self.flags[tji_ID].pos.y}) [Flag ID {tji_ID}], becoming a new version of {str(self.stones[self.flags[tjo_flag_ID].stone_ID])}")
+                        break
+            if stone_ID in self.stone_inheritance.keys():
+                # TJOd
+                for t in range(self.t_dim - 1, -1, -1):
+                    if self.stones[stone_ID].history[t] != None:
+                        last_x, last_y, last_a = self.stones[stone_ID].history[t]
+                        for flag_ID in self.board_dynamic[t][last_x][last_y].flags:
+                            if self.flags[flag_ID].flag_type == "time_jump_out" and self.flags[flag_ID].stone_ID == stone_ID:
+                                print(f"The stone time-jumped-out at ({t}, {last_x}, {last_y}) [Flag ID {flag_ID}], changing into {str(self.stones[self.stone_inheritance[stone_ID]])}")
+                                break
 
 
     # ----------------------------------------------------
@@ -440,31 +458,58 @@ class Gamemaster():
         self.flags[new_flag.flag_ID] = new_flag
         return(new_flag.flag_ID)
 
-    def add_flag_timejump(self, stone_ID, old_t, old_x, old_y, new_t, new_x, new_y, new_a):
-        # The TJI is placed inactive, and may be activated during causal consistency resolution
-        tji_flag = Flag(STPos(new_t - 1, new_x, new_y), "time_jump_in", self.stones[stone_ID].player_faction, [False, new_a])
-        tjo_flag = Flag(STPos(old_t, old_x, old_y), "time_jump_out", self.stones[stone_ID].player_faction, [STPos(new_t - 1, new_x, new_y), tji_flag.flag_ID], stone_ID)
+    def add_flag_timejump(self, stone_ID, old_t, old_x, old_y, new_t, new_x, new_y, new_a, adopted_stone_ID = -1):
 
-        # We place the flags.
-        # The time_jump_in flag is actually placed one t lower than specified (-1 is allowed!), so the child can be controlled on the same time-slice it is placed onto.
-        self.board_dynamic[old_t][old_x][old_y].add_flag(tjo_flag.flag_ID, stone_ID)
-        if new_t - 1 >= 0:
-            self.board_dynamic[new_t - 1][new_x][new_y].add_flag(tji_flag.flag_ID, tji_flag.stone_ID)
-        if new_t == 0:
-            # We place the flag into a special time-slice
-            self.setup_squares[new_x][new_y].add_flag(tji_flag.flag_ID, tji_flag.stone_ID)
-        self.flags[tjo_flag.flag_ID] = tjo_flag
-        self.flags[tji_flag.flag_ID] = tji_flag
+        # If adopted_stone_ID specified, instead of creating a new TJI, we adopt an existing one.
+        if adopted_stone_ID == -1:
+            # The TJI is placed inactive, and may be activated during causal consistency resolution
+            tji_flag = Flag(STPos(new_t - 1, new_x, new_y), "time_jump_in", self.stones[stone_ID].player_faction, [False, new_a])
+            tjo_flag = Flag(STPos(old_t, old_x, old_y), "time_jump_out", self.stones[stone_ID].player_faction, [STPos(new_t - 1, new_x, new_y), tji_flag.flag_ID], stone_ID)
 
-        # Trackers
-        self.tji_ID_list.append(tji_flag.flag_ID)
-        self.timejump_surjection[tjo_flag.flag_ID] = tji_flag.flag_ID
+            # We place the flags.
+            # The time_jump_in flag is actually placed one t lower than specified (-1 is allowed!), so the child can be controlled on the same time-slice it is placed onto.
+            self.board_dynamic[old_t][old_x][old_y].add_flag(tjo_flag.flag_ID, stone_ID)
+            if new_t - 1 >= 0:
+                self.board_dynamic[new_t - 1][new_x][new_y].add_flag(tji_flag.flag_ID, tji_flag.stone_ID)
+            if new_t == 0:
+                # We place the flag into a special time-slice
+                self.setup_squares[new_x][new_y].add_flag(tji_flag.flag_ID, tji_flag.stone_ID)
+            self.flags[tjo_flag.flag_ID] = tjo_flag
+            self.flags[tji_flag.flag_ID] = tji_flag
 
-        # We add the new stone into the army
-        self.stones[tji_flag.stone_ID] = Stone(tji_flag.stone_ID, self.stones[stone_ID].player_faction, self.t_dim)
-        self.faction_armies[self.stones[stone_ID].player_faction].append(tji_flag.stone_ID)
+            # Trackers
+            self.tji_ID_list.append(tji_flag.flag_ID)
+            self.timejump_surjection[tjo_flag.flag_ID] = tji_flag.flag_ID
 
-        return(tjo_flag.flag_ID, tji_flag.flag_ID)
+            # We add the new stone into the army
+            self.stones[tji_flag.stone_ID] = Stone(tji_flag.stone_ID, self.stones[stone_ID].player_faction, self.t_dim)
+            self.faction_armies[self.stones[stone_ID].player_faction].append(tji_flag.stone_ID)
+            return([tjo_flag.flag_ID, tji_flag.flag_ID])
+        else:
+            # First, we find the TJI which summons the stone
+            adopted_stone_found = False
+            for tji_ID in self.tji_ID_list:
+                if self.flags[tji_ID].stone_ID == adopted_stone_ID:
+                    adopted_stone_found = True
+                    # We now check if it is allowed to link us up
+                    if not (self.flags[tji_ID].pos.t == new_t - 1 and self.flags[tji_ID].pos.x == new_x and self.flags[tji_ID].pos.y == new_y):
+                        return("except Specified stone doesn't time-jump-in at the specified square")
+                    if self.stones[stone_ID].player_faction != self.stones[adopted_stone_ID].player_faction:
+                        return("except Specified stone belongs to a different faction")
+                    if self.stones[stone_ID].stone_type not in ["wildcard", self.stones[adopted_stone_ID].stone_type]:
+                        return("except Specified stone is of a different type")
+                    if self.flags[tji_ID].flag_args[1] != new_a:
+                        return("except Specified stone jumps in at a different azimuth than proposed")
+                    # We can link up!
+                    tjo_flag = Flag(STPos(old_t, old_x, old_y), "time_jump_out", self.stones[stone_ID].player_faction, [STPos(new_t - 1, new_x, new_y), tji_ID], stone_ID)
+                    self.board_dynamic[old_t][old_x][old_y].add_flag(tjo_flag.flag_ID, stone_ID)
+                    self.flags[tjo_flag.flag_ID] = tjo_flag
+                    self.timejump_surjection[tjo_flag.flag_ID] = tji_ID
+                    return([tjo_flag.flag_ID])
+
+            if not adopted_stone_found:
+                return("except Specified stone not linked with a time-jump-in")
+
 
     def set_tji_activity(self, tji_ID, new_is_active):
         """tji_pos = self.flag_index[tji_ID]
