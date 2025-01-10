@@ -107,10 +107,10 @@ class Stone():
             available_commands = self.type_specific_commands
         self.display_commands_in_helplog(available_commands)
 
-    def parse_generic_move_cmd(self, gm, cmd_raw, x, y):
+    def parse_generic_move_cmd(self, gm, cmd_raw, x, y, is_final_command = False):
         # Generic commands
         if cmd_raw in ['h', 'help']:
-            self.print_help_message(False)
+            self.print_help_message(is_final_command)
             return("success")
 
         if cmd_raw in ['q', 'quit', 'exit']:
@@ -264,7 +264,7 @@ class Stone():
                 input_cmd_raw = input("Input the command in the form \"[command name] [argument]\", or type \"help\": ")
 
                 # Generic commands
-                generic_msg = self.parse_generic_move_cmd(gm, input_cmd_raw, cur_x, cur_y)
+                generic_msg = self.parse_generic_move_cmd(gm, input_cmd_raw, cur_x, cur_y, is_final_command = True)
                 generic_msg_list = generic_msg.split(' ')
                 if generic_msg_list[0] == "success":
                     continue

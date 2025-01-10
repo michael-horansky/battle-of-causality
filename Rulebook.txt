@@ -23,6 +23,23 @@
     3.3 TUI elements
 
 
+- time travel notes
+    -FLAG REMOVAL: It would seem that if a stone is disturbed, its future flags which do not get activated do not matter and should be removed, so they cannot activate by accident.
+                   However, they are still important for selecting causally consistent scenarios, as the disturbing event may be removed.
+                   POSSIBLE SOLUTION: Flags tied to a specific scenario? (more specifically, to a list of activated TJIs in which the flags matter. These should be TJIs whose stones
+                   already reached t_max/time-jump-out.)
+    -Immediate paradoxes: They shouldn't be a thing. More generally, a newly added TJI only adds the stone for one single time-slice (since it must be causally free there), and as such
+                          shouldn't count for that round's causal selection (or flag deactivation, if we implement that).
+    -Paradox resolution: We will alow the Gamemaster to not only deactivate TJIs, but also remove stones which spawn with load_board if paradox is reached. This is good from a game
+                         design perspective, since it lightly punishes players which engage in paradox tomfoolery.
+                         (e.g.: Try scenario selection normally. If paradox is reached, then track all the stones associated with the unresolvable timejumps, find their ur-ancestors, and
+                         try removing them in some specified order. Prioritise 1. removing a smaller number of ur-ancestors; 2. removing ur-ancestors with a smaller number of children
+                         (because the philosophy is to affect the game less).
+
+
+
+
+
 POZNAMKA:
 flags are executed in the order movement & placement - attacks
 in between of these two things the conflict resolution takes place
