@@ -43,7 +43,7 @@ class Gamemaster():
         self.stone_inheritance = {} # [stone_ID] = child_ID
 
         # Trackers for newly added time-jumps
-        self.tji_ID_buffer = [] # TJIs added before the next scenario selection (after each selection, they flush into tji_ID_list)
+        self.tji_ID_buffer = {} # TJIs added before the next scenario selection (after each selection, they flush into tji_ID_list). [new tji_ID] = new tjo_ID
 
         # TUI elements
         self.board_delim = ' | '
@@ -453,6 +453,9 @@ class Gamemaster():
         # Fourth: Remove flag from trackers
         if flag_ID in self.tji_ID_list:
             self.tji_ID_list.remove(flag_ID)
+        if flag_ID in self.tji_ID_buffer.keys():
+            # Removal of a newly added TJI also means removal of its associated TJO
+            del self.tji_ID_buffer[flag_ID]
 
     def add_flag_spatial_move(self, stone_ID, t, old_x, old_y, new_x, new_y, new_a):
         new_flag = Flag(STPos(t, old_x, old_y), "spatial_move", self.stones[stone_ID].player_faction, [new_x, new_y, new_a], stone_ID)
@@ -486,7 +489,7 @@ class Gamemaster():
             self.flags[tji_flag.flag_ID] = tji_flag
 
             # Trackers
-            self.tji_ID_list.append(tji_flag.flag_ID)
+            self.tji_ID_buffer[tji_flag.flag_ID] = tjo_flag.flag_ID
 
             # We add the new stone into the army
             self.stones[tji_flag.stone_ID] = Stone(tji_flag.stone_ID, self.stones[stone_ID].player_faction, self.t_dim)
@@ -668,6 +671,9 @@ class Gamemaster():
 
         causally_consistent_scenarios = []
         tji_N = len(self.tji_ID_list)
+        if tji_N == 0:
+            return([[]]) # The only possible scenario is also, by design, causally consistent
+
         activity_map = [False] * tji_N
 
         for n in range(int(np.power(2, tji_N))):
@@ -802,7 +808,8 @@ class Gamemaster():
                         # The following flags remove the stone from the board, and as such are the only flags which can be placed at t = t_dim - 1
                         if cur_flag.stone_ID in self.board_dynamic[t][x][y].stones:
                             if cur_flag.flag_type == "time_jump_out":
-                                if reset_timejump_trackers:
+                                # If TJO was newly added (still in the buffer), it shouldn't update trackers
+                                if reset_timejump_trackers and cur_flag.flag_ID not in self.tji_ID_buffer.values():
                                     self.tji_bearing[cur_flag.flag_args[1]] += 1
                                     self.timejump_bijection[cur_flag.flag_args[1]] = cur_flag.flag_ID
                                     self.stone_inheritance[cur_flag.stone_ID] = self.flags[cur_flag.flag_args[1]].stone_ID
@@ -886,6 +893,8 @@ class Gamemaster():
 
                         stone_index += 1
 
+            # ---------------------- Sorting out time travel --------------------------
+
             # We have now spanned the entire temporal length of the board, and must now select a causally consistent scenario
             self.print_heading_message("Selecting a causally-consistent scenario", 1)
             causally_consistent_scenarios = self.find_causally_consistent_scenarios()
@@ -896,5 +905,15 @@ class Gamemaster():
             for i in range(len(self.tji_ID_list)):
                 # We set the is_active argument according to the activity map
                 self.set_tji_activity(self.tji_ID_list[i], canonical_scenario[i])
+
+            # We now set all newly added TJIs as active and flush tji_ID_buffer into tji_ID_list. We update the trackers.
+            for new_tji_ID, new_tjo_ID in self.tji_ID_buffer.items():
+                self.set_tji_activity(new_tji_ID, True)
+                self.tji_ID_list.append(new_tji_ID)
+                self.timejump_bijection[new_tji_ID] = new_tjo_ID
+                self.stone_inheritance[self.flags[new_tjo_ID].stone_ID] = self.flags[new_tji_ID].stone_ID
+
+            self.tji_ID_buffer = {}
+
 
 

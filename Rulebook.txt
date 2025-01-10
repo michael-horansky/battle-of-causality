@@ -29,7 +29,7 @@
                    POSSIBLE SOLUTION: Flags tied to a specific scenario? (more specifically, to a list of activated TJIs in which the flags matter. These should be TJIs whose stones
                    already reached t_max/time-jump-out.)
     -Immediate paradoxes: They shouldn't be a thing. More generally, a newly added TJI only adds the stone for one single time-slice (since it must be causally free there), and as such
-                          shouldn't count for that round's causal selection (or flag deactivation, if we implement that).
+                          shouldn't count for that round's causal selection (or flag deactivation, if we implement that). DONE
     -Paradox resolution: We will alow the Gamemaster to not only deactivate TJIs, but also remove stones which spawn with load_board if paradox is reached. This is good from a game
                          design perspective, since it lightly punishes players which engage in paradox tomfoolery.
                          (e.g.: Try scenario selection normally. If paradox is reached, then track all the stones associated with the unresolvable timejumps, find their ur-ancestors, and
