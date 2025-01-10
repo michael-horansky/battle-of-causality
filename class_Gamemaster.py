@@ -17,8 +17,11 @@ class Gamemaster():
     # ------ constructors, destructors, descriptors ------
     # ----------------------------------------------------
 
-    def __init__(self, board_number):
+    def __init__(self, board_number, display_logs = False):
 
+        self.display_logs = display_logs
+
+        self.print_log("Initialising game trackers and memory bins...",)
         # players and stones. The lists are updated when flags are placed, and do not depend on which stones are actually present on the board dynamically.
         self.stones = {} #[ID] = Stone()
         self.faction_armies = {} #[faction] = [ID_1, ID_2 ... ]
@@ -33,11 +36,14 @@ class Gamemaster():
         # flags
         self.flags = {} # [flag_ID] = Flag()
 
-        self.timejump_surjection = {} # [time_jump_out] = time_jump_in
+        # Trackers for existing time-jumps
         self.tji_ID_list = [] # This list is always ordered in an ascending order
         self.tji_bearing = {} # This updates on every self.execute_moves. [tji_ID] = number of activated matching TJOs
         self.timejump_bijection = {} # This is the recorded bijection of active TJIs. [tji_ID] = tjo_ID, where tjo_ID marks the TJO which actually activates
         self.stone_inheritance = {} # [stone_ID] = child_ID
+
+        # Trackers for newly added time-jumps
+        self.tji_ID_buffer = [] # TJIs added before the next scenario selection (after each selection, they flush into tji_ID_list)
 
         # TUI elements
         self.board_delim = ' | '
@@ -54,8 +60,9 @@ class Gamemaster():
 
     def load_board(self, board_number):
         # load spatial and temporal dimensions of the board from the provided txt file
-        print("gamemaster.load_board")
-        self.round_number = 0
+        self.print_log(f"Loading board {board_number}...", 0)
+
+        self.print_log("Reading board source file...", 1)
         board_file = open("resources/boards/board_" + uniform_str(board_number, 3) + ".txt", 'r')
         board_lines = board_file.readlines()
         board_file.close()
@@ -101,6 +108,7 @@ class Gamemaster():
                     self.board_static[x][y] = cur_char
 
         # Setup dynamic board squares
+        self.print_log("Setting up dynamic board representation...", 1)
         self.board_dynamic = []
         for t in range(self.t_dim):
             self.board_dynamic.append([])
@@ -110,8 +118,6 @@ class Gamemaster():
                     self.board_dynamic[t][x].append(Board_square(STPos(t, x, y)))
 
         self.conflicting_squares = repeated_list(self.t_dim, [])
-
-        self.timejump_surjection = {}
 
         # Calculate TUI parameters for printing
         self.single_board_width = self.x_dim * 2 + len(str(self.y_dim - 1))
@@ -132,6 +138,10 @@ class Gamemaster():
             print('-' * int(header_size / 4) + ' ' + color.BOLD + msg + color.LIGHT)
         if level >= 3:
             print("# " + color.BOLD + msg + color.LIGHT)
+
+    def print_log(self, msg, lvl = 0):
+        if self.display_logs:
+            print(" " * lvl * 4 + "[" + msg + "]")
 
     def print_board_at_time(self, t, print_to_output = True, include_header_line = False, is_active = False, track_stone_ID = -1):
 
@@ -443,8 +453,6 @@ class Gamemaster():
         # Fourth: Remove flag from trackers
         if flag_ID in self.tji_ID_list:
             self.tji_ID_list.remove(flag_ID)
-        if flag_ID in self.timejump_surjection.keys():
-            del self.timejump_surjection[flag_ID]
 
     def add_flag_spatial_move(self, stone_ID, t, old_x, old_y, new_x, new_y, new_a):
         new_flag = Flag(STPos(t, old_x, old_y), "spatial_move", self.stones[stone_ID].player_faction, [new_x, new_y, new_a], stone_ID)
@@ -479,7 +487,6 @@ class Gamemaster():
 
             # Trackers
             self.tji_ID_list.append(tji_flag.flag_ID)
-            self.timejump_surjection[tjo_flag.flag_ID] = tji_flag.flag_ID
 
             # We add the new stone into the army
             self.stones[tji_flag.stone_ID] = Stone(tji_flag.stone_ID, self.stones[stone_ID].player_faction, self.t_dim)
@@ -504,7 +511,6 @@ class Gamemaster():
                     tjo_flag = Flag(STPos(old_t, old_x, old_y), "time_jump_out", self.stones[stone_ID].player_faction, [STPos(new_t - 1, new_x, new_y), tji_ID], stone_ID)
                     self.board_dynamic[old_t][old_x][old_y].add_flag(tjo_flag.flag_ID, stone_ID)
                     self.flags[tjo_flag.flag_ID] = tjo_flag
-                    self.timejump_surjection[tjo_flag.flag_ID] = tji_ID
                     return([tjo_flag.flag_ID])
 
             if not adopted_stone_found:
@@ -892,12 +898,3 @@ class Gamemaster():
                 self.set_tji_activity(self.tji_ID_list[i], canonical_scenario[i])
 
 
-
-
-
-lol = Gamemaster(1)
-
-#lol.execute_moves()
-#print(lol.causally_free_stones_at_time(0))
-#print(lol.causally_free_stones_at_time(1))
-lol.standard_game_loop()

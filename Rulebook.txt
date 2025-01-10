@@ -35,7 +35,7 @@
                          (e.g.: Try scenario selection normally. If paradox is reached, then track all the stones associated with the unresolvable timejumps, find their ur-ancestors, and
                          try removing them in some specified order. Prioritise 1. removing a smaller number of ur-ancestors; 2. removing ur-ancestors with a smaller number of children
                          (because the philosophy is to affect the game less).
-
+The philosophy is: "Every timejump should get its chance to prove itself!"
 
 
 
