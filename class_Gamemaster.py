@@ -3,6 +3,7 @@
 import math
 from functions import *
 from class_STPos import STPos
+from class_Message import Message
 from class_Stone import Stone
 from class_Flag import Flag
 from class_Board_square import Board_square
@@ -22,10 +23,14 @@ class Gamemaster():
         self.display_logs = display_logs
 
         self.print_log("Initialising game trackers and memory bins...",)
-        # players and stones. The lists are updated when flags are placed, and do not depend on which stones are actually present on the board dynamically.
+
+        # Stone trackers. The lists are updated when flags are placed, and do not depend on which stones are actually present on the board dynamically.
         self.stones = {} #[ID] = Stone()
         self.faction_armies = {} #[faction] = [ID_1, ID_2 ... ]
         self.factions = ['A', 'B']
+        # Setup trackers
+        self.setup_stones = {} # Tracker for stones which are added on board setup. This is used when resolving paradoxes. [stone_ID] = flag_ID
+        self.removed_setup_stones = {} # [stone_ID] = flag_ID
 
         # the board
         self.board_static = [] # [x][y] = type
@@ -52,11 +57,14 @@ class Gamemaster():
 
     def add_stone_on_setup(self, faction, x, y, a0):
         # This function allows Gamemaster to describe the initial state of the board, which is reverted to for every retrace of causal events
-        new_flag = Flag(STPos(-1, x, y), 'add_stone', faction, [a0])
+        new_flag = Flag(STPos(-1, x, y), 'add_stone', faction, [True, a0])
         self.setup_squares[x][y].add_flag(new_flag.flag_ID, new_flag.stone_ID)
         self.flags[new_flag.flag_ID] = new_flag
+
+        # Trackers
         self.stones[new_flag.stone_ID] = Stone(new_flag.stone_ID, faction, self.t_dim)
         self.faction_armies[faction].append(new_flag.stone_ID)
+        self.setup_stones[new_flag.stone_ID] = new_flag.flag_ID
 
     def load_board(self, board_number):
         # load spatial and temporal dimensions of the board from the provided txt file
@@ -93,6 +101,8 @@ class Gamemaster():
         # Setup players
         self.stones = {}
         self.faction_armies = {}
+        self.setup_stones = {}
+        self.removed_setup_stones = {}
         for faction in self.factions:
             self.faction_armies[faction] = []
 
@@ -661,6 +671,61 @@ class Gamemaster():
 
     # Temporal resolution algorithms
 
+    def resolve_causal_consistency(self):
+        # The wrapper for causal consistency methods
+
+        # Order setup stones by a deterministic criterion from least prioritised to most prioritised
+        active_setup_stones = list(self.setup_stones.keys())
+
+        # The ordering cannot be added on the TUI but this is how it's gonna work:
+        # Every time a player selects a setup stone and adds a flag to it, it floats down to
+        # the end of the ordered list. Hence, after a turn, the stones are ordered from
+        # first-commanded (least priority to keep) to last-commanded (biggest priority to keep).
+        # The philosophy is: "The more recently you've touched a stone, the bigger the chance
+        # it will survive a paradox."
+        # Naturally, stones which become causally locked are not touched and become low priority,
+        # and hence will be removed first.
+        ordered_setup_stones = active_setup_stones #TODO
+
+        for number_of_deactivations in range(len(active_setup_stones) + 1):
+            activity_maps = ordered_switch_flips(len(active_setup_stones), number_of_deactivations) # True means deactivate
+            for activity_map in activity_maps:
+                # We set active add_stone flags according to current activity map
+                for i in range(len(active_setup_stones)):
+                    self.flags[self.setup_stones[ordered_setup_stones[i]]].flag_args[0] = not activity_map[i]
+
+                # We find all causally consistent scenarios for this activity map
+                causally_consistent_scenarios = self.find_causally_consistent_scenarios()
+                if len(causally_consistent_scenarios) == 0:
+                    continue # Paradox
+                else:
+                    # We commit to the canonical scenario
+                    canonical_scenario = self.select_scenario(causally_consistent_scenarios.copy())
+                    for i in range(len(self.tji_ID_list)):
+                        # We set the is_active argument according to the activity map
+                        self.set_tji_activity(self.tji_ID_list[i], canonical_scenario[i])
+
+                    # We delete all inactive setup stones from self.setup_stones,
+                    # disallowing them from being considered for activation later.
+
+                    recently_removed_setup_stones = []
+
+                    for i in range(len(activity_map)):
+                        self.removed_setup_stones[ordered_setup_stones[i]] = self.setup_stones[ordered_setup_stones[i]]
+                        recently_removed_setup_stones.append(ordered_setup_stones[i])
+                        del self.setup_stones[ordered_setup_stones[i]]
+
+                    return(Message("removed stones", recently_removed_setup_stones))
+
+        # If we get to this point, something has gone terribly wrong, as not even
+        # the removal of all stones yielded a causally consistent scenario
+
+        # This should theoretically never occur, as deactivating all add_stone flags
+        # AND all TJIs should result in a completely empty board, which is always causally consistent.
+        return(Message("exception"), "Unable to find a causally consistent scenario.")
+
+
+
     def find_causally_consistent_scenarios(self):
         # takes the internal timejump surjection and returns a list of activity maps, where each activity map is a list of booleans,
         # where the i-th element specifies if the i-th TJI (ordered by flag_ID) should be active.
@@ -755,7 +820,8 @@ class Gamemaster():
                 for cur_flag_ID in self.setup_squares[x][y].flags:
                     cur_flag = self.flags[cur_flag_ID]
                     if cur_flag.flag_type == "add_stone":
-                        self.board_dynamic[0][x][y].add_stone(cur_flag.stone_ID, cur_flag.flag_args)
+                        if cur_flag.flag_args[0]:
+                            self.board_dynamic[0][x][y].add_stone(cur_flag.stone_ID, [cur_flag.flag_args[1]])
                     if cur_flag.flag_type == "time_jump_in":
                         if cur_flag.flag_args[0]:
                             self.board_dynamic[0][x][y].add_stone(cur_flag.stone_ID, [cur_flag.flag_args[1]])
@@ -794,7 +860,8 @@ class Gamemaster():
                         # If a stone is propagated onto an occupied square, the square is added to self.conflicting_squares
                         if t < self.t_dim - 1:
                             if cur_flag.flag_type == "add_stone":
-                                self.place_stone_on_board(STPos(t+1, x, y), cur_flag.stone_ID, [cur_flag.flag_args[0]])
+                                if cur_flag.flag_args[0]:
+                                    self.place_stone_on_board(STPos(t+1, x, y), cur_flag.stone_ID, [cur_flag.flag_args[1]])
                             if cur_flag.flag_type == "time_jump_in":
                                 if cur_flag.flag_args[0]:
                                     self.place_stone_on_board(STPos(t+1, x, y), cur_flag.stone_ID, [cur_flag.flag_args[1]])

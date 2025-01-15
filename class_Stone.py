@@ -1,6 +1,7 @@
 
 from functions import *
 from class_STPos import STPos
+from class_Message import Message
 
 # -------------- Custom exceptions ------------
 # We will use these during command parsing, to

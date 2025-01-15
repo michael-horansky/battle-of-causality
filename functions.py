@@ -154,3 +154,29 @@ reverse = '\033[07m'
         lightgrey = '\033[47m'
 """
 
+def ordered_switch_flips(N, S):
+    # Let [bool, bool ... bool] represent the states of N switches.
+    # This returns a list of all states with S switches on (True)
+    # ordered such that for two states differing only in the position
+    # of one on-switch, the state for which the disputed switch is at
+    # a lower index will be at a lower index in the returned list.
+    if S == 0:
+        return([[False] * N])
+    if S == N:
+        return([[True] * N])
+    else:
+        res = []
+        for last_pos in range(S - 1, N):
+            subres = ordered_switch_flips(last_pos, S - 1)
+            suffix = [True] + [False] * (N - last_pos - 1)
+            for i in range(len(subres)):
+                subres[i] += suffix
+            res += subres
+        return(res)
+
+
+
+
+
+
+
