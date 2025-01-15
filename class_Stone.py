@@ -112,19 +112,19 @@ class Stone():
         # Generic commands
         if cmd_raw in ['h', 'help']:
             self.print_help_message(is_final_command)
-            return("success")
+            return(Message("continue"))
 
         if cmd_raw in ['q', 'quit', 'exit']:
             print("Quitting the game...")
-            return("quit")
+            return(Message("option", "quit"))
 
         if cmd_raw in ['u', 'undo']:
             print("Reverting to the previous stone...")
-            return("undo")
+            return(Message("option", "undo"))
 
         if cmd_raw in ['list_stones', 'ls']:
             gm.print_stone_list()
-            return("success")
+            return(Message("continue"))
 
         cmd_raw_list = cmd_raw.split(" ")
         if cmd_raw_list[0] in ['list_portals', 'lp']:
@@ -132,42 +132,42 @@ class Stone():
                 try:
                     target_time = int(cmd_raw_list[1])
                     gm.print_time_portals(target_time, x, y)
-                    return("success")
+                    return(Message("continue"))
                 except:
-                    return("except Submitted argument not formatted like an integer")
+                    return(Message("exception", "Submitted argument not formatted like an integer"))
             elif len(cmd_raw_list) == 4:
                 try:
                     target_time = int(cmd_raw_list[1])
                     target_x = int(cmd_raw_list[2])
                     target_y = int(cmd_raw_list[3])
                     gm.print_time_portals(target_time, target_x, target_y)
-                    return("success")
+                    return(Message("continue"))
                 except:
-                    return("except Submitted arguments not formatted like an integer")
+                    return(Message("exception", "Submitted argument not formatted like integers"))
             else:
-                return("except Mismatched number of arguments")
+                return(Message("exception", "Mismatched number of arguments"))
 
         if cmd_raw_list[0] in ['track']:
             if len(cmd_raw_list) == 2:
                 try:
                     target_ID = int(cmd_raw_list[1])
                     gm.print_stone_tracking(target_ID)
-                    return("success")
+                    return(Message("continue"))
                 except:
-                    return("except Submitted argument not formatted like an integer")
+                    return(Message("exception", "Submitted argument not formatted like an integer"))
             elif len(cmd_raw_list) == 4:
                 try:
                     target_time = int(cmd_raw_list[1])
                     target_x = int(cmd_raw_list[2])
                     target_y = int(cmd_raw_list[3])
                     gm.print_stone_tracking(STPos(target_time, target_x, target_y))
-                    return("success")
+                    return(Message("continue"))
                 except:
-                    return("except Submitted arguments not formatted like an integer")
+                    return(Message("exception", "Submitted argument not formatted like integers"))
             else:
-                return("except Mismatched number of arguments")
+                return(Message("exception", "Mismatched number of arguments"))
 
-        return("fail")
+        return(Message("not a generic cmd"))
 
 
 
@@ -179,7 +179,7 @@ class Stone():
 
         # Default controls: tanks
 
-        # If a Flag is added, this method MUST return the message "flag_added [flag_ID]"
+        # This method must return a Message
 
         cur_x, cur_y, cur_a = self.history[t]
         while(True):
@@ -188,18 +188,17 @@ class Stone():
 
                 # Generic commands
                 generic_msg = self.parse_generic_move_cmd(gm, input_cmd_raw, cur_x, cur_y)
-                generic_msg_list = generic_msg.split(' ')
-                if generic_msg_list[0] == "success":
+                if generic_msg.header == "continue":
                     continue
-                elif generic_msg_list[0] == "except":
-                    raise Exception(" ".join(generic_msg_list[1:]))
-                elif generic_msg_list[0] != "fail":
-                    return(generic_msg)
+                elif generic_msg.header == "exception":
+                    raise Exception(generic_msg.msg)
+                elif generic_msg.header == "option":
+                    return(generic_msg) # The Gamemaster handles options!
 
 
                 if input_cmd_raw in ['', 'w', 'wait']:
                     new_flag_ID = gm.add_flag_spatial_move(self.ID, t, cur_x, cur_y, cur_x, cur_y, cur_a)
-                    return(f"flag_added {new_flag_ID}")
+                    return(Message("flags added", [new_flag_ID]))
 
                 # From now on, we need to consider the command arguments
 
@@ -220,7 +219,7 @@ class Stone():
                         # The stone is attempting to move into a wall
                         raise Exception("Invalid move")
                     new_flag_ID = gm.add_flag_spatial_move(self.ID, t, cur_x, cur_y, new_x, new_y, new_a)
-                    return(f"flag_added {new_flag_ID}")
+                    return(Message("flags added", [new_flag_ID]))
                 if input_cmd_list[0] in ['b', 'bwd', 'backward']:
                     if len(input_cmd_list) == 1:
                         new_a = cur_a
@@ -236,7 +235,7 @@ class Stone():
                         # The stone is attempting to move into a wall
                         raise Exception("Invalid move")
                     new_flag_ID = gm.add_flag_spatial_move(self.ID, t, cur_x, cur_y, new_x, new_y, new_a)
-                    return(f"flag_added {new_flag_ID}")
+                    return(Message("flags added", [new_flag_ID]))
                 if input_cmd_list[0] in ['t', 'turn']:
                     if len(input_cmd_list) == 1:
                         raise Exception("Required argument missing")
@@ -244,10 +243,10 @@ class Stone():
                     if new_a == None:
                         raise Exception("Your input couldn't be parsed")
                     new_flag_ID = gm.add_flag_spatial_move(self.ID, t, cur_x, cur_y, cur_x, cur_y, new_a)
-                    return(f"flag_added {new_flag_ID}")
+                    return(Message("flags added", [new_flag_ID]))
                 if input_cmd_list[0] in ['a', 'atk', 'attack']:
                     new_flag_ID = gm.add_flag_attack(self.ID, t, cur_x, cur_y, allow_friendly_fire = True)
-                    return(f"flag_added {new_flag_ID}")
+                    return(Message("flags added", [new_flag_ID]))
                 raise Exception("Your input couldn't be parsed")
 
             except Exception as e:
@@ -266,17 +265,16 @@ class Stone():
 
                 # Generic commands
                 generic_msg = self.parse_generic_move_cmd(gm, input_cmd_raw, cur_x, cur_y, is_final_command = True)
-                generic_msg_list = generic_msg.split(' ')
-                if generic_msg_list[0] == "success":
+                if generic_msg.header == "continue":
                     continue
-                elif generic_msg_list[0] == "except":
-                    raise Exception(" ".join(generic_msg_list[1:]))
-                elif generic_msg_list[0] != "fail":
-                    return(generic_msg)
+                elif generic_msg.header == "exception":
+                    raise Exception(generic_msg.msg)
+                elif generic_msg.header == "option":
+                    return(generic_msg) # The Gamemaster handles options!
 
 
                 if input_cmd_raw in ['', 'p', 'pass']:
-                    return("pass")
+                    return(Message("pass"))
 
                 # From now on, we need to consider the command arguments
 
@@ -290,8 +288,11 @@ class Stone():
                             raise Exception("Lowest target time value is 0")
                         if target_time >= t:
                             raise Exception("Target time must be in the past")
-                        tjo_ID, tji_ID = gm.add_flag_timejump(self.ID, t, cur_x, cur_y, target_time, cur_x, cur_y, cur_a)
-                        return(f"flag_added {tjo_ID} {tji_ID}")
+                        tj_msg = gm.add_flag_timejump(self.ID, t, cur_x, cur_y, target_time, cur_x, cur_y, cur_a)
+                        if tj_msg.header == "flags added":
+                            return(tj_msg)
+                        elif tj_msg.header == "exception":
+                            raise Exception(tj_msg.msg)
                     elif len(input_cmd_list) == 3:
                         # Both time and stone_ID specified; an adoption of a TJI is attempted
                         target_time = int(input_cmd_list[1])
@@ -302,14 +303,11 @@ class Stone():
                             raise Exception("Target time must be in the past")
                         if adopted_stone_ID not in gm.stones:
                             raise Exception("Stone ID invalid")
-                        created_flags = gm.add_flag_timejump(self.ID, t, cur_x, cur_y, target_time, cur_x, cur_y, cur_a, adopted_stone_ID = adopted_stone_ID)
-                        if isinstance(created_flags, str):
-                            # We got a log instead
-                            cmd_msg_list = created_flags.split(" ")
-                            if cmd_msg_list[0] == "except":
-                                raise Exception(" ".join(cmd_msg_list[1:]))
-                            raise Exception("Unknown log received")
-                        return(f"flag_added {" ".join(str(item_ID) for item_ID in created_flags)}")
+                        tj_msg = gm.add_flag_timejump(self.ID, t, cur_x, cur_y, target_time, cur_x, cur_y, cur_a, adopted_stone_ID = adopted_stone_ID)
+                        if tj_msg.header == "flags added":
+                            return(tj_msg)
+                        elif tj_msg.header == "exception":
+                            raise Exception(tj_msg.msg)
                     else:
                         raise Exception("Required argument missing")
 

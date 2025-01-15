@@ -504,30 +504,27 @@ class Gamemaster():
             # We add the new stone into the army
             self.stones[tji_flag.stone_ID] = Stone(tji_flag.stone_ID, self.stones[stone_ID].player_faction, self.t_dim)
             self.faction_armies[self.stones[stone_ID].player_faction].append(tji_flag.stone_ID)
-            return([tjo_flag.flag_ID, tji_flag.flag_ID])
+            return(Message("flags added", [tjo_flag.flag_ID, tji_flag.flag_ID]))
         else:
             # First, we find the TJI which summons the stone
-            adopted_stone_found = False
             for tji_ID in self.tji_ID_list:
                 if self.flags[tji_ID].stone_ID == adopted_stone_ID:
-                    adopted_stone_found = True
                     # We now check if it is allowed to link us up
                     if not (self.flags[tji_ID].pos.t == new_t - 1 and self.flags[tji_ID].pos.x == new_x and self.flags[tji_ID].pos.y == new_y):
-                        return("except Specified stone doesn't time-jump-in at the specified square")
+                        return(Message("exception", "Specified stone doesn't time-jump-in at the specified square"))
                     if self.stones[stone_ID].player_faction != self.stones[adopted_stone_ID].player_faction:
-                        return("except Specified stone belongs to a different faction")
+                        return(Message("exception", "Specified stone belongs to a different faction"))
                     if self.stones[stone_ID].stone_type not in ["wildcard", self.stones[adopted_stone_ID].stone_type]:
-                        return("except Specified stone is of a different type")
+                        return(Message("exception", "Specified stone is of a different type"))
                     if self.flags[tji_ID].flag_args[1] != new_a:
-                        return("except Specified stone jumps in at a different azimuth than proposed")
+                        return(Message("exception", "Specified stone jumps in at a different azimuth than proposed"))
                     # We can link up!
                     tjo_flag = Flag(STPos(old_t, old_x, old_y), "time_jump_out", self.stones[stone_ID].player_faction, [STPos(new_t - 1, new_x, new_y), tji_ID], stone_ID)
                     self.board_dynamic[old_t][old_x][old_y].add_flag(tjo_flag.flag_ID, stone_ID)
                     self.flags[tjo_flag.flag_ID] = tjo_flag
-                    return([tjo_flag.flag_ID])
+                    return(Message("flags added", [tjo_flag.flag_ID]))
 
-            if not adopted_stone_found:
-                return("except Specified stone not linked with a time-jump-in")
+            return(Message("exception", "Specified stone not associated with a time-jump-in"))
 
 
     def set_tji_activity(self, tji_ID, new_is_active):
@@ -937,26 +934,25 @@ class Gamemaster():
                             move_msg = self.stones[cur_stone].parse_move_cmd(self, self.current_time)
                         else:
                             move_msg = self.stones[cur_stone].parse_final_move_cmd(self, self.current_time)
-                        if move_msg == "quit":
-                            return(-1)
-                        if move_msg == "undo":
-                            # We revert back to the previous stone
-                            stone_index = max(stone_index-1, 0)
-                            # We delete the Flag we added to this stone if any
-                            if flags_added_this_turn[stone_index] != None:
-                                prev_x, prev_y, prev_a = self.stones[currently_causally_free_stones[player][stone_index]].history[self.current_time]
-                                for added_flag_ID in flags_added_this_turn[stone_index]:
-                                    self.remove_flag_from_game(added_flag_ID)
-                                    #self.board_dynamic[self.current_time][prev_x][prev_y].remove_flag()
-                            continue
 
-                        move_msg_split = move_msg.split(" ")
-                        if move_msg_split[0] == "flag_added":
+                        if move_msg.header == "option":
+                            # The user is interacting with gamemaster options
+                            if move_msg.msg == "quit":
+                                return(-1)
+                            if move_msg.msg == "undo":
+                                # We revert back to the previous stone
+                                stone_index = max(stone_index-1, 0)
+                                # We delete the Flag we added to this stone if any
+                                if flags_added_this_turn[stone_index] != None:
+                                    prev_x, prev_y, prev_a = self.stones[currently_causally_free_stones[player][stone_index]].history[self.current_time]
+                                    for added_flag_ID in flags_added_this_turn[stone_index]:
+                                        self.remove_flag_from_game(added_flag_ID)
+                                        #self.board_dynamic[self.current_time][prev_x][prev_y].remove_flag()
+                                continue
+
+                        if move_msg.header == "flags added":
                             # A new Flag was added
-                            flags_added_for_stone = []
-                            for i in range(1, len(move_msg_split)):
-                                flags_added_for_stone.append(int(move_msg_split[i]))
-                            flags_added_this_turn[stone_index] = flags_added_for_stone
+                            flags_added_this_turn[stone_index] = move_msg.msg
 
                         stone_index += 1
 
