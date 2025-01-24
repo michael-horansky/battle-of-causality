@@ -1,0 +1,92 @@
+\documentclass[12pt]{article}
+\usepackage{xargs}
+\usepackage{amsmath,amssymb}
+
+
+\begin{document}
+
+	\title{Elo-like rating system for asymmetric games}
+	\author{Michal Horanský}
+	\maketitle
+	
+	Suppose we are designing a zero-sum game which allows players to play competitive one-on-one matches on custom boards (by board we here refer to a specific starting configuration of the game). We wish to implement a rating system to serve a purpose akin to that of Elo rating for chess players. This rating system has to satisfy the same principal property of Elo rating, which is as follows: \textit{the rating difference has to reflect the expected outcome of the game.} That is to say, we assume that each player has their "true strength", and the difference of true strengths of two players facing each other governs the expected outcome of the match. We then adjust player ratings based on their games so that \textit{if a player would always perform according to his true strength, his rating would converge to a constant value regardless on the true strength of his opponents.}
+	
+	The Elo rating in chess achieves this by identifiyng the difference between the measured outcome of a match and the expected outcome as the measured fault of the player's rating, and the post-match rating adjustment is technically a gradient descent towards the equilibrium. If player $A$ scores $S_A$ points in a match against player $B$, his new rating $R_A'$ will be calculated as such:
+	\begin{equation} \label{rating_adjustment}		
+	R_A' = R_A + K\cdot \left(S_A - E_A(R_A - R_B)\right)
+	\end{equation}
+where $E_A(R_A - R_B)$ is the expected value of player $A$'s score given the rating difference, and $K$ is the speed of the descent towards equilibrium (high $K$ means volatile system, low $K$ means rigid system). We see that \textit{any} choice of rating system--i.e. the specific function $E_A$, which links true strength and rating--satisfies the principal condition if Eq. (\ref{rating_adjustment}) is used. An important consequence is that Eq. (\ref{rating_adjustment}) automatically conserves the total number of Elo points in circulation, since $S_B = 1 - S_A$ (as we assume a zero-sum game) and $E_A(R_A - R_B) = 1 - E_B(R_B - R_A)$, since $E$ as an expectation function must sum up to $1$ over all participants.
+
+	In our case, the problem is complicated by the asymmetry of the board. Suppose we parametrise this asymmetry with a real parameter $h$, which quantifies the advantage player $A$ has over player $B$. Then, we need to devise a rating system such that Player A's expected score in a match is given by the function $E^{(a)}_A(R_A - R_B, h)$ (the superscript serves to distinguish the asymmetric expectancy from the standard Elo-like expectancy). We have a freedom of choice, but let us take the most straightforward way and interpret $h$ as a handicap applied to the rating difference like so:
+	\begin{equation}\label{asymmetric_expectancy}
+	E^{(a)}_A(R_A - R_B, h) = E_A(R_A - R_B + h)
+	\end{equation}
+	In other words, the "true" rating difference is context-dependent, and is calculated as the sum of the difference of player ratings plus the handicap.
+	
+	The problem is that we do not know the value of $h$ for a given board. Suppose, however, that we keep track of all games ever played for every board in the following format:
+	\begin{center} \label{game_table}
+	\begin{tabular}{ c | c }
+	\multicolumn{2}{c}{board $i$} \\
+	\hline
+ 	$\Delta R^i_1$ & $S^i_1$ \\ 
+ 	$\Delta R^i_2$ & $S^i_2$ \\ 
+ 	\multicolumn{2}{c}{$\vdots$} \\ 
+ 	$\Delta R^i_j$ & $S^i_j$    \\
+ 	\multicolumn{2}{c}{$\vdots$}
+	\end{tabular}
+	\end{center}
+	where $\Delta R^i_j$ is the rating difference $R_A - R_B$ between the players who played the $j$-th game on board $i$, and $S^i_j$ is player $A$'s achieved score in that game (standardly $1$ for win, $0$ for loss, $1/2$ for draw).
+	
+	What we now want to find out when players $A$ and $B$ sit down to play a game on board $i$ whose historical games have been recorded in \ref{game_table} is the probability of player $A$ winning given the rating difference \textit{and} the previous games. In other words, we are looking for the conditional expectancy
+	$$E^{(a)}_A(A\text{ wins } | \text{ data})$$
+	We start by considering every possible value of $h$ and identifying its contribution to the conditional expectancy as the product of the expectancy given the value of $h$ multiplied by the probability of that expectancy being correct given the data:
+	\begin{equation}
+	E^{(a)}_A(A\text{ wins } | \text{ data}) = \int E_A(R_A - R_B + h) P(h\text{ } | \text{ data}) \text{d}h
+	\end{equation}
+	where we used Eq. (\ref{asymmetric_expectancy}) to express the expectancy conditioned by a specific handicap value. As for $P(h\text{ } | \text{ data})$, we can now turn to Bayes' theorem:
+	\begin{equation} \label{bayes}
+	P(h\text{ } | \text{ data}) = \frac{P(\text{data } | \text{ }h)P(h)}{P(D)}
+	\end{equation}
+	Here, $P(\text{data } | \text{ }h)$ is the likelihood function which gives us a probability of measuring the dataset in Tab. \ref{game_table} given a specific value of $h$. As such, it is a function of $h$ and can be evaluated easily if we assume that every game played is independent of every other game:
+	\begin{eqnarray} \label{handicap_likelihood}
+	P(\text{data } | \text{ }h) = \prod_j^{\text{not draws}} P(S^i_j\text{ }|\text{ }\Delta R^i_j, h)\\
+	P(S^i_j\text{ }|\text{ }\Delta R^i_j, h)=\begin{cases} 
+      E_A(\Delta R^i_j + h) & S^i_j = 1\text{ (Player A wins)} \\
+      1 - E_A(\Delta R^i_j + h) & S^i_j = 0\text{ (Player B wins)}
+   \end{cases}
+	\end{eqnarray}
+	Notice how we ignored datapoints which ended in a draw. This is because in our underlying symmetric model, we have no way of assigning probability to the draw output. This usually requires a new free parameter, as per Elo-Davidson rating systems. Here we just assume that drawn games have nothing to say about the handicap value. (Which is not necessarily true, as a large number of draws for games where player A has consistently higher rating than player B points at a high probability of a negative handicap, \textit{given} a specific probability of a draw for a symmetric game. But since we do not know this probability for a symmetric game and assume it to be small, we choose to ignore these datapoints.)
+	
+	Coming back to Eq. (\ref{bayes}), we see two more unexplained terms. $P(D)$ is simply a normalization factor for the likelihood function (which, as you can see, is not normalized with respect to $h$), and as such is simply equal to
+	\begin{equation}\label{likelihood_normalization}
+	P(D) = \int P(\text{data } | \text{ }h)P(h) \text{d}h
+	\end{equation}
+	so that $P(h\text{ } | \text{ data})$ has integral norm $1$ w.r.t. $h$. Finally $P(h)$ is the prior probability distribution of the handicap--in other words, the probability that a random board has handicap $h$. We could use a non-informative prior and rely on a large dataset to accurately retrieve the posterior handicap distribution, but there is a better way. Since we are already storing information about all games across \textit{all boards}, we can simply inspect all the other boards to estimate a prior standard deviation on $h$ and assume e.g. a normal distribution around zero\footnote{For the first few boards, we will indeed need to use a non-informative prior, e.g. an initial guess on the standard deviation $\sigma_h$, which then iteratively gets better as we update this value with more and more boards and more games on each board, and converges to the true, equilibirum value.}. We do not actually need to re-calculate the prior standard deviation every time from all of the games for all the boards; we can just keep a list of mean values of $h$ measured for existing boards and estimate $\sigma_h$ from this aggregate dataset.
+	
+	We can now write down player $A$'s expected score as a function of the rating difference and the data for this board and handicaps for previous boards:
+	\begin{align} \label{expectancy_based_on_data}
+	E^{(a)}_A(A\text{ wins } | \text{ data}) &= \int E_A(R_A - R_B + h) \frac{P(\text{data } | \text{ }h)P(h)}{\int P(\text{data } | \text{ }h')P(h') \text{d}h'} \text{d}h \\
+	P(\text{data } | \text{ }h) &= \prod_j^{\text{not draws}} P(S^i_j\text{ }|\text{ }\Delta R^i_j, h)\nonumber \\
+	P(S^i_j\text{ }|\text{ }\Delta R^i_j, h)&=\begin{cases} 
+      E_A(\Delta R^i_j + h) & S^i_j = 1\text{ (Player A wins)} \\
+      1 - E_A(\Delta R^i_j + h) & S^i_j = 0\text{ (Player B wins)}
+   \end{cases} \nonumber\\
+   P(h) &= \frac{1}{\sigma_h\sqrt{2\pi}}e^{-\frac{1}{2}\left(\frac{h}{\sigma_h}\right)^2} \nonumber
+	\end{align}
+	
+	The new expected value of $h$ to be added to the list which is used to calculate $\sigma_h$ is simply
+	\begin{equation}
+	E[h] = E[P(h\text{ } | \text{ data})] = \frac{\int hP(\text{data } | \text{ }h)P(h) \text{d}h}{\int P(\text{data } | \text{ }h)P(h) \text{d}h}
+	\end{equation}
+	and the update to the rating based on the match outcome is obtainable by substituing Eq. (\ref{expectancy_based_on_data}) into Eq. (\ref{rating_adjustment}). (Exercise to the reader: prove that Eq. (\ref{expectancy_based_on_data}) satisfies the conservation of rating points when the aforementioned adjustment is used!)
+	
+	Final note: the history of games played on a specific board retroactively adjusts the rating gain from each of those games, as the likelihood function becomes more and more accurate in its description of the true handicap value. Consequently, the rating of a player gets retroactively adjusted after each game played \textit{after} his match on the same board. This sounds like a bug, but it is actually a feature, since early players should \textit{not} suffer from lack of information about the board's fairness.
+	
+	And for posterity: there is nothing wrong with using the rating system expectancy provided by Elo, in which
+	$$E_A(R_A - R_B) = \frac{1}{1 + 10^{(R_B - R_A)/400}}$$
+	Note the sign flip!
+	
+
+	
+	
+\end{document}
