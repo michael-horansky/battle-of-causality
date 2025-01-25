@@ -1,4 +1,5 @@
 \documentclass[12pt]{article}
+\usepackage[a4paper, total={6.5in, 8in}]{geometry}
 \usepackage{xargs}
 \usepackage{amsmath,amssymb}
 
@@ -9,22 +10,29 @@
 	\author{Michal Horanský}
 	\maketitle
 	
+	\section{Introduction}	
+	
 	Suppose we are designing a zero-sum game which allows players to play competitive one-on-one matches on custom boards (by board we here refer to a specific starting configuration of the game). We wish to implement a rating system to serve a purpose akin to that of Elo rating for chess players. This rating system has to satisfy the same principal property of Elo rating, which is as follows: \textit{the rating difference has to reflect the expected outcome of the game.} That is to say, we assume that each player has their "true strength", and the difference of true strengths of two players facing each other governs the expected outcome of the match. We then adjust player ratings based on their games so that \textit{if a player would always perform according to his true strength, his rating would converge to a constant value regardless on the true strength of his opponents.}
 	
 	The Elo rating in chess achieves this by identifiyng the difference between the measured outcome of a match and the expected outcome as the measured fault of the player's rating, and the post-match rating adjustment is technically a gradient descent towards the equilibrium. If player $A$ scores $S_A$ points in a match against player $B$, his new rating $R_A'$ will be calculated as such:
 	\begin{equation} \label{rating_adjustment}		
-	R_A' = R_A + K\cdot \left(S_A - E_A(R_A - R_B)\right)
+	R_A' = R_A + K\cdot \left(S_A - P_A(R_A - R_B)\right)
 	\end{equation}
-where $E_A(R_A - R_B)$ is the expected value of player $A$'s score given the rating difference, and $K$ is the speed of the descent towards equilibrium (high $K$ means volatile system, low $K$ means rigid system). We see that \textit{any} choice of rating system--i.e. the specific function $E_A$, which links true strength and rating--satisfies the principal condition if Eq. (\ref{rating_adjustment}) is used. An important consequence is that Eq. (\ref{rating_adjustment}) automatically conserves the total number of Elo points in circulation, since $S_B = 1 - S_A$ (as we assume a zero-sum game) and $E_A(R_A - R_B) = 1 - E_B(R_B - R_A)$, since $E$ as an expectation function must sum up to $1$ over all participants.
+where $P_A(R_A - R_B)$ is the probability player $A$ wins the game\footnote{Equivalently: the expected value of player $A$'s score.} given the rating difference, and $K$ is the speed of the descent towards equilibrium (high $K$ means volatile system, low $K$ means rigid system). We see that \textit{any} choice of rating system--i.e. the specific function $P_A$, which links true strength and rating--satisfies the principal condition if Eq. (\ref{rating_adjustment}) is used. An important consequence is that Eq. (\ref{rating_adjustment}) automatically conserves the total number of Elo points in circulation, since $S_B = 1 - S_A$ (as we assume a zero-sum game) and $P_A(R_A - R_B) = 1 - P_B(R_B - R_A)$, since $P$ as a probability value must sum up to $1$ over all participants.
 
-	In our case, the problem is complicated by the asymmetry of the board. Suppose we parametrise this asymmetry with a real parameter $h$, which quantifies the advantage player $A$ has over player $B$. Then, we need to devise a rating system such that Player A's expected score in a match is given by the function $E^{(a)}_A(R_A - R_B, h)$ (the superscript serves to distinguish the asymmetric expectancy from the standard Elo-like expectancy). We have a freedom of choice, but let us take the most straightforward way and interpret $h$ as a handicap applied to the rating difference like so:
+	\section{Asymmetric boards and handicap}
+
+	In our case, the problem is complicated by the asymmetry of the board. Suppose we parametrise this asymmetry with a real parameter $h$, which quantifies the advantage player $A$ has over player $B$. Then, we need to devise a rating system such that Player $A$'s win probability in a match is given by the function $P^{(a)}_A(R_A - R_B, h)$ (the superscript serves to distinguish the asymmetric probability from the standard Elo-like win probability). We have a freedom of choice, but let us take the most straightforward way and interpret $h$ as a handicap applied to the rating difference like so:
 	\begin{equation}\label{asymmetric_expectancy}
-	E^{(a)}_A(R_A - R_B, h) = E_A(R_A - R_B + h)
+	P^{(a)}_A(R_A - R_B, h) = P_A(R_A - R_B + h)
 	\end{equation}
 	In other words, the "true" rating difference is context-dependent, and is calculated as the sum of the difference of player ratings plus the handicap.
 	
+	\subsection{Inferring the handicap from prior data}
+	
 	The problem is that we do not know the value of $h$ for a given board. Suppose, however, that we keep track of all games ever played for every board in the following format:
-	\begin{center} \label{game_table}
+	\begin{table}[h]
+	\begin{center} 
 	\begin{tabular}{ c | c }
 	\multicolumn{2}{c}{board $i$} \\
 	\hline
@@ -35,41 +43,48 @@ where $E_A(R_A - R_B)$ is the expected value of player $A$'s score given the rat
  	\multicolumn{2}{c}{$\vdots$}
 	\end{tabular}
 	\end{center}
+	\caption{Data about games played on a specific board.}\label{game_table}
+	\end{table}
+	
 	where $\Delta R^i_j$ is the rating difference $R_A - R_B$ between the players who played the $j$-th game on board $i$, and $S^i_j$ is player $A$'s achieved score in that game (standardly $1$ for win, $0$ for loss, $1/2$ for draw).
 	
-	What we now want to find out when players $A$ and $B$ sit down to play a game on board $i$ whose historical games have been recorded in \ref{game_table} is the probability of player $A$ winning given the rating difference \textit{and} the previous games. In other words, we are looking for the conditional expectancy
-	$$E^{(a)}_A(A\text{ wins } | \text{ data})$$
-	We start by considering every possible value of $h$ and identifying its contribution to the conditional expectancy as the product of the expectancy given the value of $h$ multiplied by the probability of that expectancy being correct given the data:
-	\begin{equation}
-	E^{(a)}_A(A\text{ wins } | \text{ data}) = \int E_A(R_A - R_B + h) P(h\text{ } | \text{ data}) \text{d}h
+	What we now want to find out when players $A$ and $B$ sit down to play a game on board $i$ whose historical games have been recorded in \ref{game_table} is the probability of player $A$ winning given the rating difference \textit{and} the previous games. In other words, we are looking for the conditional probability
+	$$P^{(a)}_A(A\text{ wins } | \text{ data})$$
+	We start by considering every possible value of $h$ and identifying its contribution to the conditional probability as the product of the probability given the value of $h$ multiplied by the probability of that value being correct given the data:
+	\begin{equation} \label{prob_convolution}
+	P^{(a)}_A(A\text{ wins } | \text{ data}) = \int P_A(R_A - R_B + h) P(h\mid\text{data}) \text{d}h
 	\end{equation}
-	where we used Eq. (\ref{asymmetric_expectancy}) to express the expectancy conditioned by a specific handicap value. As for $P(h\text{ } | \text{ data})$, we can now turn to Bayes' theorem:
+	where we used Eq. (\ref{asymmetric_expectancy}) to express the probability conditioned by a specific handicap value. As for $P(h\mid\text{data})$, we can now turn to Bayes' theorem:
 	\begin{equation} \label{bayes}
-	P(h\text{ } | \text{ data}) = \frac{P(\text{data } | \text{ }h)P(h)}{P(D)}
+	P(h\mid\text{data}) = \frac{P(\text{data}\mid h)P(h)}{P(D)}
 	\end{equation}
-	Here, $P(\text{data } | \text{ }h)$ is the likelihood function which gives us a probability of measuring the dataset in Tab. \ref{game_table} given a specific value of $h$. As such, it is a function of $h$ and can be evaluated easily if we assume that every game played is independent of every other game:
+	Here, $P(\text{data}\mid h)$ is the likelihood function which gives us a probability of measuring the dataset in Tab. \ref{game_table} given a specific value of $h$. As such, it is a function of $h$ and can be evaluated easily if we assume that every game played is independent of every other game:
 	\begin{eqnarray} \label{handicap_likelihood}
-	P(\text{data } | \text{ }h) = \prod_j^{\text{not draws}} P(S^i_j\text{ }|\text{ }\Delta R^i_j, h)\\
-	P(S^i_j\text{ }|\text{ }\Delta R^i_j, h)=\begin{cases} 
-      E_A(\Delta R^i_j + h) & S^i_j = 1\text{ (Player A wins)} \\
-      1 - E_A(\Delta R^i_j + h) & S^i_j = 0\text{ (Player B wins)}
+	P(\text{data}\mid h) = \prod_j^{\text{not draws}} P(S^i_j\mid\Delta R^i_j, h)\\
+	P(S^i_j\mid\Delta R^i_j, h)=\begin{cases} 
+      P_A(\Delta R^i_j + h) & S^i_j = 1\text{ (Player A wins)} \\
+      1 - P_A(\Delta R^i_j + h) & S^i_j = 0\text{ (Player B wins)}
    \end{cases}
 	\end{eqnarray}
-	Notice how we ignored datapoints which ended in a draw. This is because in our underlying symmetric model, we have no way of assigning probability to the draw output. This usually requires a new free parameter, as per Elo-Davidson rating systems. Here we just assume that drawn games have nothing to say about the handicap value. (Which is not necessarily true, as a large number of draws for games where player A has consistently higher rating than player B points at a high probability of a negative handicap, \textit{given} a specific probability of a draw for a symmetric game. But since we do not know this probability for a symmetric game and assume it to be small, we choose to ignore these datapoints.)
+	Notice how we ignored datapoints which ended in a draw. This is because in our underlying symmetric model, we have no way of assigning probability to the draw output. This requires a new free parameter, as per Elo-Davidson rating systems (see further sections). Here we just assume that drawn games have nothing to say about the handicap value.
+	
+	\subsection{Handicap prior}
 	
 	Coming back to Eq. (\ref{bayes}), we see two more unexplained terms. $P(D)$ is simply a normalization factor for the likelihood function (which, as you can see, is not normalized with respect to $h$), and as such is simply equal to
 	\begin{equation}\label{likelihood_normalization}
-	P(D) = \int P(\text{data } | \text{ }h)P(h) \text{d}h
+	P(D) = \int P(\text{data}\mid h)P(h) \text{d}h
 	\end{equation}
-	so that $P(h\text{ } | \text{ data})$ has integral norm $1$ w.r.t. $h$. Finally $P(h)$ is the prior probability distribution of the handicap--in other words, the probability that a random board has handicap $h$. We could use a non-informative prior and rely on a large dataset to accurately retrieve the posterior handicap distribution, but there is a better way. Since we are already storing information about all games across \textit{all boards}, we can simply inspect all the other boards to estimate a prior standard deviation on $h$ and assume e.g. a normal distribution around zero\footnote{For the first few boards, we will indeed need to use a non-informative prior, e.g. an initial guess on the standard deviation $\sigma_h$, which then iteratively gets better as we update this value with more and more boards and more games on each board, and converges to the true, equilibirum value.}. We do not actually need to re-calculate the prior standard deviation every time from all of the games for all the boards; we can just keep a list of mean values of $h$ measured for existing boards and estimate $\sigma_h$ from this aggregate dataset.
+	so that $P(h\mid\text{data})$ has integral norm $1$ w.r.t. $h$. Finally $P(h)$ is the prior probability distribution of the handicap--in other words, the probability that a random board has handicap $h$. We could use a non-informative prior and rely on a large dataset to accurately retrieve the posterior handicap distribution, but there is a better way. Since we are already storing information about all games across \textit{all boards}, we can simply inspect all the other boards to estimate a prior standard deviation on $h$ and assume e.g. a normal distribution around zero\footnote{For the first few boards, we will indeed need to use a non-informative prior, e.g. an initial guess on the standard deviation $\sigma_h$, which then iteratively gets better as we update this value with more and more boards and more games on each board, and converges to the true, equilibirum value.}. We do not actually need to re-calculate the prior standard deviation every time from all of the games for all the boards; we can just keep a list of mean values of $h$ measured for existing boards and estimate $\sigma_h$ from this aggregate dataset.
+	
+	\subsection{Expected score}
 	
 	We can now write down player $A$'s expected score as a function of the rating difference and the data for this board and handicaps for previous boards:
 	\begin{align} \label{expectancy_based_on_data}
-	E^{(a)}_A(A\text{ wins } | \text{ data}) &= \int E_A(R_A - R_B + h) \frac{P(\text{data } | \text{ }h)P(h)}{\int P(\text{data } | \text{ }h')P(h') \text{d}h'} \text{d}h \\
-	P(\text{data } | \text{ }h) &= \prod_j^{\text{not draws}} P(S^i_j\text{ }|\text{ }\Delta R^i_j, h)\nonumber \\
-	P(S^i_j\text{ }|\text{ }\Delta R^i_j, h)&=\begin{cases} 
-      E_A(\Delta R^i_j + h) & S^i_j = 1\text{ (Player A wins)} \\
-      1 - E_A(\Delta R^i_j + h) & S^i_j = 0\text{ (Player B wins)}
+	P^{(a)}_A(A\text{ wins}\mid\text{data}) &= \int P_A(R_A - R_B + h) \frac{P(\text{data}\mid h)P(h)}{\int P(\text{data}\mid h')P(h') \text{d}h'} \text{d}h \\
+	P(\text{data}\mid h) &= \prod_j^{\text{not draws}} P(S^i_j\mid\Delta R^i_j, h)\nonumber \\
+	P(S^i_j\mid\Delta R^i_j, h)&=\begin{cases} 
+      P_A(\Delta R^i_j + h) & S^i_j = 1\text{ (Player A wins)} \\
+      1 - P_A(\Delta R^i_j + h) & S^i_j = 0\text{ (Player B wins)}
    \end{cases} \nonumber\\
    P(h) &= \frac{1}{\sigma_h\sqrt{2\pi}}e^{-\frac{1}{2}\left(\frac{h}{\sigma_h}\right)^2} \nonumber
 	\end{align}
@@ -78,13 +93,142 @@ where $E_A(R_A - R_B)$ is the expected value of player $A$'s score given the rat
 	\begin{equation}
 	E[h] = E[P(h\text{ } | \text{ data})] = \frac{\int hP(\text{data } | \text{ }h)P(h) \text{d}h}{\int P(\text{data } | \text{ }h)P(h) \text{d}h}
 	\end{equation}
-	and the update to the rating based on the match outcome is obtainable by substituing Eq. (\ref{expectancy_based_on_data}) into Eq. (\ref{rating_adjustment}). (Exercise to the reader: prove that Eq. (\ref{expectancy_based_on_data}) satisfies the conservation of rating points when the aforementioned adjustment is used!)
+	and the update to the rating based on the match outcome is obtainable by substituing Eq. (\ref{expectancy_based_on_data}) into Eq. (\ref{rating_adjustment}).
 	
-	Final note: the history of games played on a specific board retroactively adjusts the rating gain from each of those games, as the likelihood function becomes more and more accurate in its description of the true handicap value. Consequently, the rating of a player gets retroactively adjusted after each game played \textit{after} his match on the same board. This sounds like a bug, but it is actually a feature, since early players should \textit{not} suffer from lack of information about the board's fairness.
+	\subsection{Dynamical step-size and retroactive rating adjustment}
 	
-	And for posterity: there is nothing wrong with using the rating system expectancy provided by Elo, in which
-	$$E_A(R_A - R_B) = \frac{1}{1 + 10^{(R_B - R_A)/400}}$$
-	Note the sign flip!
+	Note that the history of games played on a specific board retroactively adjusts the rating gain from each of those games, as the likelihood function becomes more and more accurate in its description of the true handicap value. Consequently, the rating of a player gets retroactively adjusted after each game played \textit{after} his match on the same board. This sounds like a bug, but it is actually a feature, since early players should \textit{not} suffer from lack of information about the board's fairness. Following this philosophy, there is one more improvement ready to be made to incentivize players to use boards with small datasets: retrospectively adjusting the $K$ parameter with regard to our certainty about the board's fairness. To keep things simple, this could be estimated purely by the size of our dataset about the given board, i.e. $N^i=$ number of non-drawn games recorded on board $i$. Then, we would choose a function $K(N^i)$ such that as $N^i\to 0$, $K\to 0$, and as $N^i\to\infty$, $K\to K_\text{max}$. I propose a simple hyperbolic curve:
+	\begin{equation}
+	K(N^i)=32\frac{N^i}{10+N^i}
+	\end{equation}
+	This function is designed so that $K$ converges to $32$, a value used for low-rated players in chess, when played on boards about whose unfairness we are certain about, and it reaches half of that value after $10$ games played on the board. These parameters can, of course, be changed to reflect your game's needs.
+	
+	It is customary to note the specific function for expected score which is used for Elo rating in chess:
+	$$P_A(R_A-R_B)=\frac{1}{1+10^{(R_B-R_A)/s}}$$
+	where $s$ is typically chosen to be $400$, so that a difference in rating of $400$ points means player $A$ is ten times as likely to win as player $B$.
+	
+	\section{Including drawn games}
+	In the previous section, we have sketched the idea for inferring information about the handicap inherent to an asymmetric board using data about the games played previously (on that and all other boards). However, we have deliberately omitted drawn games when estimating the likelihood of a given handicap value, as we had no way of stating the probability that a game between two players with a specific handicap will be drawn.
+	
+	\subsection{Parametrising the probability of a draw}
+	
+	There is a way to expand our model to include the probability of drawing and then go through an analogous process to determine the expected score for player $A$. To do this, we begin with the Elo-Davidson model, which introduces a free parameter $\kappa$, which is related to the probability a game between two players will be drawn. The probabilities of the three outcomes in the Elo-Davidson model are as follows:
+	\begin{eqnarray} \label{elo_davidson}
+	P(A\text{ wins}\mid \Delta R,\kappa) &=& \sigma(\Delta R,\kappa)\\
+	P(B\text{ wins}\mid \Delta R,\kappa) &=& \sigma(-\Delta R,\kappa)\\
+	P(\text{draw}\mid \Delta R,\kappa) &=& \kappa\sqrt{\sigma(\Delta R,\kappa)\sigma(-\Delta R,\kappa)}\\
+	\text{where}\quad \sigma(\Delta R, \kappa)&=&\frac{10^{\Delta R/s}}{10^{-\Delta R/s}+\kappa+10^{\Delta R/s}}
+	\end{eqnarray}
+	Now, suppose we once again have a dataset about all the previous games in the form $(\Delta R^i_j,\text{ outcome})$ for the $j$-th game played on the $i$-th board. We can first write two equations analogous to Eq. (\ref{prob_convolution}):
+	\begin{eqnarray} \label{prob_convolution_2}
+	P(A\text{ wins}\mid\text{data}) &=& \iint P(A\text{ wins}\mid \Delta R + h, \kappa) P(h,\kappa\mid\text{data}) \text{d}h\text{d}\kappa\\
+	P(\text{draw}\mid\text{data}) &=& \iint P(\text{draw}\mid \Delta R + h, \kappa) P(h,\kappa\mid\text{data}) \text{d}h\text{d}\kappa
+	\end{eqnarray}
+	where, naturally,
+	$$P(B\text{ wins}\mid\text{data})=1-P(A\text{ wins}\mid\text{ data})-P(\text{draw}\mid\text{ data})$$
+	and thus we do not need to calculate the probability of player $B$ winning.
+	
+	As for the posterior probability distribution for $h,\kappa$, we once again turn to Bayes' theorem:
+	\begin{equation}
+	P(h, \kappa\mid\text{data}) = \frac{P(\text{data}\mid h, \kappa)P(h,\kappa)}{\iint P(\text{data}\mid h, \kappa)P(h,\kappa)\text{d}h\text{d}\kappa}
+	\end{equation}
+	The likelihood function is now straightforward to write down and uses all datapoints, including drawn games:
+	\begin{align}
+	P(\text{data}\mid h, \kappa) &= \prod_j^{\text{board }i} P(\Delta R^i_j,\text{ outcome}\mid h,\kappa)\\
+	P(\Delta R^i_j,\text{ outcome}\mid h,\kappa) &= \begin{cases}
+		\sigma(\Delta R + h, \kappa) & \text{if player }A\text{ won}\\
+		\sigma(-\Delta R - h, \kappa) & \text{if player }B\text{ won}\\
+		\kappa\sqrt{\sigma(\Delta R + h, \kappa)\sigma(-\Delta R - h, \kappa)} & \text{if draw}
+	\end{cases} \nonumber
+	\end{align}
+	\subsection{Prior for $\kappa$} \label{kappa_prior}
+	\subsubsection{Assumptions for separability and lack of correlations}
+	As for the prior probability distribution for $h,\kappa$, a seasoned statistician with a large dataset could go to town. We here propose the simplest solution, once again aggregating data about all the other boards. Let us assume that the probability that a random board has a specific handicap and that it has a specific probability of a draw occuring are uncorrelated. Then, we can separate the prior like so:
+	\begin{equation}
+	P(h,\kappa) = P(h)P(\kappa)
+	\end{equation}
+	As for the prior $P(h)$, we use just the same approach as in the previous sections. For $P(\kappa)$, we can use a similar approach, given one more assumption. For the sake of numerical simplicity, let us assume that the average game played on a random board has a zero rating difference. Then, the probability of a draw is simply
+	\begin{equation} \label{zero_diff_kappa}
+	P(\text{draw}\mid\kappa)=\frac{\kappa}{2+\kappa}
+	\end{equation}
+	For the $i$-th board, we can estimate its probability of a draw as the ratio of the number of draws and the number of all games played on this board:
+	$$P^i(\text{draw})=\frac{N^i(\text{draws})}{N^i(\text{all games})}$$
+	and then
+	$$\kappa^i=2\frac{N^i(\text{draws})/N^i(\text{all games})}{1-N^i(\text{draws})/N^i(\text{all games})}$$
+	This is purely a simple estimate for the value of $\kappa$ for a given board, and it could be improved by including the rating differences in Eq. (\ref{zero_diff_kappa}) and then performing either a numerical fit, or another Bayesian iteration. However, for the sake of numerical simplicity, we shall make the zero-difference assumption in this calculation, which is justified by the fact the matchmaking algorithm tries to minimize rating difference, and so for most matches the probability of a draw will be roughly constant. Naturally, this means we are slightly underestimating the value of $\kappa$, but as this estimate is only used for a prior, it matters little.
+	
+	After collecting the values of $\kappa^i$ for all the other boards, we can quickly calculate their mean value $\langle\kappa\rangle=N(\text{draws})/N(\text{all games})$. As will be demonstrated below, the mean value is all we need to find the prior $P(\kappa)$ in this simplified model.
+	\subsubsection{Probability distribution of $p$ and $\kappa$}
+	As mentioned above, \textit{in the prior} we assume that the probability of a game being drawn is correlated to neither its handicap nor its rating difference. Since all the games are played independently of each other, if the true probability of a game being drawn is $p$, then the probability of $N_d$ games out of $N$ being drawn follows the binomial distribution. As the number of $N$ goes to infinity, the probability distribution of the ratio $\hat{p}=N_d/N$ approaches a continuous distribution, which can be identified as the Beta distribution:
+	\begin{equation} \label{beta_dist}
+	P(\hat{p},p)=\frac{\Gamma(N+2)}{\Gamma(N\hat{p}+1)\Gamma(N(1-\hat{p})+1)}p^{N\hat{p}}(1-p)^{N(1-\hat{p})}
+	\end{equation}
+	We have measured the value of $\hat{p}$ and are interested in the likelihood of a given value of the true probability $b$. Since Eq. (\ref{beta_dist}) is already normalized with respect to $p$ for a fixed $\hat{p}$ (as $N\to\infty$), we can interpret it directly as the probability density function of $p$. 
+	
+	We are interested in the probability distribution $P_\kappa$ of the $\kappa=\frac{2\hat{p}}{1-\hat{p}}$ parameter. For this, we employ the rule for transforming probability distributions:
+	\begin{equation}\label{lotus}
+	\text{If }Y=G(X)\text{ and }X\text{ follows }f_X(x)\text{, then }Y\text{ follows }f_Y(y)=f_X(G^{-1}(y))\left|\frac{\text{d}}{\text{d}y}G^{-1}(y)\right|
+	\end{equation}
+	Substituing Eq. (\ref{beta_dist}) into Eq. (\ref{lotus}) yields the probability density function of $\kappa$ given a measured mean probability of drawing a game $\langle P(\text{draw})\rangle$:
+	\begin{equation} \label{draw_prob}
+	P_\kappa(\hat{p},\kappa)=\frac{\Gamma(N+2)}{\Gamma(N\hat{p}+1)\Gamma(N(1-\hat{p})+1)}\frac{2^{N(1-\hat{p})+1}\kappa^{N\hat{p}}}{(2+\kappa)^{N+2}}
+	\end{equation}
+	This probability density function has all we need: it is undefined for $\kappa<0$ and normalized on the non-negative reals, and its expected value is $\frac{2\hat{p}}{1-\hat{p}}$, agreeing with the initial measurement of drawing probability. As such, it is a useful prior for the $\kappa$ parameter.
+	
+	The total prior then becomes
+	\begin{equation}\label{prior_2}
+	P(h,\kappa) = \frac{1}{\sigma_h\sqrt{2\pi}}\exp\left[-\frac{1}{2}\left(\frac{h}{\sigma_h}\right)^2\right]\frac{\Gamma(N+2)}{\Gamma(N\hat{p}+1)\Gamma(N(1-\hat{p})+1)}\frac{2^{N(1-\hat{p})+1}\kappa^{N\hat{p}}}{(2+\kappa)^{N+2}}
+	\end{equation}
+	\subsubsection{Approximate version of the $\kappa$ prior}	
+	For very large $N$, Eq. (\ref{beta_dist}) is subject to the Central Limit Theorem, since it describes the distribution of the sum of a large number of independent measurements. Therefore
+	\begin{equation}
+	\lim_{N\to\infty} P(\hat{p},p) = \mathcal{N}\left(\hat{p},\frac{\hat{p}(1-\hat{p})}{N}\right)
+	\end{equation}
+	We observe the mean $\langle p\rangle=\hat{p}$ and standard deviation $\sigma_p=\sqrt{\frac{\hat{p}(1-\hat{p})}{N}}$ agree with the binomial distribution for $N_d$.
+	
+	Applying Eq. (\ref{lotus}) once again, we see that $\kappa$ does not follow a normal distribution even in the large $N$ limit:
+	\begin{equation}
+	\lim_{N\to\infty} P(\hat{p},\kappa)=\frac{2}{(2+\kappa)^2\sigma_p\sqrt{2\pi}}\exp\left[-\frac{1}{2}\left(\frac{\kappa-\frac{2\langle p\rangle}{1-\langle p\rangle}}{\frac{2+\kappa}{1-\langle p\rangle}\sigma_p}\right)^2\right]
+	\end{equation}
+	However, if we assume $\kappa\to 0$, which is reasonable if and only if our game has a low proabbility of a draw, this approximates a normal distribution with the properties
+	\begin{eqnarray}
+	\langle\kappa\rangle &=& \frac{2\langle p\rangle}{1-\langle p\rangle}\\
+	\sigma_\kappa &=& \frac{2}{1-\langle p\rangle}\sigma_p
+	\end{eqnarray}
+	This final approximation allows us to write the total prior $P(h,\kappa)$ as a two-dimensional normal distribution.
+	
+	\subsection{Score calculation from win and draw probability}
+	
+	As for the final step, we evaluate player $A$'s expected score
+	\begin{equation}
+	E_A^{(A)}(\Delta R\mid\text{data}) = P(A\text{ wins}\mid\text{data}) + \frac{1}{2}P(\text{draw}\mid\text{data})
+	\end{equation}
+	Using this expected score value and the dynamic value of $K(N^i(\text{games}))$, we obtain the\\ Elo\nobreakdash-Davidson\nobreakdash-Horanský rating system, characterised by the rating adjustment to player $A$ after the game:
+	\begin{equation}
+	R_A' = R_A + K(N^i)(S_A - E_A^{(A)}(\Delta R\mid\text{data}))
+	\end{equation}
+	\section{Algorithm summary for the Elo-Davidson-Horanský rating system}
+	The following algorithm can be readily applied when building any asymmetric one-vs-one zero-sum game which permits wins, losses, and draws:
+	\begin{enumerate}
+	\item We first choose the value of $s$, which simply sets the scale of the rating. If every new player starts with a rating of $1000$, the chess value of $s=400$ is reasonable. This value's interpretation is as follows: for every $s$ points of rating difference, the ratio of the two players' win probabilities multiplies tenfold.
+	\item Before any boards are created, we need to estimate a starting prior for the handicaps and draw probabilities. This requires some knowledge of the specific game we are designing, but the following values should be good benchmarks for any application:
+	\begin{itemize}
+	\item For the handicap, we estimate that a carefully-made board will rarely make one player more than twice as likely to win as their equally-rated opponent. Hence a good standard deviation estimate for $h$ will be $\sigma_h\approx s\log_{10}(2)\approx 120$.
+	\item For the draw parameter, first estimate the probability of a draw on a symmetric board for two equally-rated players. If, for example, this estimate if $1/10$, the corresponding expected value of $\langle\kappa\rangle$ is $2\cdot\frac{1/10}{1-1/10}\approx 0.2$. As per Sec. \ref{kappa_prior}, the mean fully specifies the prior distribution from Eq. (\ref{prior_2}). Since we have no data, we can set $N=1$ in the prior for the first calculation, maximizing the uncertainty.
+	\end{itemize}
+	We will be using these low-information priors until our dataset grows large enough (let's say $N(\text{all games}) > 30$ for $P(\kappa)$ and $N(\text{boards with at least }5\text{ games played}) > 5$ for $P(h)$)
+	\item If two players rated $R_A$ and $R_B$, respectively, play a game on board $m$, we follow this procedure:
+	\begin{enumerate}
+	\item If this was the first game played on this board, the step-size $K$ is zero, and the ratings do not change. Record the game and exit algorithm.
+	\item Otherwise, we calculate the likelihood function $P(\text{data}\mid h,\kappa)$ from all previous games played on this board, \textit{including the one that was just played}. The reason for that is we will be retrospectively adjusting the rating changes from all of the games played on this board, and thus they should all use the same statistic. The uniformness of this outweights the trouble of one badly-behaved datapoint for each game to be re-rated.
+	\item We choose the priors for $P(h)$ and $P(\kappa)$, either based on the data already collected, or, if the datasets are too small, just opting in for the initial approximations prepared in earlier steps, and combine them to form the two-dimensional prior $P(h,\kappa)$. For this, we use the aggregate data for all the boards \textit{excluding the one that was just played on.} The reason for this is that the priors are meant to estimate the probability this board has a specific handicap and drawing probability, and thus using its own data would be ill-formed.
+	\item We calculate the normalization factor $\iint P(h,\kappa)P(\text{data}\mid h,\kappa)\text{d}h\text{d}\kappa$, and by dividing the integrand by the integral we obtain the posterior $P(h,\kappa\mid \text{data})$.
+	\item We calculate the new step-size for the board, $K$.
+	\item Now, we will readjust the rating for every game played on this board. For every game, we calculate the probability of player $A$ winning and the game being drawn, respectively, from the posterior and the rating difference. From this, we obtain player $A$'s expected score. The new, updated value of the rating adjustment for player $A$ will be the new step-size multiplied by the difference between player $A$'s obtained score and his expected score. Player $B$'s updated rating adjustment will be the of equal value and opposite sign. We retroactively update each player's rating as the sum of the initial value of $1000$ and all the adjustments across all the games they played (but this can be simplified as only the rating adjustments from games played on this specific board have changed).
+	\end{enumerate}
+	\item We update the expected handicap value for the board in the aggregate dataset using the new posterior: $\langle h\rangle=\iint hP(h,\kappa\mid\text{data})\text{d}h\text{d}\kappa$. This value will be used to calculate the priors for games played only on other boards, not this one.
+	\end{enumerate}
+	
 	
 
 	
