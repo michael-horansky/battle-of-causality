@@ -1,10 +1,26 @@
 
+import constants
+
 # ---------------------------------------------
 # ---------------- class STPos ----------------
 # ---------------------------------------------
 # A simple structure where every instance encodes a single spacetime position
 
 class STPos():
+
+    # --------------- class methods ----------------
+    @classmethod
+    def from_str(cls, str_repr):
+        new_args = str_repr[1:-1].split(constants.STPos_delim)
+        try:
+            t = int(new_args[0])
+            x = int(new_args[1])
+            y = int(new_args[2])
+            return(cls(t, x, y))
+        except:
+            print(f"STPos(repr) attempted initialization from a badly formatted string representation: {t}")
+            return(-1)
+
     # --- Constructors, destructors, descriptors ---
     def __init__(self, t, x, y):
         self.t = t
@@ -20,4 +36,4 @@ class STPos():
     # in flag_args, and thus must be standardised
 
     def __str__(self):
-        return(f"({self.t},{self.x},{self.y})")
+        return("(" + (constants.STPos_delim).join(str(x) for x in [self.t, self.x, self.y]) + ")")

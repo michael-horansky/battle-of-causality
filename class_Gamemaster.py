@@ -1,6 +1,9 @@
 
 
 import math
+
+import constants
+
 from functions import *
 from class_STPos import STPos
 from class_Message import Message
@@ -14,9 +17,9 @@ from class_Board_square import Board_square
 
 class Gamemaster():
 
-    # ----------------------------------------------------
-    # ------ constructors, destructors, descriptors ------
-    # ----------------------------------------------------
+    # -------------------------------------------------------------------------
+    # ---------------- constructors, destructors, descriptors -----------------
+    # -------------------------------------------------------------------------
 
     def __init__(self, board_number, display_logs = False):
 
@@ -76,8 +79,7 @@ class Gamemaster():
         #      incrementing sequentially). The content is a list of flags
         #      ordered by Flag ID (for stone causal priority), with the
         #      format being:
-        #        "flag_ID,flag_type,player_faction,stone_ID,pos_t,pos_x,
-        #         pos_y,args;second flag_type..."
+        #        "flag_ID,flag_type,player_faction,stone_ID,pos,args;..."
         #      where different flags are separated by ';' and the args
         #      for each flag are separated by ','.
         # The loading paradigm is as follows:
@@ -106,85 +108,9 @@ class Gamemaster():
 
         self.load_board(board_number)
 
-    def add_stone_on_setup(self, faction, x, y, a0):
-        # This function allows Gamemaster to describe the initial state of the board, which is reverted to for every retrace of causal events
-        new_flag = Flag(STPos(-1, x, y), 'add_stone', faction, [True, a0])
-        self.setup_squares[x][y].add_flag(new_flag.flag_ID, new_flag.stone_ID)
-        self.flags[new_flag.flag_ID] = new_flag
-
-        # Trackers
-        self.stones[new_flag.stone_ID] = Stone(new_flag.stone_ID, faction, self.t_dim)
-        self.faction_armies[faction].append(new_flag.stone_ID)
-        self.setup_stones[new_flag.stone_ID] = new_flag.flag_ID
-
-    def load_board(self, board_number):
-        # load spatial and temporal dimensions of the board from the provided txt file
-        self.print_log(f"Loading board {board_number}...", 0)
-
-        self.print_log("Reading board source file...", 1)
-        board_file = open("resources/boards/board_" + uniform_str(board_number, 3) + ".txt", 'r')
-        board_lines = board_file.readlines()
-        board_file.close()
-
-        for i in range(len(board_lines)):
-            if board_lines[i][-1] == '\n':
-                board_lines[i] = board_lines[i][:-1]
-
-        self.x_dim = len(board_lines[1])
-        self.y_dim = len(board_lines) - 1
-
-        # initialize the board matrix, indexed as M[x][y]
-
-        self.board_static = []
-        for i in range(self.x_dim):
-            self.board_static.append([' ']*self.y_dim)
-
-        # Initialize the board initializing flags
-        self.flags = {}
-        self.setup_squares = []
-        for x in range(self.x_dim):
-            self.setup_squares.append([])
-            for y in range(self.y_dim):
-                self.setup_squares[x].append(Board_square(STPos(-1, x, y)))
-
-        self.t_dim = int(board_lines[0])
-
-        # Setup players
-        self.stones = {}
-        self.faction_armies = {}
-        self.setup_stones = {}
-        self.removed_setup_stones = {}
-        for faction in self.factions:
-            self.faction_armies[faction] = []
-
-        faction_orientations = {'A': 1, 'B' : 3} #TODO load this from the board dynamically
-
-        # Read the board setup
-        for y in range(self.y_dim):
-            for x in range(self.x_dim):
-                cur_char = board_lines[y+1][x]
-                if cur_char.upper() in self.factions:
-                    self.add_stone_on_setup(cur_char.upper(), x, y, faction_orientations[cur_char.upper()])
-                else:
-                    self.board_static[x][y] = cur_char
-
-        # Setup dynamic board squares
-        self.print_log("Setting up dynamic board representation...", 1)
-        self.board_dynamic = []
-        for t in range(self.t_dim):
-            self.board_dynamic.append([])
-            for x in range(self.x_dim):
-                self.board_dynamic[t].append([])
-                for y in range(self.y_dim):
-                    self.board_dynamic[t][x].append(Board_square(STPos(t, x, y)))
-
-        self.conflicting_squares = repeated_list(self.t_dim, [])
-
-        # Calculate TUI parameters for printing
-        self.single_board_width = self.x_dim * 2 + len(str(self.y_dim - 1))
-        self.header_width = self.single_board_width * self.t_dim + len(self.board_delim) * (self.t_dim - 1)
-
-    # ----------------- Print functions -------------------------
+    # -------------------------------------------------------------------------
+    # ---------------------------- Print functions ----------------------------
+    # -------------------------------------------------------------------------
 
     def print_heading_message(self, msg, level):
         # smaller the level, bigger the header
@@ -458,16 +384,16 @@ class Gamemaster():
                                 break
 
 
-    # ----------------------------------------------------
-    # ----------- board manipulation functions -----------
-    # ----------------------------------------------------
+    # -------------------------------------------------------------------------
+    # --------------------- Board manipulation functions ----------------------
+    # -------------------------------------------------------------------------
 
-    # static board functions
+    # ------------------------ Static board functions -------------------------
 
     def is_square_available(self, x, y):
         return(self.board_static[x][y] in [' '])
 
-    # board access
+    # ----------------------------- Board access ------------------------------
 
     def clear_board(self):
         # This function removes all information about Board_square occupancy,
@@ -496,27 +422,44 @@ class Gamemaster():
         self.board_dynamic[t][new_x][new_y].add_stone(stone_ID, self.board_dynamic[t][old_x][old_y].stone_properties[stone_ID])
         self.board_dynamic[t][old_x][old_y].remove_stone(stone_ID)
 
-    # -------------- Flag management
+    def causally_free_stones_at_time(self, t):
+        causally_free_armies = {}
+        for faction in self.factions:
+            causally_free_armies[faction] = []
+
+        for x in range(self.x_dim):
+            for y in range(self.y_dim):
+                for causally_free_stone_ID in self.board_dynamic[t][x][y].causally_free_stones:
+                    causally_free_armies[self.stones[causally_free_stone_ID].player_faction].append(causally_free_stone_ID)
+        return(causally_free_armies)
+
+    def causally_free_stones_at_time_by_player(self, t, player):
+        causally_free_army = []
+
+        for x in range(self.x_dim):
+            for y in range(self.y_dim):
+                for causally_free_stone_ID in self.board_dynamic[t][x][y].causally_free_stones:
+                    if self.stones[causally_free_stone_ID].player_faction == player:
+                        causally_free_army.append(causally_free_stone_ID)
+        return(causally_free_army)
+
+    # ---------------------------- Flag management ----------------------------
+
+    # ----------------------------- Flag addition
     # Methods which add new Flags always return the Flag ID
 
-    def remove_flag_from_game(self, flag_ID):
-        flag_pos = self.flags[flag_ID].pos
-        # First: If this is a stone generating flag type, we need to remove the generated stone
-        if self.flags[flag_ID].flag_type in Flag.stone_generating_flag_types:
-            self.remove_stone_from_game(self.flags[flag_ID].stone_ID)
-        # Second: Remove flag from its board square
-        if flag_pos.t == -1:
-            self.setup_squares[flag_pos.x][flag_pos.y].remove_flag(flag_ID)
-        else:
-            self.board_dynamic[flag_pos.t][flag_pos.x][flag_pos.y].remove_flag(flag_ID)
-        # Third: Purge the flag
-        del self.flags[flag_ID]
-        # Fourth: Remove flag from trackers
-        if flag_ID in self.tji_ID_list:
-            self.tji_ID_list.remove(flag_ID)
-        if flag_ID in self.tji_ID_buffer.keys():
-            # Removal of a newly added TJI also means removal of its associated TJO
-            del self.tji_ID_buffer[flag_ID]
+    def add_stone_on_setup(self, faction, x, y, a0):
+        # This function allows Gamemaster to describe the initial state of the board, which is reverted to for every retrace of causal events
+        new_flag = Flag(STPos(-1, x, y), 'add_stone', faction, [True, a0])
+        self.setup_squares[x][y].add_flag(new_flag.flag_ID, new_flag.stone_ID)
+        self.flags[new_flag.flag_ID] = new_flag
+
+        # Trackers
+        self.stones[new_flag.stone_ID] = Stone(new_flag.stone_ID, faction, self.t_dim)
+        self.faction_armies[faction].append(new_flag.stone_ID)
+        self.setup_stones[new_flag.stone_ID] = new_flag.flag_ID
+
+        return(new_flag.flag_ID)
 
     def add_flag_spatial_move(self, stone_ID, t, old_x, old_y, new_x, new_y, new_a):
         new_flag = Flag(STPos(t, old_x, old_y), "spatial_move", self.stones[stone_ID].player_faction, [new_x, new_y, new_a], stone_ID)
@@ -578,18 +521,36 @@ class Gamemaster():
             return(Message("exception", "Specified stone not associated with a time-jump-in"))
 
 
-    def set_tji_activity(self, tji_ID, new_is_active):
-        """tji_pos = self.flag_index[tji_ID]
-        if tji_pos.t == -1:
-            old_arguments = self.setup_squares[tji_pos.x][tji_pos.y].get_flag_arguments(tji_ID)
-            old_arguments[0] = new_is_active
-            self.setup_squares[tji_pos.x][tji_pos.y].set_flag_arguments(tji_ID, old_arguments)
+    def remove_flag_from_game(self, flag_ID):
+        flag_pos = self.flags[flag_ID].pos
+        # First: If this is a stone generating flag type, we need to remove the generated stone
+        if self.flags[flag_ID].flag_type in Flag.stone_generating_flag_types:
+            self.remove_stone_from_game(self.flags[flag_ID].stone_ID)
+        # Second: Remove flag from its board square
+        if flag_pos.t == -1:
+            self.setup_squares[flag_pos.x][flag_pos.y].remove_flag(flag_ID)
         else:
-            old_arguments = self.board_dynamic[tji_pos.t][tji_pos.x][tji_pos.y].get_flag_arguments(tji_ID)
-            old_arguments[0] = new_is_active
-            self.board_dynamic[tji_pos.t][tji_pos.x][tji_pos.y].set_flag_arguments(tji_ID, old_arguments)"""
+            self.board_dynamic[flag_pos.t][flag_pos.x][flag_pos.y].remove_flag(flag_ID)
+        # Third: Purge the flag
+        del self.flags[flag_ID]
+        # Fourth: Remove flag from trackers
+        if flag_ID in self.tji_ID_list:
+            self.tji_ID_list.remove(flag_ID)
+        if flag_ID in self.tji_ID_buffer.keys():
+            # Removal of a newly added TJI also means removal of its associated TJO
+            del self.tji_ID_buffer[flag_ID]
+
+    # ----------------------------- Flag activity
+
+    def set_tji_activity(self, tji_ID, new_is_active):
         self.flags[tji_ID].flag_args[0] = new_is_active
 
+
+    # -------------------------- Board canonization ---------------------------
+    # Board canonization methods take a Board state and assure its validity,
+    # either by stone manipulation or flag activity manipulation.
+
+    # ---------------------- Spatial conflict resolution
 
     def resolve_conflicts(self, t):
         # Resolves conflicts in a specified time-slice
@@ -717,7 +678,7 @@ class Gamemaster():
             x, y = cur_pos
             self.board_dynamic[t][x][y].remove_stones()
 
-    # Temporal resolution algorithms
+    # --------------------- Temporal conflict resolution
 
     def resolve_causal_consistency(self):
         # The wrapper for causal consistency methods
@@ -770,9 +731,7 @@ class Gamemaster():
 
         # This should theoretically never occur, as deactivating all add_stone flags
         # AND all TJIs should result in a completely empty board, which is always causally consistent.
-        return(Message("exception"), "Unable to find a causally consistent scenario.")
-
-
+        return(Message("exception", "Unable to find a causally consistent scenario."))
 
     def find_causally_consistent_scenarios(self):
         # takes the internal timejump surjection and returns a list of activity maps, where each activity map is a list of booleans,
@@ -846,9 +805,12 @@ class Gamemaster():
         print("Returning the first element...")
         return(causally_consistent_scenarios[0])
 
-
-
-
+    # ---------------------------- Flag execution -----------------------------
+    # This function cleans the board and realises its evolution across t_dim
+    # with a fixed flag activity map (given by the object-stored flag args) so
+    # that every time-slice is canonical (i.e. free of spatial conflicts).
+    # It also tracks timejump bearings and bijections, so that after realising
+    # the board, we can check if it is also causally consistent.
 
     def execute_moves(self, reset_timejump_trackers = False):
         # This function populates Board_squares with stones according to all flags
@@ -930,36 +892,9 @@ class Gamemaster():
                                     self.stone_inheritance[cur_flag.stone_ID] = self.flags[cur_flag.flag_args[1]].stone_ID
 
 
-
-
-
-
-
-
-    # ----------------------------------------------------
-    # --------------- game loop functions ----------------
-    # ----------------------------------------------------
-
-    def causally_free_stones_at_time(self, t):
-        causally_free_armies = {}
-        for faction in self.factions:
-            causally_free_armies[faction] = []
-
-        for x in range(self.x_dim):
-            for y in range(self.y_dim):
-                for causally_free_stone_ID in self.board_dynamic[t][x][y].causally_free_stones:
-                    causally_free_armies[self.stones[causally_free_stone_ID].player_faction].append(causally_free_stone_ID)
-        return(causally_free_armies)
-
-    def causally_free_stones_at_time_by_player(self, t, player):
-        causally_free_army = []
-
-        for x in range(self.x_dim):
-            for y in range(self.y_dim):
-                for causally_free_stone_ID in self.board_dynamic[t][x][y].causally_free_stones:
-                    if self.stones[causally_free_stone_ID].player_faction == player:
-                        causally_free_army.append(causally_free_stone_ID)
-        return(causally_free_army)
+    # -------------------------------------------------------------------------
+    # --------------------------- Game loop methods ---------------------------
+    # -------------------------------------------------------------------------
 
     def prompt_player_input(self, cur_time, player):
         # Wrapper for player input
@@ -1017,6 +952,7 @@ class Gamemaster():
                 flat_flags_added_this_turn.append(flags_added_this_turn[stone_index][flag_index])
         added_dynamic_representation = self.encode_move_representation(flat_flags_added_this_turn)
         print(added_dynamic_representation) # TODO this should be returned instead
+        #print(self.decode_move_representation(added_dynamic_representation))
 
     def standard_game_loop(self):
 
@@ -1063,24 +999,115 @@ class Gamemaster():
 
             self.tji_ID_buffer = {}
 
-    # ----------------------- Data saving/loading methods -------------------------
+    # -------------------------------------------------------------------------
+    # ---------------------- Data saving/loading methods ----------------------
+    # -------------------------------------------------------------------------
     # Saving: Sends stored representation data to python-server connector
     # Loading: Initializes Gamemaster instance from representation data
 
-    # NOTE: Because of the way loading works (basically performing the entire game
-    # from the beginning), it has to be fully deterministic (which agrees with the
-    # core philosophy of "strategy board game"). Important for causal freedom!
+    # NOTE: Because of the way loading works (basically performing the entire
+    # game from the beginning), it has to be fully deterministic (which agrees
+    # with the core philosophy of "strategy board game"). Important for c.f.!
+
+    # NOTE: Since the board state is fully determined by the board static data
+    # and the flag placement, INDEPENDENT on turn-by-turn placement, a list of
+    # flags would be sufficient. However, we still key-code moves by move and
+    # player IDs so we can realise the evolution of the game.
+    # However, this does help us, as realising the game state at a specific
+    # move just means we populate all the flags up to that point and execute
+    # them once (together with a causally-consistent scenario selector).
+
+    # -------------------------------- Saving ---------------------------------
 
     def encode_move_representation(self, list_of_flag_IDs):
         # Since the order of flag addition matters, we order the list in an ascending order by the first element of each element
         sorted_list_of_flag_IDs = sorted(list_of_flag_IDs)
 
-        new_move_representation = ""
+        flag_representation_list = []
         for cur_flag_ID in sorted_list_of_flag_IDs:
-            cur_flag = self.flags[cur_flag_ID]
-            new_move_representation += ",".join(str(x) for x in [cur_flag.flag_ID, cur_flag.flag_type, cur_flag.player_faction, cur_flag.stone_ID, cur_flag.pos.t, cur_flag.pos.x, cur_flag.pos.y]) + ","
-            new_move_representation += ",".join(str(x) for x in cur_flag.flag_args) + ";"
-        return(new_move_representation[:-1]) # We omit the final semicolon
+            flag_representation_list.append(self.flags[cur_flag_ID].get_flag_representation())
+        return((constants.Gamemaster_delim).join(flag_representation_list))
+
+    # -------------------------------- Loading --------------------------------
+
+    def decode_move_representation(self, move_representation):
+        # This is a representation of a move of a specific player, i.e. a value
+        # in the turn-indexed dict of moves by player. It is a list of flags.
+        # The output is a list of realised Flag objects
+
+        result = []
+        flag_representation_list = move_representation.split(";")
+        for flag_representation in flag_representation_list:
+            result.append(Flag.from_str(flag_representation))
+        return(result)
+
+    # This is a legacy feature
+    def load_board(self, board_number):
+        # load spatial and temporal dimensions of the board from the provided txt file
+        self.print_log(f"Loading board {board_number}...", 0)
+
+        self.print_log("Reading board source file...", 1)
+        board_file = open("resources/boards/board_" + uniform_str(board_number, 3) + ".txt", 'r')
+        board_lines = board_file.readlines()
+        board_file.close()
+
+        for i in range(len(board_lines)):
+            if board_lines[i][-1] == '\n':
+                board_lines[i] = board_lines[i][:-1]
+
+        self.x_dim = len(board_lines[1])
+        self.y_dim = len(board_lines) - 1
+
+        # initialize the board matrix, indexed as M[x][y]
+
+        self.board_static = []
+        for i in range(self.x_dim):
+            self.board_static.append([' ']*self.y_dim)
+
+        # Initialize the board initializing flags
+        self.flags = {}
+        self.setup_squares = []
+        for x in range(self.x_dim):
+            self.setup_squares.append([])
+            for y in range(self.y_dim):
+                self.setup_squares[x].append(Board_square(STPos(-1, x, y)))
+
+        self.t_dim = int(board_lines[0])
+
+        # Setup players
+        self.stones = {}
+        self.faction_armies = {}
+        self.setup_stones = {}
+        self.removed_setup_stones = {}
+        for faction in self.factions:
+            self.faction_armies[faction] = []
+
+        faction_orientations = {'A': 1, 'B' : 3} #TODO load this from the board dynamically
+
+        # Read the board setup
+        for y in range(self.y_dim):
+            for x in range(self.x_dim):
+                cur_char = board_lines[y+1][x]
+                if cur_char.upper() in self.factions:
+                    self.add_stone_on_setup(cur_char.upper(), x, y, faction_orientations[cur_char.upper()])
+                else:
+                    self.board_static[x][y] = cur_char
+
+        # Setup dynamic board squares
+        self.print_log("Setting up dynamic board representation...", 1)
+        self.board_dynamic = []
+        for t in range(self.t_dim):
+            self.board_dynamic.append([])
+            for x in range(self.x_dim):
+                self.board_dynamic[t].append([])
+                for y in range(self.y_dim):
+                    self.board_dynamic[t][x].append(Board_square(STPos(t, x, y)))
+
+        self.conflicting_squares = repeated_list(self.t_dim, [])
+
+        # Calculate TUI parameters for printing
+        self.single_board_width = self.x_dim * 2 + len(str(self.y_dim - 1))
+        self.header_width = self.single_board_width * self.t_dim + len(self.board_delim) * (self.t_dim - 1)
 
 
 

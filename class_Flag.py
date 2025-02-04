@@ -1,6 +1,7 @@
 
-
+import constants
 from functions import *
+from class_STPos import STPos
 
 # ---------------------------------------------
 # ---------------- class Flag -----------------
@@ -39,10 +40,39 @@ class Flag():
         return(new_tag)
 
     # ----------------------------------------------------
+    # ------------------ class methods -------------------
+    # ----------------------------------------------------
+
+    @classmethod
+    def from_str(cls, flag_representation):
+        try:
+            flag_elements = flag_representation.split(constants.Flag_delim)
+            cur_flag_ID             =            int(flag_elements[0])
+            cur_flag_type           =                flag_elements[1]
+            cur_flag_player_faction =                flag_elements[2]
+            cur_flag_stone_ID       =            int(flag_elements[3])
+            cur_flag_pos            = STPos.from_str(flag_elements[4])
+            cur_flag_args_list      =                flag_elements[5:]
+            if cur_flag_type == "add_stone":
+                cur_flag_args = [bool(cur_flag_args_list[0]), int(cur_flag_args_list[1])]
+            if cur_flag_type == "time_jump_out":
+                cur_flag_args = [STPos.from_str(cur_flag_args_list[0]), int(cur_flag_args_list[1])]
+            if cur_flag_type == "time_jump_in":
+                cur_flag_args = [bool(cur_flag_args_list[0]), int(cur_flag_args_list[1])]
+            if cur_flag_type == "spatial_move":
+                cur_flag_args = [int(cur_flag_args_list[0]), int(cur_flag_args_list[1]), int(cur_flag_args_list[2])]
+            if cur_flag_type == "attack":
+                cur_flag_args = [bool(cur_flag_args_list[0])]
+            return(cls(pos = cur_flag_pos, flag_type = cur_flag_type, player_faction = cur_flag_player_faction, flag_args = cur_flag_args, stone_ID = cur_flag_stone_ID, flag_ID = cur_flag_ID))
+
+        except:
+            print(f"Flag(repr) attempted initialization from a badly formatted string representation: {flag_representation}")
+
+    # ----------------------------------------------------
     # ------ constructors, destructors, descriptors ------
     # ----------------------------------------------------
 
-    def __init__(self, pos, flag_type, player_faction, flag_args, stone_ID = -1):
+    def __init__(self, pos, flag_type, player_faction, flag_args, stone_ID = -1, flag_ID = None):
         self.pos = pos
         self.flag_type = flag_type
         self.player_faction = player_faction
@@ -51,7 +81,13 @@ class Flag():
         if self.flag_type in Flag.stone_generating_flag_types:
             self.stone_ID = Flag.get_stone_ID_tag()
 
-        self.flag_ID = Flag.get_flag_ID_tag()
+        # flag_ID is generated automatically if new Flag is being created, and
+        # set to a specific value if an old Flag is being loaded into a new GM
+        if flag_ID is None:
+            self.flag_ID = Flag.get_flag_ID_tag()
+        else:
+            self.flag_ID = flag_ID
+            Flag.max_flag_ID = max(Flag.max_flag_ID, self.flag_ID + 1)
 
     def __str__(self):
         str_rep = 'UNDEFINED_MOVE'
@@ -82,4 +118,9 @@ class Flag():
         return(str_rep)
     def __repr__(self):
         return(self.__str__())
+
+    def get_flag_representation(self):
+        flag_representation = (constants.Flag_delim).join(str(x) for x in [self.flag_ID, self.flag_type, self.player_faction, self.stone_ID, self.pos]) + (constants.Flag_delim)
+        flag_representation += (constants.Flag_delim).join(str(x) for x in self.flag_args)
+        return(flag_representation)
 
