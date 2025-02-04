@@ -53,6 +53,57 @@ class Gamemaster():
         # TUI elements
         self.board_delim = ' | '
 
+
+        # ---------------------------------------------------------------
+        # ------------------- Saving and loading game -------------------
+        # ---------------------------------------------------------------
+        # An instance of Gamemaster is created freshly whenever the Game
+        # url is loaded. From the unique Game ID, the appropriate data
+        # from the server-side db are loaded into this instance, and the
+        # game is brought to the latest state, where the user can inter-
+        # act with the Gamemaster to create a new datum to be sent to
+        # server-side.
+        # The data is in the following form:
+        #   1. Static data: Data about the board, which doesn't depend on
+        #      the state of the specific Game. This is in the format of
+        #      "t_dim, x_dim, y_dim; board representation; setup moves"
+        #      (Note that setup moves are copied into table Games for
+        #      each new instance, as that table has to contain all the
+        #      flag creation data.)
+        #   2. Dynamic data: All the other moves. Each move datum is ID'd
+        #      by the Game, the Player (can be "GM", e.g. for setup
+        #      moves), and the Index (starting from 0 for setup moves and
+        #      incrementing sequentially). The content is a list of flags
+        #      ordered by Flag ID (for stone causal priority), with the
+        #      format being:
+        #        "flag_ID,flag_type,player_faction,stone_ID,pos_t,pos_x,
+        #         pos_y,args;second flag_type..."
+        #      where different flags are separated by ';' and the args
+        #      for each flag are separated by ','.
+        # The loading paradigm is as follows:
+        #   1. Astatic board is initialized from the static data
+        #      representation.
+        #   2. For each move index:
+        #     2.1. All the moves are placed as flags onto the board
+        #     2.2. End-of-turn routine plays out (conflict resolution in
+        #          the middle of a round, temporal consistency resolution
+        #          at the end of a round, win condition check).
+        # After that, the state of the board is displayed (and viewable
+        # for any max_index) and the player is prompted for their input.
+
+        # The following properties are the raw datapoints mirroring the
+        # server-side db. They are both loaded from the db and updated by
+        # user interaction
+
+        self.static_representation = ""
+        # The full dynamic representation, for loading purposes
+        self.dynamic_representation = [] #[move_index]["faction"] = "flag representations"
+        # The staged commit dynamic representation, for saving purposes
+        # (during save routine, the elements of this array are inserted into MOVES)
+        # For old moves, the elements are empty dictionaries
+        self.new_dynamic_representation = [] #[move_index]["faction"] = "flag representations"
+
+
         self.load_board(board_number)
 
     def add_stone_on_setup(self, faction, x, y, a0):
@@ -900,6 +951,73 @@ class Gamemaster():
                     causally_free_armies[self.stones[causally_free_stone_ID].player_faction].append(causally_free_stone_ID)
         return(causally_free_armies)
 
+    def causally_free_stones_at_time_by_player(self, t, player):
+        causally_free_army = []
+
+        for x in range(self.x_dim):
+            for y in range(self.y_dim):
+                for causally_free_stone_ID in self.board_dynamic[t][x][y].causally_free_stones:
+                    if self.stones[causally_free_stone_ID].player_faction == player:
+                        causally_free_army.append(causally_free_stone_ID)
+        return(causally_free_army)
+
+    def prompt_player_input(self, cur_time, player):
+        # Wrapper for player input
+
+        # TODO: Journal for printing! At a specific debug level the log is identical to TUI
+        # TODO: Flag buffer: flags are collected into a list separately from self.flags and
+        #       are only committed after input ends (this should make UNDOing safer)
+
+        # TODO: Commits the newly added flags into dynamic representations and returns it
+        currently_causally_free_stones = self.causally_free_stones_at_time_by_player(cur_time, player)
+        self.print_heading_message(f"Player {player}, it is your turn to command your stones now.", 2)
+        if len(currently_causally_free_stones) == 0:
+            self.print_heading_message("No causally free stones to command.", 3)
+        stone_index = 0
+        flags_added_this_turn = repeated_list(len(currently_causally_free_stones), None)
+        while(stone_index < len(currently_causally_free_stones)):
+            cur_stone = currently_causally_free_stones[stone_index]
+            cur_pos = self.stones[cur_stone].history[cur_time]
+            x, y, a = cur_pos
+            self.print_heading_message(f"Command your stone at ({x},{y}).", 3)
+            if cur_time < self.t_dim - 1:
+                move_msg = self.stones[cur_stone].parse_move_cmd(self, cur_time)
+            else:
+                move_msg = self.stones[cur_stone].parse_final_move_cmd(self, cur_time)
+
+            if move_msg.header == "option":
+                # The user is interacting with gamemaster options
+                if move_msg.msg == "quit":
+                    #return(-1)
+                    quit()
+                if move_msg.msg == "undo":
+                    # We revert back to the previous stone
+                    stone_index = max(stone_index-1, 0)
+                    # We delete the Flag we added to this stone if any
+                    if flags_added_this_turn[stone_index] != None:
+                        #prev_x, prev_y, prev_a = self.stones[currently_causally_free_stones[player][stone_index]].history[cur_time]
+                        for added_flag_ID in flags_added_this_turn[stone_index]:
+                            self.remove_flag_from_game(added_flag_ID)
+                        flags_added_this_turn[stone_index] = None
+                    continue
+
+            if move_msg.header == "flags added":
+                # A new Flag was added
+                flags_added_this_turn[stone_index] = move_msg.msg
+
+            stone_index += 1
+
+        # Now we flatten the buffer
+        # TODO execute flag addition as you flatten
+        flat_flags_added_this_turn = []
+        for stone_index in range(len(currently_causally_free_stones)):
+            if flags_added_this_turn[stone_index] is None:
+                continue
+            for flag_index in range(len(flags_added_this_turn[stone_index])):
+                flat_flags_added_this_turn.append(flags_added_this_turn[stone_index][flag_index])
+        added_dynamic_representation = self.encode_move_representation(flat_flags_added_this_turn)
+        print(added_dynamic_representation) # TODO this should be returned instead
+
     def standard_game_loop(self):
 
         self.round_number = -1
@@ -918,43 +1036,10 @@ class Gamemaster():
                 self.print_board_horizontally(self.current_time)
 
                 # Third, for every causally free stone, we ask its owner to place a flag
-                currently_causally_free_stones = self.causally_free_stones_at_time(self.current_time)
+                #currently_causally_free_stones = self.causally_free_stones_at_time(self.current_time)
                 for player in self.factions:
-                    self.print_heading_message(f"Player {player}, it is your turn to command your stones now.", 2)
-                    if len(currently_causally_free_stones[player]) == 0:
-                        self.print_heading_message("No causally free stones to command.", 3)
-                    stone_index = 0
-                    flags_added_this_turn = repeated_list(len(currently_causally_free_stones[player]), None)
-                    while(stone_index < len(currently_causally_free_stones[player])):
-                        cur_stone = currently_causally_free_stones[player][stone_index]
-                        cur_pos = self.stones[cur_stone].history[self.current_time]
-                        x, y, a = cur_pos
-                        self.print_heading_message(f"Command your stone at ({x},{y}).", 3)
-                        if self.current_time < self.t_dim - 1:
-                            move_msg = self.stones[cur_stone].parse_move_cmd(self, self.current_time)
-                        else:
-                            move_msg = self.stones[cur_stone].parse_final_move_cmd(self, self.current_time)
+                    self.prompt_player_input(self.current_time, player)
 
-                        if move_msg.header == "option":
-                            # The user is interacting with gamemaster options
-                            if move_msg.msg == "quit":
-                                return(-1)
-                            if move_msg.msg == "undo":
-                                # We revert back to the previous stone
-                                stone_index = max(stone_index-1, 0)
-                                # We delete the Flag we added to this stone if any
-                                if flags_added_this_turn[stone_index] != None:
-                                    prev_x, prev_y, prev_a = self.stones[currently_causally_free_stones[player][stone_index]].history[self.current_time]
-                                    for added_flag_ID in flags_added_this_turn[stone_index]:
-                                        self.remove_flag_from_game(added_flag_ID)
-                                        #self.board_dynamic[self.current_time][prev_x][prev_y].remove_flag()
-                                continue
-
-                        if move_msg.header == "flags added":
-                            # A new Flag was added
-                            flags_added_this_turn[stone_index] = move_msg.msg
-
-                        stone_index += 1
 
             # ---------------------- Sorting out time travel --------------------------
 
@@ -977,6 +1062,25 @@ class Gamemaster():
                 self.stone_inheritance[self.flags[new_tjo_ID].stone_ID] = self.flags[new_tji_ID].stone_ID
 
             self.tji_ID_buffer = {}
+
+    # ----------------------- Data saving/loading methods -------------------------
+    # Saving: Sends stored representation data to python-server connector
+    # Loading: Initializes Gamemaster instance from representation data
+
+    # NOTE: Because of the way loading works (basically performing the entire game
+    # from the beginning), it has to be fully deterministic (which agrees with the
+    # core philosophy of "strategy board game"). Important for causal freedom!
+
+    def encode_move_representation(self, list_of_flag_IDs):
+        # Since the order of flag addition matters, we order the list in an ascending order by the first element of each element
+        sorted_list_of_flag_IDs = sorted(list_of_flag_IDs)
+
+        new_move_representation = ""
+        for cur_flag_ID in sorted_list_of_flag_IDs:
+            cur_flag = self.flags[cur_flag_ID]
+            new_move_representation += ",".join(str(x) for x in [cur_flag.flag_ID, cur_flag.flag_type, cur_flag.player_faction, cur_flag.stone_ID, cur_flag.pos.t, cur_flag.pos.x, cur_flag.pos.y]) + ","
+            new_move_representation += ",".join(str(x) for x in cur_flag.flag_args) + ";"
+        return(new_move_representation[:-1]) # We omit the final semicolon
 
 
 
