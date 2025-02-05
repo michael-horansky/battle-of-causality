@@ -50,12 +50,17 @@ class Gamemaster():
 
         # Trackers for existing time-jumps
         self.tji_ID_list = [] # This list is always ordered in an ascending order
+        self.TJIs_by_round = [] # N-th element is the list of TJIs added in that round
         self.tji_bearing = {} # This updates on every self.execute_moves. [tji_ID] = number of activated matching TJOs
         self.timejump_bijection = {} # This is the recorded bijection of active TJIs. [tji_ID] = tjo_ID, where tjo_ID marks the TJO which actually activates
         self.stone_inheritance = {} # [stone_ID] = child_ID
 
         # Trackers for newly added time-jumps
         self.tji_ID_buffer = {} # TJIs added before the next scenario selection (after each selection, they flush into tji_ID_list). [new tji_ID] = new tjo_ID
+
+        # History of round canonization. N-th element is the activity map considered canon at the BEGINNING of round N (so zeroth element is the setup-only
+        # activity map).
+        self.round_canonization = [] # [round_number]["setup_AM"] = {setup_flag_ID : is active?}; [round_number]["TJI_AM"] = {TJI_flag_ID : is active?}
 
         # TUI elements
         self.board_delim = ' | '
@@ -462,6 +467,7 @@ class Gamemaster():
         self.stones[new_flag.stone_ID] = Stone(new_flag.stone_ID, faction, self.t_dim)
         self.faction_armies[faction].append(new_flag.stone_ID)
         self.setup_stones[new_flag.stone_ID] = new_flag.flag_ID
+        self.round_canonization[0]["setup_AM"][new_flag.flag_ID] = True
 
         return(new_flag.flag_ID)
 
@@ -546,6 +552,7 @@ class Gamemaster():
             self.faction_armies[new_flag.player_faction].append(new_flag.stone_ID)
             if is_setup:
                 self.setup_stones[new_flag.stone_ID] = new_flag.flag_ID
+                self.round_canonization[0]["setup_AM"][new_flag.flag_ID] = True
 
         return(new_flag.flag_ID)
 
@@ -566,6 +573,9 @@ class Gamemaster():
         # Fourth: Remove flag from trackers
         if flag_ID in self.tji_ID_list:
             self.tji_ID_list.remove(flag_ID)
+        for round_i in range(len(self.TJIs_by_round)):
+            if flag_ID in self.TJIs_by_round[round_i]:
+                self.TJIs_by_round[round_i].remove(flag_ID)
         if flag_ID in self.tji_ID_buffer.keys():
             # Removal of a newly added TJI also means removal of its associated TJO
             del self.tji_ID_buffer[flag_ID]
@@ -574,6 +584,14 @@ class Gamemaster():
 
     def set_tji_activity(self, tji_ID, new_is_active):
         self.flags[tji_ID].flag_args[0] = new_is_active
+
+    def realise_activity_map(self, activity_map):
+        # activity map = {"setup_AM" : {flag_ID : is active?...}, "TJI_AM" : {flag_ID : is active?...}}
+        for current_activity_map in activity_map.values():
+            for specific_flag_ID, is_active_val in current_activity_map.items():
+                self.flags[specific_flag_ID].flag_args[0] = is_active_val
+        # Execute moves to update trackers
+        self.execute_moves(reset_timejump_trackers = True)
 
 
     # -------------------------- Board canonization ---------------------------
@@ -714,11 +732,26 @@ class Gamemaster():
 
     # --------------------- Temporal conflict resolution
 
-    def resolve_causal_consistency(self):
+    def resolve_causal_consistency(self, max_turn_index = None):
         # The wrapper for causal consistency methods
 
+        # Returns a dict = {"setup_AM" : {setup activity map}, "TJI_AM" : {TJI activity map}}
+        result_activity_map = {"setup_AM" : {}, "TJI_AM" : {}}
+
+        # If we are looking into the past (by passing max_turn_index from a
+        # round previous to current round), we just load the correct activity
+        # map for setup flags AND TJIs and use it "blindly".
+        # This requires a preparation
+
+        active_setup_stones = []#list(self.setup_stones.keys())
+        for setup_stone_ID, setup_flag_ID in self.setup_stones.items():
+            if self.flags[setup_flag_ID].flag_args[0]:
+                active_setup_stones.append(setup_stone_ID)
+            else:
+                result_activity_map["setup_AM"][setup_flag_ID] = False
+        # NOTE populating this list depends on the Ruleset
+
         # Order setup stones by a deterministic criterion from least prioritised to most prioritised
-        active_setup_stones = list(self.setup_stones.keys())
 
         # The ordering cannot be added on the TUI but this is how it's gonna work:
         # Every time a player selects a setup stone and adds a flag to it, it floats down to
@@ -744,21 +777,19 @@ class Gamemaster():
                 else:
                     # We commit to the canonical scenario
                     canonical_scenario = self.select_scenario(causally_consistent_scenarios.copy())
-                    for i in range(len(self.tji_ID_list)):
-                        # We set the is_active argument according to the activity map
-                        self.set_tji_activity(self.tji_ID_list[i], canonical_scenario[i])
+                    result_activity_map["TJI_AM"] = canonical_scenario
 
-                    # We delete all inactive setup stones from self.setup_stones,
-                    # disallowing them from being considered for activation later.
-
-                    recently_removed_setup_stones = []
+                    #recently_removed_setup_stones = []
 
                     for i in range(len(activity_map)):
-                        self.removed_setup_stones[ordered_setup_stones[i]] = self.setup_stones[ordered_setup_stones[i]]
-                        recently_removed_setup_stones.append(ordered_setup_stones[i])
-                        del self.setup_stones[ordered_setup_stones[i]]
+                        if activity_map[i]:
+                            self.removed_setup_stones[ordered_setup_stones[i]] = self.setup_stones[ordered_setup_stones[i]]
+                            #recently_removed_setup_stones.append(ordered_setup_stones[i])
+                            #del self.setup_stones[ordered_setup_stones[i]]
+                        result_activity_map["setup_AM"][self.setup_stones[ordered_setup_stones[i]]] = not activity_map[i]
 
-                    return(Message("removed stones", recently_removed_setup_stones))
+                    return(result_activity_map)
+                    #return(Message("removed stones", recently_removed_setup_stones))
 
         # If we get to this point, something has gone terribly wrong, as not even
         # the removal of all stones yielded a causally consistent scenario
@@ -767,52 +798,80 @@ class Gamemaster():
         # AND all TJIs should result in a completely empty board, which is always causally consistent.
         return(Message("exception", "Unable to find a causally consistent scenario."))
 
-    def find_causally_consistent_scenarios(self):
-        # takes the internal timejump surjection and returns a list of activity maps, where each activity map is a list of booleans,
-        # where the i-th element specifies if the i-th TJI (ordered by flag_ID) should be active.
+    def find_causally_consistent_scenarios(self, max_turn_index = None):
+        # takes the internal timejump surjection and returns a list of activity
+        # maps {TJI_flag_ID : is active?} which are causally consistent.
 
         # A causally consistent scenario is one such that
         #   -For every in-active TJI, no stone reaches any corresponding TJO
         #   -For every active TJI, exactly one stone reaches a corresponding TJO
 
         causally_consistent_scenarios = []
-        tji_N = len(self.tji_ID_list)
+
+        reference_TJI_ID_list = []
+        # We include all TJIs from all rounds with a smaller number than the one in max_turn_index
+        if max_turn_index is None:
+            max_turn_index = len(self.flags_by_turn) - 1
+
+        max_round_number, _ = self.round_from_turn(max_turn_index)
+        if max_round_number == 0:
+            # In the zeroth round, the activity map is trivial
+            return([{}])
+        turn_index = 1
+        for t_i in range(1, self.t_dim * max_round_number + 1):
+            for move_flag_IDs in self.flags_by_turn[t_i].values():
+                for move_flag_ID in move_flag_IDs:
+                    if self.flags[move_flag_ID].flag_type == "time_jump_in":
+                        reference_TJI_ID_list.append(move_flag_ID)
+
+        # We now do an ordering according to the Ruleset. First element = lowest priority.
+        ordered_TJI_flags = reference_TJI_ID_list
+
+
+        tji_N = len(ordered_TJI_flags)
         if tji_N == 0:
             return([[]]) # The only possible scenario is also, by design, causally consistent
 
-        activity_map = [False] * tji_N
+        activity_map = [True] * tji_N
 
         for n in range(int(np.power(2, tji_N))):
             # first, prepare the moves
             how_many_TJOs_required = {}
             for i in range(tji_N):
                 # We set the is_active argument according to the activity map
-                self.set_tji_activity(self.tji_ID_list[i], activity_map[i])
+                self.set_tji_activity(ordered_TJI_flags[i], activity_map[i])
                 if activity_map[i] == True:
-                    how_many_TJOs_required[self.tji_ID_list[i]] = 1
+                    how_many_TJOs_required[ordered_TJI_flags[i]] = 1
                 if activity_map[i] == False:
-                    how_many_TJOs_required[self.tji_ID_list[i]] = 0
+                    how_many_TJOs_required[ordered_TJI_flags[i]] = 0
             # execute them
             self.execute_moves(reset_timejump_trackers = True)
             # Now we just compare self.tji_bearing to how_many_TJOs_required
             is_scenario_causally_consistent = True
-            for tji_ID in self.tji_ID_list:
+            for tji_ID in ordered_TJI_flags:
                 if how_many_TJOs_required[tji_ID] != self.tji_bearing[tji_ID]:
                     is_scenario_causally_consistent = False
                     break
             if is_scenario_causally_consistent:
-                causally_consistent_scenarios.append(activity_map.copy())
+                #causally_consistent_scenarios.append(activity_map.copy())
+                causally_consistent_scenarios.append({})
+                for i in range(tji_N):
+                    causally_consistent_scenarios[-1][ordered_TJI_flags[i]] = activity_map[i]
 
             # find the next activity map
             for i in range(tji_N):
-                if activity_map[i] == False:
-                    activity_map[i] = True
+                if activity_map[i] == True:
+                    activity_map[i] = False
                     break
                 else:
-                    activity_map[i] = False
+                    activity_map[i] = True
         return(causally_consistent_scenarios)
 
     def select_scenario(self, causally_consistent_scenarios):
+        # This depends on the Ruleset
+        # causally_consistent_scenarios is a list of dictionaries {TJI_flag_ID : is active?}
+        return(causally_consistent_scenarios[0])
+
         # THE PARADIGM HERE: We prioritize more recent TJIs to be active: the bigger the associated tji flag ID, the earlier will this break a tie
         if len(causally_consistent_scenarios) == 1:
             return(causally_consistent_scenarios[0])
@@ -881,7 +940,6 @@ class Gamemaster():
             for move_flag_IDs in self.flags_by_turn[t_i].values():
                 for move_flag_ID in move_flag_IDs:
                     flags_to_execute.append(move_flag_ID)
-        print(flags_to_execute)
 
         # Then, we execute flags for each time slice sequantially
         for t in range(self.t_dim):
@@ -945,6 +1003,17 @@ class Gamemaster():
     # --------------------------- Game loop methods ---------------------------
     # -------------------------------------------------------------------------
 
+    def round_from_turn(self, turn_index):
+        # turn_index == 0 -> setup
+        # turn_index == 1, 2... t_dim -> round 0
+        #            == t_dim + 1, ... 2.t_dim -> round 1 etc
+        if turn_index == 0:
+            return((0, -1))
+        current_round_number = int(np.floor((turn_index - 1) / self.t_dim))
+        current_timeslice    = (turn_index - 1) % self.t_dim
+        return(current_round_number, current_timeslice)
+
+
     def prompt_player_input(self, cur_time, player):
         # Wrapper for player input
 
@@ -957,6 +1026,7 @@ class Gamemaster():
         self.print_heading_message(f"Player {player}, it is your turn to command your stones now.", 2)
         if len(currently_causally_free_stones) == 0:
             self.print_heading_message("No causally free stones to command.", 3)
+            return([])
         stone_index = 0
         flags_added_this_turn = repeated_list(len(currently_causally_free_stones), None)
         while(stone_index < len(currently_causally_free_stones)):
@@ -999,8 +1069,8 @@ class Gamemaster():
                 continue
             for flag_index in range(len(flags_added_this_turn[stone_index])):
                 flat_flags_added_this_turn.append(flags_added_this_turn[stone_index][flag_index])
-        added_dynamic_representation = self.encode_move_representation(flat_flags_added_this_turn)
-        print(added_dynamic_representation) # TODO this should be returned instead
+        #added_dynamic_representation = self.encode_move_representation(flat_flags_added_this_turn)
+        #print(added_dynamic_representation) # TODO this should be returned instead
         return(flat_flags_added_this_turn)
 
     def standard_game_loop(self):
@@ -1024,7 +1094,6 @@ class Gamemaster():
                 self.print_board_horizontally(self.current_time)
 
                 # Third, for every causally free stone, we ask its owner to place a flag
-                #currently_causally_free_stones = self.causally_free_stones_at_time(self.current_time)
                 for player in self.factions:
                     flags_added_by_player = self.prompt_player_input(self.current_time, player)
                     self.flags_by_turn[turn_index][player] = flags_added_by_player
@@ -1043,18 +1112,25 @@ class Gamemaster():
             for i in range(len(self.tji_ID_list)):
                 # We set the is_active argument according to the activity map
                 self.set_tji_activity(self.tji_ID_list[i], canonical_scenario[i])"""
-            self.resolve_causal_consistency()
+            activity_map_for_next_round = self.resolve_causal_consistency()
 
             # We now set all newly added TJIs as active and flush tji_ID_buffer into tji_ID_list. We update the trackers.
             for new_tji_ID, new_tjo_ID in self.tji_ID_buffer.items():
-                self.set_tji_activity(new_tji_ID, True)
+                #self.set_tji_activity(new_tji_ID, True)
                 self.tji_ID_list.append(new_tji_ID)
+                self.TJIs_by_round[self.round_number].append(new_tji_ID)
                 self.timejump_bijection[new_tji_ID] = new_tjo_ID
                 self.stone_inheritance[self.flags[new_tjo_ID].stone_ID] = self.flags[new_tji_ID].stone_ID
+                activity_map_for_next_round["TJI_AM"][new_tji_ID] = True
 
             self.tji_ID_buffer = {}
 
+            # Commit to the activity map
+            self.round_canonization.append(activity_map_for_next_round)
+            self.realise_activity_map(activity_map_for_next_round)
+
             self.round_number += 1
+            self.TJIs_by_round.append([])
 
 
     # -------------------------------------------------------------------------
@@ -1082,7 +1158,7 @@ class Gamemaster():
     # spatial AND temporal consistency check. EZ. The game is deterministic in
     # this way: If we have a series of flag additions and then a canonization
     # routine, then sprinkling more canonizations in-between doesn't change the
-    # final state.
+    # final state. NOT TRUE: Depending on the ruleset
 
     # -------------------------------- Saving ---------------------------------
 
@@ -1101,6 +1177,9 @@ class Gamemaster():
         # This is a representation of a move of a specific player, i.e. a value
         # in the turn-indexed dict of moves by player. It is a list of flags.
         # The output is a list of realised Flag objects
+
+        if move_representation == "":
+            return([]) # E.g. player had no causally free stones
 
         result = []
         flag_representation_list = move_representation.split(";")
@@ -1148,6 +1227,8 @@ class Gamemaster():
         self.faction_armies = {}
         self.setup_stones = {}
         self.removed_setup_stones = {}
+        self.TJIs_by_round = [[]]
+        self.round_canonization = [{"setup_AM" : {}, "TJI_AM" : {}}]
         for faction in self.factions:
             self.faction_armies[faction] = []
 
@@ -1243,6 +1324,9 @@ class Gamemaster():
 
         self.tji_ID_buffer = {}
 
+        self.TJIs_by_round = [[]]
+        self.round_canonization = [{"setup_AM" : {}, "TJI_AM" : {}}]
+
         # game_status points at the turn index for which moves should be added next.
         game_status = None
         if len(dynamic_data_representation) == 1:
@@ -1259,17 +1343,20 @@ class Gamemaster():
             else:
                 game_status = len(dynamic_data_representation) - 1
 
-        # round number = number of causally-consistent-scenario selections occured
+        # round number = number of causally-consistent-scenario selections
+        # executed so far (i.e. the number of canonized rounds).
         # NOTE: For EVERY element of dynamic_data_representation, there is an
         # extra special key "round_number", which points not to a move rep, but
         # the round number corresponding to that turn.
         current_round_number = int(np.floor((game_status - 1) / self.t_dim))
+        self.TJIs_by_round = repeated_list(current_round_number + 1, [])
 
 
         # NOTE: we need to consider game status! if player A played turn 2 for tlim 2, but player B
         # hasn't yet, the len is 3, but the current round is still 0
         for turn_id in range(len(dynamic_data_representation)):
-            historic_round_number = dynamic_data_representation[turn_id]["round_number"]#int(np.floor((turn_id - 1) / self.t_dim))
+            #historic_round_number = dynamic_data_representation[turn_id]["round_number"]#int(np.floor((turn_id - 1) / self.t_dim))
+            historic_round_number, historic_timeslice = self.round_from_turn(turn_id)
             self.round_number_by_turn.append(historic_round_number)
 
             self.flags_by_turn.append({})
@@ -1283,14 +1370,15 @@ class Gamemaster():
                     self.flags_by_turn[turn_id][faction].append(move_flag.flag_ID)
                 # If this is a TJI added in the final round, it needs to be
                 # in the TJI buffer
+                TJOs_added_this_turn = []
+                TJIs_added_this_turn = []
+                for move_flag in move_flags:
+                    if move_flag.flag_type == "time_jump_out":
+                        TJOs_added_this_turn.append(move_flag.flag_ID)
+                    if move_flag.flag_type == "time_jump_in":
+                        TJIs_added_this_turn.append(move_flag.flag_ID)
+                self.TJIs_by_round[historic_round_number] += TJIs_added_this_turn
                 if historic_round_number == current_round_number:
-                    TJOs_added_this_turn = []
-                    TJIs_added_this_turn = []
-                    for move_flag in move_flags:
-                        if move_flag.flag_type == "time_jump_out":
-                            TJOs_added_this_turn.append(move_flag.flag_ID)
-                        if move_flag.flag_type == "time_jump_in":
-                            TJIs_added_this_turn.append(move_flag.flag_ID)
                     for recent_TJO in TJOs_added_this_turn:
                         if self.flags[recent_TJO].flag_args[1] in TJIs_added_this_turn:
                             # NOTE when prompting player, forbid linking to TJIs still in the buffer

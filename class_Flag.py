@@ -89,6 +89,9 @@ class Flag():
             self.flag_ID = flag_ID
             Flag.max_flag_ID = max(Flag.max_flag_ID, self.flag_ID + 1)
 
+    # NOTE: For flags subject to activity maps ('add_stone', 'time_jump_in'), the zeroth flag_arg is ALWAYS 'is_active'!
+    # TODO: Make is_active a separate Flag property. Any flag can be deactivated. This is how we resolve deactivating flags
+    # on the course off of which a stone has strayed by temporal tampering.
     def __str__(self):
         str_rep = 'UNDEFINED_MOVE'
         if self.flag_type == 'add_stone':

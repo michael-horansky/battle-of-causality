@@ -1,0 +1,16 @@
+The first option is always the default one.
+
+1. Reaching a paradox results in:
+     a) 'Auditors of Reality': Variations of deactivating stones on setup are tried in a specific order (prioritizing an arbitrary ordering, see below) until a causally-consistent scenario is possible. Setup stones deactivated this way stay deactivated for the rest of the game, even if, in future canonizations, their reoccurence would be causally consistent.
+     b) 'Vacation in Time': Same as 'Auditors of reality', except the stones are not removed permanently and their re-activation is considered in every canonization.
+     c) 'Know your paradoxes!': A paradox immediately ends the game!
+
+2. If the game ends with no players satisfying the primary win condition,
+     a) 'Poiccard's Gambit': The game counts as a draw.
+     b) 'Fighting in the War Room': If one player owns the majority of bases in the final timeslice of the last canonized round, that player wins the game.
+
+3. If a paradox is reached and two or more variations of setup stone deactivations are causally consistent, what criterions are used to trim down the number of variations to choose from?
+     a) 'Shield and Spear': 1. Smaller number of setup deactivations is prioritized; 2. Not deactivating stones more recently touched by the player is prioritized; 3. Keeping TJIs added more recently active is prioritized.
+     b) 'Ace Wildcard': 1. Keeping TJIs added more recently active is prioritized; 2. Not deactivating stones more recently touched by the player is prioritized; 3. Smaller number of setup deactivations is prioritized.
+     c) 'Merry Chronos': 1. Bigger number of active TJIs is prioritized; 2. Bigger number of stones present on board is prioritized; 3. Keeping more recently added stones is prioritized (where the recency of setup stones is determined in first round by a headcount by each player).
+
