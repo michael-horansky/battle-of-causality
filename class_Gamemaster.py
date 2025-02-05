@@ -44,6 +44,7 @@ class Gamemaster():
         # flags
         self.flags = {} # [flag_ID] = Flag()
         self.flags_by_turn = [] # [turn_number]["faction"] = [list of flag IDs added by that player that turn]
+        self.round_number_by_turn = [] # [turn_number] = round_number
         # flags_by_turn is never handled by the add_flag methods, as they are turn-number-invariant. Instead,
         # it is always handled by the input prompt (loader or player input).
 
@@ -501,7 +502,7 @@ class Gamemaster():
             # We add the new stone into the army
             self.stones[tji_flag.stone_ID] = Stone(tji_flag.stone_ID, self.stones[stone_ID].player_faction, self.t_dim)
             self.faction_armies[self.stones[stone_ID].player_faction].append(tji_flag.stone_ID)
-            return(Message("flags added", [tjo_flag.flag_ID, tji_flag.flag_ID]))
+            return(Message("flags added", [tji_flag.flag_ID, tjo_flag.flag_ID]))
         else:
             # First, we find the TJI which summons the stone
             for tji_ID in self.tji_ID_list:
@@ -586,8 +587,12 @@ class Gamemaster():
         # Assumes all previous time-slices are canonical (void of conflicts)
         # The paradigm here is as follows: 1 Sokoban; 2 Impasse; 3 Destruction
 
+        # NOTE that this method is completely flag-independent, only dealing
+        # with the placement of Stones on board!
+
         # 1 Sokoban
         # Sokoban pushes do not occur at t = 0, as they depend on the state of the board in the previous time-slice
+
         if t != 0:
             squares_to_be_checked = self.conflicting_squares[t].copy()
 
@@ -841,8 +846,9 @@ class Gamemaster():
     # It also tracks timejump bearings and bijections, so that after realising
     # the board, we can check if it is also causally consistent.
 
-    def execute_moves(self, reset_timejump_trackers = False):
-        # This function populates Board_squares with stones according to all flags
+    def execute_moves(self, reset_timejump_trackers = False, max_turn_index = None):
+        # This function populates Board_squares with stones according to flags
+        # placed on up to (and including) turn with i = max_turn_index.
 
         # First, we clear the board
         self.clear_board()
@@ -860,10 +866,22 @@ class Gamemaster():
                     cur_flag = self.flags[cur_flag_ID]
                     if cur_flag.flag_type == "add_stone":
                         if cur_flag.flag_args[0]:
-                            self.board_dynamic[0][x][y].add_stone(cur_flag.stone_ID, [cur_flag.flag_args[1]])
+                            #self.board_dynamic[0][x][y].add_stone(cur_flag.stone_ID, [cur_flag.flag_args[1]])
+                            self.place_stone_on_board(STPos(0, x, y), cur_flag.stone_ID, [cur_flag.flag_args[1]])
                     if cur_flag.flag_type == "time_jump_in":
                         if cur_flag.flag_args[0]:
-                            self.board_dynamic[0][x][y].add_stone(cur_flag.stone_ID, [cur_flag.flag_args[1]])
+                            #self.board_dynamic[0][x][y].add_stone(cur_flag.stone_ID, [cur_flag.flag_args[1]])
+                            self.place_stone_on_board(STPos(0, x, y), cur_flag.stone_ID, [cur_flag.flag_args[1]])
+
+        # Then we prepare a flat list of all flag IDs to execute
+        flags_to_execute = []
+        if max_turn_index is None:
+            max_turn_index = len(self.flags_by_turn) - 1
+        for t_i in range(max_turn_index + 1):
+            for move_flag_IDs in self.flags_by_turn[t_i].values():
+                for move_flag_ID in move_flag_IDs:
+                    flags_to_execute.append(move_flag_ID)
+        print(flags_to_execute)
 
         # Then, we execute flags for each time slice sequantially
         for t in range(self.t_dim):
@@ -892,6 +910,8 @@ class Gamemaster():
             for x in range(self.x_dim):
                 for y in range(self.y_dim):
                     for cur_flag_ID in self.board_dynamic[t][x][y].flags:
+                        #if cur_flag_ID not in flags_to_execute:
+                        #    continue # This allows us to see the past.
                         cur_flag = self.flags[cur_flag_ID]
                         # Flag switch here
 
@@ -981,18 +1001,21 @@ class Gamemaster():
                 flat_flags_added_this_turn.append(flags_added_this_turn[stone_index][flag_index])
         added_dynamic_representation = self.encode_move_representation(flat_flags_added_this_turn)
         print(added_dynamic_representation) # TODO this should be returned instead
-        #print(self.decode_move_representation(added_dynamic_representation))
+        return(flat_flags_added_this_turn)
 
     def standard_game_loop(self):
 
-        self.round_number = -1
+        self.round_number = 0
         self.current_time = 0
 
+        turn_index = 0
+
         while(True):
-            self.round_number += 1
             self.print_heading_message(f"Round {self.round_number} commences", 0)
 
             for self.current_time in range(self.t_dim):
+                turn_index += 1
+                self.flags_by_turn.append({})
                 # First, we find the canonical state of the board
                 self.execute_moves()
 
@@ -1003,21 +1026,24 @@ class Gamemaster():
                 # Third, for every causally free stone, we ask its owner to place a flag
                 #currently_causally_free_stones = self.causally_free_stones_at_time(self.current_time)
                 for player in self.factions:
-                    self.prompt_player_input(self.current_time, player)
+                    flags_added_by_player = self.prompt_player_input(self.current_time, player)
+                    self.flags_by_turn[turn_index][player] = flags_added_by_player
+
 
 
             # ---------------------- Sorting out time travel --------------------------
 
             # We have now spanned the entire temporal length of the board, and must now select a causally consistent scenario
             self.print_heading_message("Selecting a causally-consistent scenario", 1)
-            causally_consistent_scenarios = self.find_causally_consistent_scenarios()
+            """causally_consistent_scenarios = self.find_causally_consistent_scenarios()
             if len(causally_consistent_scenarios) == 0:
                 # And just like that, we have reached a paradoxical situation. What now?
                 self.print_heading_message("A paradox has been reached!", 2)
             canonical_scenario = self.select_scenario(causally_consistent_scenarios.copy())
             for i in range(len(self.tji_ID_list)):
                 # We set the is_active argument according to the activity map
-                self.set_tji_activity(self.tji_ID_list[i], canonical_scenario[i])
+                self.set_tji_activity(self.tji_ID_list[i], canonical_scenario[i])"""
+            self.resolve_causal_consistency()
 
             # We now set all newly added TJIs as active and flush tji_ID_buffer into tji_ID_list. We update the trackers.
             for new_tji_ID, new_tjo_ID in self.tji_ID_buffer.items():
@@ -1027,6 +1053,9 @@ class Gamemaster():
                 self.stone_inheritance[self.flags[new_tjo_ID].stone_ID] = self.flags[new_tji_ID].stone_ID
 
             self.tji_ID_buffer = {}
+
+            self.round_number += 1
+
 
     # -------------------------------------------------------------------------
     # ---------------------- Data saving/loading methods ----------------------
@@ -1049,6 +1078,11 @@ class Gamemaster():
     # NOTE: We can't actually show the state of the board after an arbitrary
     # number of moves, since the correct activity maps are not tracked, and
     # would have to be calculated using complicated iterative algorithms.
+    # WRONG: We can! We just trim the added flags, and then we always run a
+    # spatial AND temporal consistency check. EZ. The game is deterministic in
+    # this way: If we have a series of flag additions and then a canonization
+    # routine, then sprinkling more canonizations in-between doesn't change the
+    # final state.
 
     # -------------------------------- Saving ---------------------------------
 
@@ -1100,6 +1134,7 @@ class Gamemaster():
         # Initialize the board initializing flags
         self.flags = {}
         self.flags_by_turn = [{"GM" : []}]
+        self.round_number_by_turn = [0]
         self.setup_squares = []
         for x in range(self.x_dim):
             self.setup_squares.append([])
@@ -1204,41 +1239,48 @@ class Gamemaster():
         # Initialize the board initializing flags
         self.flags = {}
         self.flags_by_turn = []
+        self.round_number_by_turn = []
 
         self.tji_ID_buffer = {}
 
-        game_status = "undefined"
+        # game_status points at the turn index for which moves should be added next.
+        game_status = None
         if len(dynamic_data_representation) == 1:
             # only setup occured so far
-            game_status = "new_turn_for_all_players"
+            game_status = 1
         else:
-            factions_played_in_final_turn = list(dynamic_data_representation[-1].keys())
-            players_which_havent_played_in_final_turn = []
+            all_factions_ready_for_next_turn = True
             for faction in self.factions:
-                if faction not in factions_played_in_final_turn:
-                    players_which_havent_played_in_final_turn.append(faction)
-            if len(players_which_havent_played_in_final_turn) == 0:
-                game_status = "new_turn_for_all_players"
+                if faction not in dynamic_data_representation[-1].keys():
+                    all_factions_ready_for_next_turn = False # Some players still need to add their commands to this turn
+                    break
+            if all_factions_ready_for_next_turn:
+                game_status = len(dynamic_data_representation)
             else:
-                game_status = "finish_turn_for_" + ",".join(players_which_havent_played_in_final_turn)
+                game_status = len(dynamic_data_representation) - 1
 
         # round number = number of causally-consistent-scenario selections occured
-        round_game_status_modifier = -1
-        if game_status == "new_turn_for_all_players":
-            round_game_status_modifier = 0
-        current_round_number = int(np.floor((len(dynamic_data_representation) - 1 + round_game_status_modifier) / self.t_dim))
+        # NOTE: For EVERY element of dynamic_data_representation, there is an
+        # extra special key "round_number", which points not to a move rep, but
+        # the round number corresponding to that turn.
+        current_round_number = int(np.floor((game_status - 1) / self.t_dim))
+
+
         # NOTE: we need to consider game status! if player A played turn 2 for tlim 2, but player B
         # hasn't yet, the len is 3, but the current round is still 0
         for turn_id in range(len(dynamic_data_representation)):
-            historic_round_number = int(np.floor((turn_id - 1) / self.t_dim))
+            historic_round_number = dynamic_data_representation[turn_id]["round_number"]#int(np.floor((turn_id - 1) / self.t_dim))
+            self.round_number_by_turn.append(historic_round_number)
 
             self.flags_by_turn.append({})
-            for faction, move_representation in dynamic_data_representation[turn_id].items():
+            for faction in set(dynamic_data_representation[turn_id]) - {"round_number"}:
+                move_representation = dynamic_data_representation[turn_id][faction]
                 self.flags_by_turn[turn_id][faction] = []
                 move_flags = self.decode_move_representation(move_representation)
 
                 for move_flag in move_flags:
                     self.add_canonized_flag(move_flag, turn_id == 0)
+                    self.flags_by_turn[turn_id][faction].append(move_flag.flag_ID)
                 # If this is a TJI added in the final round, it needs to be
                 # in the TJI buffer
                 if historic_round_number == current_round_number:
