@@ -51,6 +51,33 @@ BOMBARDIER's attacks are of course an exception
 
 
 
+1.1 Win conditions
+
+The board contains one or more squares labelled as "bases". A base is a special square, because although it is not an entity (i.e. it is static and can occupy the same space as a different entity), it has an additional property of "belonging". At the beginning, a base may belong to either faction or none at all, remaining neutral. The belonging of a base may change as the game progresses. The following win condition is universal for every game in the basic rulesets:
+
+    A player wins the game in the moment a full round comes to an end after a causally consistent scenario has been selected if and only if every base on the board belongs to him in the final timeslice of the board.
+
+It is important to note that the process of selecting a causally consistent scenario may change the realisation of the board after the last player input prompt, and so players must mind that their actions are not only able to conquer every base, but do it in a causally consistent way.
+
+The way to change the belonging of a base and claim it for your faction is as follows:
+
+    If a base square is, after spatial conflict resolution, occupied by a stone belonging to a specific player, the base belongs to that player in that and every subsequent timeslice, until it is conquered by another player.
+
+Note that if a neutral stone occupies a base square, the belonging of that base doesn't change to neutral, but remains as before, since a neutral stone doesn't belong to a specific player.
+
+In other words, the win condition can be rephrased as follows:
+
+    If, after selecting a causally consistent scenario, the last visitor to every base square is a stone belonging to one and the same player, that player wins the game.
+
+There are also several noteworthy conditions for drawing the game:
+
+    1. 'Equilibrium': If, after selecting a causally consistent scenario, there are no causally free stones in any timeslice (and the win condition remains unsatisfied), the game ends in a draw.
+    2. 'Stagnation': If no new time-jump-in is placed for three rounds in a row, the game ends in a draw.
+
+The first condition is straightforward. It can occur if, for example, all causally free stones get destroyed, or if a paradox so unresolvable occurs that the only causally consistent scenario is that in which all stones are removed.
+
+The second condition is also simple, but there's a caveat. Note that if a stone links an under-bearing time-jump-in, a new time-jump-out is added, but not a new time-jump-in. Hence, a non-linking time jump has to be executed at least every third round. Note that time-jumps-in do not have to be placed in order to avoid triggering the 'Equilibrium' condition: an intricate dynamic of activating and deactivating time-jumps-in through causal consistency selection may assure the presence of at least a handful of causally-free stones on the board in each round. However, if no new time-jumps-in are placed for a long time, and the win condition remains unsatisfied, it is assumed that the game degenerated into a fruitless back-and-forth, and is terminated with a draw. This condition also maintains a sense of pacing in the game, as adding more and more time-jumps-in makes the game more and more unstable (in the sense that the number of possible scenarios grows, and so larger and larger sets of activations and deactivations may occur at the end of each round), threatening to tip off the first condition.
+
 
 2.2.2 Resolving flags - movement
 

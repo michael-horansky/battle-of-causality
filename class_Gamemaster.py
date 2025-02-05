@@ -43,6 +43,9 @@ class Gamemaster():
 
         # flags
         self.flags = {} # [flag_ID] = Flag()
+        self.flags_by_turn = [] # [turn_number]["faction"] = [list of flag IDs added by that player that turn]
+        # flags_by_turn is never handled by the add_flag methods, as they are turn-number-invariant. Instead,
+        # it is always handled by the input prompt (loader or player input).
 
         # Trackers for existing time-jumps
         self.tji_ID_list = [] # This list is always ordered in an ascending order
@@ -69,7 +72,7 @@ class Gamemaster():
         # The data is in the following form:
         #   1. Static data: Data about the board, which doesn't depend on
         #      the state of the specific Game. This is in the format of
-        #      "t_dim, x_dim, y_dim; board representation; setup moves"
+        #      [t_dim, x_dim, y_dim, board representation]
         #      (Note that setup moves are copied into table Games for
         #      each new instance, as that table has to contain all the
         #      flag creation data.)
@@ -97,7 +100,7 @@ class Gamemaster():
         # server-side db. They are both loaded from the db and updated by
         # user interaction
 
-        self.static_representation = ""
+        self.static_representation = []
         # The full dynamic representation, for loading purposes
         self.dynamic_representation = [] #[move_index]["faction"] = "flag representations"
         # The staged commit dynamic representation, for saving purposes
@@ -512,6 +515,8 @@ class Gamemaster():
                         return(Message("exception", "Specified stone is of a different type"))
                     if self.flags[tji_ID].flag_args[1] != new_a:
                         return(Message("exception", "Specified stone jumps in at a different azimuth than proposed"))
+                    if tji_ID in self.tji_ID_buffer.keys():
+                        return(Message("exception", "Specified time-jump-in has been added only this round, and thus hasn't been realised yet."))
                     # We can link up!
                     tjo_flag = Flag(STPos(old_t, old_x, old_y), "time_jump_out", self.stones[stone_ID].player_faction, [STPos(new_t - 1, new_x, new_y), tji_ID], stone_ID)
                     self.board_dynamic[old_t][old_x][old_y].add_flag(tjo_flag.flag_ID, stone_ID)
@@ -519,6 +524,30 @@ class Gamemaster():
                     return(Message("flags added", [tjo_flag.flag_ID]))
 
             return(Message("exception", "Specified stone not associated with a time-jump-in"))
+
+
+    def add_canonized_flag(self, new_flag, is_setup = False):
+        # This is a function used in loading, which can add any flag type, with
+        # the assumption that the flag is well-inputted.
+
+        # is_setup is used for stone-adding flags on the zeroth move only,
+        # and is useful for the self.setup_stones tracker
+
+        self.flags[new_flag.flag_ID] = new_flag
+        if new_flag.pos.t == -1:
+            self.setup_squares[new_flag.pos.x][new_flag.pos.y].add_flag(new_flag.flag_ID, new_flag.stone_ID)
+        else:
+            self.board_dynamic[new_flag.pos.t][new_flag.pos.x][new_flag.pos.y].add_flag(new_flag.flag_ID, new_flag.stone_ID)
+
+        # If this flag creates a stone, that stone is tracked
+        if new_flag.flag_type in Flag.stone_generating_flag_types:
+            self.stones[new_flag.stone_ID] = Stone(new_flag.stone_ID, new_flag.player_faction, self.t_dim)
+            self.faction_armies[new_flag.player_faction].append(new_flag.stone_ID)
+            if is_setup:
+                self.setup_stones[new_flag.stone_ID] = new_flag.flag_ID
+
+        return(new_flag.flag_ID)
+
 
 
     def remove_flag_from_game(self, flag_ID):
@@ -1017,6 +1046,10 @@ class Gamemaster():
     # move just means we populate all the flags up to that point and execute
     # them once (together with a causally-consistent scenario selector).
 
+    # NOTE: We can't actually show the state of the board after an arbitrary
+    # number of moves, since the correct activity maps are not tracked, and
+    # would have to be calculated using complicated iterative algorithms.
+
     # -------------------------------- Saving ---------------------------------
 
     def encode_move_representation(self, list_of_flag_IDs):
@@ -1066,6 +1099,7 @@ class Gamemaster():
 
         # Initialize the board initializing flags
         self.flags = {}
+        self.flags_by_turn = [{"GM" : []}]
         self.setup_squares = []
         for x in range(self.x_dim):
             self.setup_squares.append([])
@@ -1089,7 +1123,8 @@ class Gamemaster():
             for x in range(self.x_dim):
                 cur_char = board_lines[y+1][x]
                 if cur_char.upper() in self.factions:
-                    self.add_stone_on_setup(cur_char.upper(), x, y, faction_orientations[cur_char.upper()])
+                    setup_flag_ID = self.add_stone_on_setup(cur_char.upper(), x, y, faction_orientations[cur_char.upper()])
+                    self.flags_by_turn[0]["GM"].append(setup_flag_ID)
                 else:
                     self.board_static[x][y] = cur_char
 
@@ -1108,6 +1143,149 @@ class Gamemaster():
         # Calculate TUI parameters for printing
         self.single_board_width = self.x_dim * 2 + len(str(self.y_dim - 1))
         self.header_width = self.single_board_width * self.t_dim + len(self.board_delim) * (self.t_dim - 1)
+
+    def load_board_representation(self, t_dim, x_dim, y_dim, board_representation):
+        # Initializes everything from dimensions and a board representation string
+        self.print_log(f"Initializing board from static string representation...", 0)
+
+        self.t_dim = t_dim
+        self.x_dim = x_dim
+        self.y_dim = y_dim
+
+        # initialize the board matrix, indexed as M[x][y]
+        self.board_static = []
+        for i in range(self.x_dim):
+            self.board_static.append([' ']*self.y_dim)
+
+        self.setup_squares = []
+        for x in range(self.x_dim):
+            self.setup_squares.append([])
+            for y in range(self.y_dim):
+                self.setup_squares[x].append(Board_square(STPos(-1, x, y)))
+
+        # Setup players
+        self.stones = {}
+        self.faction_armies = {}
+        self.setup_stones = {}
+        self.removed_setup_stones = {}
+        for faction in self.factions:
+            self.faction_armies[faction] = []
+
+        # Load board static
+        # board_representation is a string of length x_dim * y_dim, reading the board
+        # left-to-right, up-to-down
+        for y in range(self.y_dim):
+            for x in range(self.x_dim):
+                cur_char = board_representation[y * self.x_dim + x]
+                self.board_static[x][y] = cur_char
+                # TODO here, we also load bases :))
+
+        # Setup dynamic board squares
+        self.print_log("Setting up dynamic board representation...", 1)
+        self.board_dynamic = []
+        for t in range(self.t_dim):
+            self.board_dynamic.append([])
+            for x in range(self.x_dim):
+                self.board_dynamic[t].append([])
+                for y in range(self.y_dim):
+                    self.board_dynamic[t][x].append(Board_square(STPos(t, x, y)))
+
+        self.conflicting_squares = repeated_list(self.t_dim, [])
+
+        # Calculate TUI parameters for printing
+        self.single_board_width = self.x_dim * 2 + len(str(self.y_dim - 1))
+        self.header_width = self.single_board_width * self.t_dim + len(self.board_delim) * (self.t_dim - 1)
+
+        # Unlike the legacy method "load_board", this ignored setup moves
+
+    def load_flags_from_representation(self, dynamic_data_representation):
+        # This overwrites ALL the flags.
+
+        # Initialize the board initializing flags
+        self.flags = {}
+        self.flags_by_turn = []
+
+        self.tji_ID_buffer = {}
+
+        game_status = "undefined"
+        if len(dynamic_data_representation) == 1:
+            # only setup occured so far
+            game_status = "new_turn_for_all_players"
+        else:
+            factions_played_in_final_turn = list(dynamic_data_representation[-1].keys())
+            players_which_havent_played_in_final_turn = []
+            for faction in self.factions:
+                if faction not in factions_played_in_final_turn:
+                    players_which_havent_played_in_final_turn.append(faction)
+            if len(players_which_havent_played_in_final_turn) == 0:
+                game_status = "new_turn_for_all_players"
+            else:
+                game_status = "finish_turn_for_" + ",".join(players_which_havent_played_in_final_turn)
+
+        # round number = number of causally-consistent-scenario selections occured
+        round_game_status_modifier = -1
+        if game_status == "new_turn_for_all_players":
+            round_game_status_modifier = 0
+        current_round_number = int(np.floor((len(dynamic_data_representation) - 1 + round_game_status_modifier) / self.t_dim))
+        # NOTE: we need to consider game status! if player A played turn 2 for tlim 2, but player B
+        # hasn't yet, the len is 3, but the current round is still 0
+        for turn_id in range(len(dynamic_data_representation)):
+            historic_round_number = int(np.floor((turn_id - 1) / self.t_dim))
+
+            self.flags_by_turn.append({})
+            for faction, move_representation in dynamic_data_representation[turn_id].items():
+                self.flags_by_turn[turn_id][faction] = []
+                move_flags = self.decode_move_representation(move_representation)
+
+                for move_flag in move_flags:
+                    self.add_canonized_flag(move_flag, turn_id == 0)
+                # If this is a TJI added in the final round, it needs to be
+                # in the TJI buffer
+                if historic_round_number == current_round_number:
+                    TJOs_added_this_turn = []
+                    TJIs_added_this_turn = []
+                    for move_flag in move_flags:
+                        if move_flag.flag_type == "time_jump_out":
+                            TJOs_added_this_turn.append(move_flag.flag_ID)
+                        if move_flag.flag_type == "time_jump_in":
+                            TJIs_added_this_turn.append(move_flag.flag_ID)
+                    for recent_TJO in TJOs_added_this_turn:
+                        if self.flags[recent_TJO].flag_args[1] in TJIs_added_this_turn:
+                            # NOTE when prompting player, forbid linking to TJIs still in the buffer
+                            self.tji_ID_buffer[self.flags[recent_TJO].flag_args[1]] = recent_TJO
+
+
+
+
+
+
+    def load_from_database(self, static_data_representation, dynamic_data_representation):
+        # This is the big gun. Initializes the Gamemaster instance from a list of rows.
+        # static_data_representation is a dictionary with static data.
+        # dynamic_data_representation is a list of dictionaries, where the i-th element
+        # is a dictionary of moves made in the i-th turn (0 reserved for setup moves).
+
+        self.static_representation = static_data_representation
+        self.dynamic_representation = dynamic_data_representation
+        self.new_dynamic_representation = []
+
+        try:
+            t_dim = int(static_data_representation[0])
+            x_dim = int(static_data_representation[1])
+            y_dim = int(static_data_representation[2])
+            board_representation = static_data_representation[3]
+        except:
+            print(f"load_from_database(static, dynamic) attempted initialization from a badly formatted static data string representation: {static_data_representation}")
+            return(-1)
+
+        self.load_board_representation(t_dim, x_dim, y_dim, board_representation)
+        self.load_flags_from_representation(dynamic_data_representation)
+
+
+
+
+
+
 
 
 
