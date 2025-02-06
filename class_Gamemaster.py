@@ -63,6 +63,7 @@ class Gamemaster():
         # History of round canonization. N-th element is the activity map considered canon at the BEGINNING of round N (so zeroth element is the setup-only
         # activity map).
         self.round_canonization = [] # [round_number]["setup_AM"] = {setup_flag_ID : is active?}; [round_number]["TJI_AM"] = {TJI_flag_ID : is active?}
+        self.round_canonized_trackers = [] # [round_number] = {"timejump_bijection" : {...}, "stone_inheritance" : {...}}
 
         # TUI elements
         self.board_delim = ' | '
@@ -1100,10 +1101,14 @@ class Gamemaster():
                                 # Newly added TJOs which link previous TJIs should be subject to tracker,
                                 # but not TJOs added together with new TJIs
                                 if reset_timejump_trackers and cur_flag.flag_args[1] not in self.TJIs_by_round[max_round_number]:
-                                    self.tji_bearing[cur_flag.flag_args[1]] += 1
-                                    self.timejump_bijection[cur_flag.flag_args[1]] = cur_flag.flag_ID
-                                    self.stone_inheritance[cur_flag.stone_ID] = self.flags[cur_flag.flag_args[1]].stone_ID
+                                        self.tji_bearing[cur_flag.flag_args[1]] += 1
+                                        self.timejump_bijection[cur_flag.flag_args[1]] = cur_flag.flag_ID
+                                        self.stone_inheritance[cur_flag.stone_ID] = self.flags[cur_flag.flag_args[1]].stone_ID
 
+        # We update the tracker to include all the flags from the historical buffer
+        """for new_tji_ID, new_tjo_ID in self.tji_ID_buffer.items():
+            self.timejump_bijection[new_tji_ID] = new_tjo_ID
+            self.stone_inheritance[self.flags[new_tjo_ID].stone_ID] = self.flags[new_tji_ID].stone_ID"""
 
     # -------------------------------------------------------------------------
     # --------------------------- Game loop methods ---------------------------
@@ -1133,6 +1138,10 @@ class Gamemaster():
         else:
             current_activity_map = self.round_canonization[round_number]
         self.realise_activity_map(current_activity_map, max_turn_index = turn_index - 1) # This also executes moves
+
+        # Load historic trackers
+        self.timejump_bijection = self.round_canonized_trackers[round_number]["timejump_bijection"]
+        self.stone_inheritance = self.round_canonized_trackers[round_number]["stone_inheritance"]
 
 
 
@@ -1244,7 +1253,6 @@ class Gamemaster():
             for new_tji_ID, new_tjo_ID in self.tji_ID_buffer.items():
                 activity_map_for_next_round["TJI_AM"][new_tji_ID] = True
 
-
             # Commit to the activity map
             self.round_canonization.append(activity_map_for_next_round)
             self.realise_activity_map(activity_map_for_next_round) # this resets trackers
@@ -1253,6 +1261,12 @@ class Gamemaster():
                 self.stone_inheritance[self.flags[new_tjo_ID].stone_ID] = self.flags[new_tji_ID].stone_ID
             self.tji_ID_buffer = {}
 
+            # Canonize round
+            self.round_canonized_trackers = add_tail_to_list(self.round_canonized_trackers, self.round_number + 2, {})
+            self.round_canonized_trackers[self.round_number + 1]["timejump_bijection"] = self.timejump_bijection
+            self.round_canonized_trackers[self.round_number + 1]["stone_inheritance"] = self.stone_inheritance
+
+            print(self.timejump_bijection)
 
             self.round_number += 1
             self.TJIs_by_round.append([])
@@ -1311,6 +1325,11 @@ class Gamemaster():
                     self.timejump_bijection[new_tji_ID] = new_tjo_ID
                     self.stone_inheritance[self.flags[new_tjo_ID].stone_ID] = self.flags[new_tji_ID].stone_ID
                 self.tji_ID_buffer = {}
+
+                #self.round_canonized_trackers = add_tail_to_list(self.round_canonized_trackers, next_round + 1, {})
+                self.round_canonized_trackers.append({})
+                self.round_canonized_trackers[next_round]["timejump_bijection"] = self.timejump_bijection
+                self.round_canonized_trackers[next_round]["stone_inheritance"] = self.stone_inheritance
 
                 self.TJIs_by_round.append([])
 
@@ -1458,6 +1477,7 @@ class Gamemaster():
         self.removed_setup_stones = {}
         self.TJIs_by_round = [[]]
         self.round_canonization = [{"setup_AM" : {}, "TJI_AM" : {}}]
+        self.round_canonized_trackers = [{"timejump_bijection" : {}, "stone_inheritance" : {}}]
         for faction in self.factions:
             self.faction_armies[faction] = []
 
@@ -1564,6 +1584,7 @@ class Gamemaster():
 
         self.TJIs_by_round = [[]]
         self.round_canonization = [{"setup_AM" : {}, "TJI_AM" : {}}]
+        self.round_canonized_trackers = [{"timejump_bijection" : {}, "stone_inheritance" : {}}]
 
         # round number = number of causally-consistent-scenario selections
         # executed so far (i.e. the number of canonized rounds).
@@ -1654,6 +1675,13 @@ class Gamemaster():
                 self.round_canonization[round_number + 1]["TJI_AM"][new_tji_ID] = True
                 self.timejump_bijection[new_tji_ID] = new_tjo_ID
                 self.stone_inheritance[self.flags[new_tjo_ID].stone_ID] = self.flags[new_tji_ID].stone_ID
+            self.round_canonized_trackers = add_tail_to_list(self.round_canonized_trackers, round_number + 2, {})
+            self.round_canonized_trackers[round_number + 1]["timejump_bijection"] = self.timejump_bijection
+            self.round_canonized_trackers[round_number + 1]["stone_inheritance"] = self.stone_inheritance
+
+            print(f"studying round no. {round_number}, Flags added in this round are {historic_TJI_ID_buffers[round_number]}")
+
+        print(self.round_canonized_trackers)
 
 
 
