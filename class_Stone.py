@@ -26,9 +26,10 @@ class UnparsableException(Exception):
 
 class Stone():
     # --- Constructors, destructors, descriptors ---
-    def __init__(self, stone_ID, player_faction, t_dim):
+    def __init__(self, stone_ID, progenitor_flag_ID, player_faction, t_dim):
 
         self.ID = stone_ID
+        self.progenitor_flag_ID = progenitor_flag_ID
         self.player_faction = player_faction
 
 
