@@ -261,60 +261,60 @@ class Stone():
         # the previous time-slices, not the future ones).
         cur_x, cur_y, cur_a = self.history[t]
         while(True):
-            try:
-                input_cmd_raw = input("Input the command in the form \"[command name] [argument]\", or type \"help\": ")
+            #try:
+            input_cmd_raw = input("Input the command in the form \"[command name] [argument]\", or type \"help\": ")
 
-                # Generic commands
-                generic_msg = self.parse_generic_move_cmd(gm, input_cmd_raw, cur_x, cur_y, is_final_command = True)
-                if generic_msg.header == "continue":
-                    continue
-                elif generic_msg.header == "exception":
-                    raise Exception(generic_msg.msg)
-                elif generic_msg.header == "option":
-                    return(generic_msg) # The Gamemaster handles options!
+            # Generic commands
+            generic_msg = self.parse_generic_move_cmd(gm, input_cmd_raw, cur_x, cur_y, is_final_command = True)
+            if generic_msg.header == "continue":
+                continue
+            elif generic_msg.header == "exception":
+                raise Exception(generic_msg.msg)
+            elif generic_msg.header == "option":
+                return(generic_msg) # The Gamemaster handles options!
 
 
-                if input_cmd_raw in ['', 'p', 'pass']:
-                    return(Message("pass"))
+            if input_cmd_raw in ['', 'p', 'pass']:
+                return(Message("pass"))
 
-                # From now on, we need to consider the command arguments
+            # From now on, we need to consider the command arguments
 
-                input_cmd_list = input_cmd_raw.split(' ')
+            input_cmd_list = input_cmd_raw.split(' ')
 
-                if input_cmd_list[0] in ['tj', 'timejump']:
-                    if len(input_cmd_list) == 2:
-                        # Only time specified
-                        target_time = int(input_cmd_list[1])
-                        if target_time < 0:
-                            raise Exception("Lowest target time value is 0")
-                        if target_time >= t:
-                            raise Exception("Target time must be in the past")
-                        tj_msg = gm.add_flag_timejump(self.ID, t, cur_x, cur_y, target_time, cur_x, cur_y, cur_a)
-                        if tj_msg.header == "flags added":
-                            return(tj_msg)
-                        elif tj_msg.header == "exception":
-                            raise Exception(tj_msg.msg)
-                    elif len(input_cmd_list) == 3:
-                        # Both time and stone_ID specified; an adoption of a TJI is attempted
-                        target_time = int(input_cmd_list[1])
-                        adopted_stone_ID = int(input_cmd_list[2])
-                        if target_time < 0:
-                            raise Exception("Lowest target time value is 0")
-                        if target_time >= t:
-                            raise Exception("Target time must be in the past")
-                        if adopted_stone_ID not in gm.stones:
-                            raise Exception("Stone ID invalid")
-                        tj_msg = gm.add_flag_timejump(self.ID, t, cur_x, cur_y, target_time, cur_x, cur_y, cur_a, adopted_stone_ID = adopted_stone_ID)
-                        if tj_msg.header == "flags added":
-                            return(tj_msg)
-                        elif tj_msg.header == "exception":
-                            raise Exception(tj_msg.msg)
-                    else:
-                        raise Exception("Required argument missing")
+            if input_cmd_list[0] in ['tj', 'timejump']:
+                if len(input_cmd_list) == 2:
+                    # Only time specified
+                    target_time = int(input_cmd_list[1])
+                    if target_time < 0:
+                        raise Exception("Lowest target time value is 0")
+                    if target_time >= t:
+                        raise Exception("Target time must be in the past")
+                    tj_msg = gm.add_flag_timejump(self.ID, t, cur_x, cur_y, target_time, cur_x, cur_y, cur_a)
+                    if tj_msg.header == "flags added":
+                        return(tj_msg)
+                    elif tj_msg.header == "exception":
+                        raise Exception(tj_msg.msg)
+                elif len(input_cmd_list) == 3:
+                    # Both time and stone_ID specified; an adoption of a TJI is attempted
+                    target_time = int(input_cmd_list[1])
+                    adopted_stone_ID = int(input_cmd_list[2])
+                    if target_time < 0:
+                        raise Exception("Lowest target time value is 0")
+                    if target_time >= t:
+                        raise Exception("Target time must be in the past")
+                    if adopted_stone_ID not in gm.stones:
+                        raise Exception("Stone ID invalid")
+                    tj_msg = gm.add_flag_timejump(self.ID, t, cur_x, cur_y, target_time, cur_x, cur_y, cur_a, adopted_stone_ID = adopted_stone_ID)
+                    if tj_msg.header == "flags added":
+                        return(tj_msg)
+                    elif tj_msg.header == "exception":
+                        raise Exception(tj_msg.msg)
+                else:
+                    raise Exception("Required argument missing")
 
-                raise Exception("Your input couldn't be parsed")
+                """raise Exception("Your input couldn't be parsed")
 
             except ValueError:
                 print("Try again; Arguments with numerical inputs should be well-formatted")
             except Exception as e:
-                print("Try again;", e)
+                print("Try again;", e)"""

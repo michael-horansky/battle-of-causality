@@ -313,7 +313,7 @@ class Gamemaster():
             print(f"Player {faction} controls the following stones:")
             for stone_ID in self.faction_armies[faction]:
                 msg = "  -" + str(self.stones[stone_ID])
-                if self.flags[self.stones[stone_ID].progenitor_flag_ID].flag_args[0] == False:
+                if self.flags[self.stones[stone_ID].progenitor_flag_ID].is_active == False:
                     msg += f" [Not placed on the board to maintain causal consistency]"
                 if stone_ID in self.stone_inheritance.keys():
                     msg += f" [Time-travels to become {str(self.stones[self.stone_inheritance[stone_ID]])}]"
@@ -331,7 +331,7 @@ class Gamemaster():
             tji_square = self.setup_squares[x][y]
         for flag_ID in tji_square.flags:
             if self.flags[flag_ID].flag_type == "time_jump_in":
-                if self.flags[flag_ID].flag_args[0]:
+                if self.flags[flag_ID].is_active:
                     TJI_active.append(flag_ID)
                 else:
                     TJI_inactive.append(flag_ID)
@@ -377,7 +377,7 @@ class Gamemaster():
         if stone_ID not in self.stones.keys():
             print("The selected stone does not exist.")
             return(-1)
-        if self.flags[self.stones[stone_ID].progenitor_flag_ID].flag_args[0] == False:
+        if self.flags[self.stones[stone_ID].progenitor_flag_ID].is_active == False:
             print("The selected stone has not been placed on the board in the recently selected causally-consistent scenario.")
             return(-1)
 
@@ -465,7 +465,7 @@ class Gamemaster():
 
     def add_stone_on_setup(self, faction, x, y, a0):
         # This function allows Gamemaster to describe the initial state of the board, which is reverted to for every retrace of causal events
-        new_flag = Flag(STPos(-1, x, y), 'add_stone', faction, [True, a0])
+        new_flag = Flag(STPos(-1, x, y), 'add_stone', faction, [a0])
         self.setup_squares[x][y].add_flag(new_flag.flag_ID, new_flag.stone_ID)
         self.flags[new_flag.flag_ID] = new_flag
 
@@ -494,7 +494,7 @@ class Gamemaster():
         # If adopted_stone_ID specified, instead of creating a new TJI, we adopt an existing one.
         if adopted_stone_ID == -1:
             # The TJI is placed inactive, and may be activated during causal consistency resolution
-            tji_flag = Flag(STPos(new_t - 1, new_x, new_y), "time_jump_in", self.stones[stone_ID].player_faction, [False, new_a])
+            tji_flag = Flag(STPos(new_t - 1, new_x, new_y), "time_jump_in", self.stones[stone_ID].player_faction, [new_a])
             tjo_flag = Flag(STPos(old_t, old_x, old_y), "time_jump_out", self.stones[stone_ID].player_faction, [STPos(new_t - 1, new_x, new_y), tji_flag.flag_ID], stone_ID)
 
             # We place the flags.
@@ -507,6 +507,9 @@ class Gamemaster():
                 self.setup_squares[new_x][new_y].add_flag(tji_flag.flag_ID, tji_flag.stone_ID)
             self.flags[tjo_flag.flag_ID] = tjo_flag
             self.flags[tji_flag.flag_ID] = tji_flag
+
+            # TJIs start inactive
+            self.set_flag_activity(tji_flag.flag_ID, False)
 
             # Trackers
             self.tji_ID_buffer[tji_flag.flag_ID] = tjo_flag.flag_ID
@@ -528,7 +531,7 @@ class Gamemaster():
                             return(Message("exception", "Specified stone belongs to a different faction"))
                         if self.stones[stone_ID].stone_type not in ["wildcard", self.stones[adopted_stone_ID].stone_type]:
                             return(Message("exception", "Specified stone is of a different type"))
-                        if self.flags[TJI_ID].flag_args[1] != new_a:
+                        if self.flags[TJI_ID].flag_args[0] != new_a:
                             return(Message("exception", "Specified stone jumps in at a different azimuth than proposed"))
                         #if TJI_ID in self.tji_ID_buffer.keys():
                         if round_n == self.round_number:
@@ -591,14 +594,25 @@ class Gamemaster():
 
     # ----------------------------- Flag activity
 
-    def set_tji_activity(self, tji_ID, new_is_active):
-        self.flags[tji_ID].flag_args[0] = new_is_active
+    def set_flag_activity(self, flag_ID, new_is_active):
+        self.flags[flag_ID].is_active = new_is_active
+        if new_is_active == True:
+            if self.flags[flag_ID].pos.t == -1:
+                self.setup_squares[self.flags[flag_ID].pos.x][self.flags[flag_ID].pos.y].activate_flag(flag_ID)
+            else:
+                self.board_dynamic[self.flags[flag_ID].pos.t][self.flags[flag_ID].pos.x][self.flags[flag_ID].pos.y].activate_flag(flag_ID)
+        else:
+            if self.flags[flag_ID].pos.t == -1:
+                self.setup_squares[self.flags[flag_ID].pos.x][self.flags[flag_ID].pos.y].deactivate_flag(flag_ID)
+            else:
+                self.board_dynamic[self.flags[flag_ID].pos.t][self.flags[flag_ID].pos.x][self.flags[flag_ID].pos.y].deactivate_flag(flag_ID)
 
     def realise_activity_map(self, activity_map):
         # activity map = {"setup_AM" : {flag_ID : is active?...}, "TJI_AM" : {flag_ID : is active?...}}
         for current_activity_map in activity_map.values():
             for specific_flag_ID, is_active_val in current_activity_map.items():
-                self.flags[specific_flag_ID].flag_args[0] = is_active_val
+                #self.flags[specific_flag_ID].is_active = is_active_val
+                self.set_flag_activity(specific_flag_ID, is_active_val)
         # Execute moves to update trackers
         self.execute_moves(reset_timejump_trackers = True)
 
@@ -754,7 +768,7 @@ class Gamemaster():
 
         active_setup_stones = []#list(self.setup_stones.keys())
         for setup_stone_ID, setup_flag_ID in self.setup_stones.items():
-            if self.flags[setup_flag_ID].flag_args[0]:
+            if self.flags[setup_flag_ID].is_active:
                 active_setup_stones.append(setup_stone_ID)
             else:
                 result_activity_map["setup_AM"][setup_flag_ID] = False
@@ -777,7 +791,7 @@ class Gamemaster():
             for activity_map in activity_maps:
                 # We set active add_stone flags according to current activity map
                 for i in range(len(active_setup_stones)):
-                    self.flags[self.setup_stones[ordered_setup_stones[i]]].flag_args[0] = not activity_map[i]
+                    self.flags[self.setup_stones[ordered_setup_stones[i]]].is_active = not activity_map[i]
 
                 # We find all causally consistent scenarios for this activity map
                 causally_consistent_scenarios = self.find_causally_consistent_scenarios()
@@ -848,7 +862,7 @@ class Gamemaster():
             how_many_TJOs_required = {}
             for i in range(tji_N):
                 # We set the is_active argument according to the activity map
-                self.set_tji_activity(ordered_TJI_flags[i], activity_map[i])
+                self.set_flag_activity(ordered_TJI_flags[i], activity_map[i])
                 if activity_map[i] == True:
                     how_many_TJOs_required[ordered_TJI_flags[i]] = 1
                 if activity_map[i] == False:
@@ -937,14 +951,12 @@ class Gamemaster():
             for y in range(self.y_dim):
                 for cur_flag_ID in self.setup_squares[x][y].flags:
                     cur_flag = self.flags[cur_flag_ID]
+                    if not cur_flag.is_active:
+                        continue
                     if cur_flag.flag_type == "add_stone":
-                        if cur_flag.flag_args[0]:
-                            #self.board_dynamic[0][x][y].add_stone(cur_flag.stone_ID, [cur_flag.flag_args[1]])
-                            self.place_stone_on_board(STPos(0, x, y), cur_flag.stone_ID, [cur_flag.flag_args[1]])
+                        self.place_stone_on_board(STPos(0, x, y), cur_flag.stone_ID, [cur_flag.flag_args[0]])
                     if cur_flag.flag_type == "time_jump_in":
-                        if cur_flag.flag_args[0]:
-                            #self.board_dynamic[0][x][y].add_stone(cur_flag.stone_ID, [cur_flag.flag_args[1]])
-                            self.place_stone_on_board(STPos(0, x, y), cur_flag.stone_ID, [cur_flag.flag_args[1]])
+                        self.place_stone_on_board(STPos(0, x, y), cur_flag.stone_ID, [cur_flag.flag_args[0]])
 
         # Then we prepare a flat list of all flag IDs to execute
         flags_to_execute = []
@@ -983,17 +995,17 @@ class Gamemaster():
                         if cur_flag_ID not in flags_to_execute:
                             continue # This allows us to see the past.
                         cur_flag = self.flags[cur_flag_ID]
+                        if not cur_flag.is_active:
+                            continue
                         # Flag switch here
 
                         # These flags propagate the stone into the next time-slice, and as such are forbidden at t = self.t_dim - 1
                         # If a stone is propagated onto an occupied square, the square is added to self.conflicting_squares
                         if t < self.t_dim - 1:
                             if cur_flag.flag_type == "add_stone":
-                                if cur_flag.flag_args[0]:
-                                    self.place_stone_on_board(STPos(t+1, x, y), cur_flag.stone_ID, [cur_flag.flag_args[1]])
+                                self.place_stone_on_board(STPos(t+1, x, y), cur_flag.stone_ID, [cur_flag.flag_args[0]])
                             if cur_flag.flag_type == "time_jump_in":
-                                if cur_flag.flag_args[0]:
-                                    self.place_stone_on_board(STPos(t+1, x, y), cur_flag.stone_ID, [cur_flag.flag_args[1]])
+                                self.place_stone_on_board(STPos(t+1, x, y), cur_flag.stone_ID, [cur_flag.flag_args[0]])
                             # For the following flags, the stone has to be present in the current time-slice
                             if cur_flag.stone_ID in self.board_dynamic[t][x][y].stones:
                                 if cur_flag.flag_type == "spatial_move":

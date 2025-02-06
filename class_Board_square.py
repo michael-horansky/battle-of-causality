@@ -9,24 +9,36 @@ class Board_square():
         self.stones = [] # list of IDs which always has to be of length 1 or 0
         self.occupied = False # Is there a stone here?
         self.stone_properties = {} # [stone_ID] = [azimuth, ...]
-        self.flags = [] # this list can be long
+        self.flags = {} # [flag_ID] = stone_ID
 
         self.causally_free_stones = [] # list of IDs of stones which are present and don't have a flag associated with them
         self.causally_locked_stones = {} # list of IDs of stones which have a flag associated with them - if the stone is added, it is not causally free. [flag_ID] = stone_ID
 
     def add_flag(self, new_flag_ID, new_stone_ID):
-        self.flags.append(new_flag_ID) #TODO maybe order matters here?
+        self.flags[new_flag_ID] = new_stone_ID #TODO maybe order matters here?
         if new_stone_ID in self.causally_free_stones:
             self.causally_free_stones.remove(new_stone_ID)
         self.causally_locked_stones[new_flag_ID] = new_stone_ID
 
-    def remove_flag(self, ID):
+    def remove_flag(self, flag_ID):
         # Does the associated stone become causally free?
-        associated_stone_ID = self.causally_locked_stones[ID]
-        del self.causally_locked_stones[ID]
+        associated_stone_ID = self.flags[flag_ID]
+        if flag_ID in self.causally_locked_stones.keys():
+            del self.causally_locked_stones[flag_ID]
         if associated_stone_ID in self.stones and associated_stone_ID not in self.causally_locked_stones.values():
             self.causally_free_stones.append(associated_stone_ID)
-        self.flags.remove(ID)
+        del self.flags[flag_ID]
+
+    def deactivate_flag(self, flag_ID):
+        if flag_ID in self.causally_locked_stones.keys():
+            del self.causally_locked_stones[flag_ID]
+        if self.flags[flag_ID] in self.stones and self.flags[flag_ID] not in self.causally_locked_stones.values():
+            self.causally_free_stones.append(self.flags[flag_ID])
+
+    def activate_flag(self, flag_ID):
+        self.causally_locked_stones[flag_ID] = self.flags[flag_ID]
+        if self.flags[flag_ID] in self.causally_free_stones:
+            self.causally_free_stones.remove(new_stone_ID)
 
     def remove_stones(self):
         self.stones = []
