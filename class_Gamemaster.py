@@ -21,7 +21,7 @@ class Gamemaster():
     # ---------------- constructors, destructors, descriptors -----------------
     # -------------------------------------------------------------------------
 
-    def __init__(self, board_number, display_logs = False):
+    def __init__(self, display_logs = False):
 
         self.display_logs = display_logs
 
@@ -47,6 +47,9 @@ class Gamemaster():
         self.round_number_by_turn = [] # [turn_number] = round_number
         # flags_by_turn is never handled by the add_flag methods, as they are turn-number-invariant. Instead,
         # it is always handled by the input prompt (loader or player input).
+
+        # Game status variables
+        self.current_turn_index = None # Index of turn where some or all players need to add commands
 
         # Trackers for existing time-jumps
         self.TJIs_by_round = [] # N-th element is the list of TJIs added in that round
@@ -113,8 +116,6 @@ class Gamemaster():
         # For old moves, the elements are empty dictionaries
         self.new_dynamic_representation = [] #[move_index]["faction"] = "flag representations"
 
-
-        self.load_board(board_number)
 
     # -------------------------------------------------------------------------
     # ---------------------------- Print functions ----------------------------
@@ -458,6 +459,46 @@ class Gamemaster():
                         causally_free_army.append(causally_free_stone_ID)
         return(causally_free_army)
 
+    def did_player_finish_turn(self, player, turn_index):
+        # If there are causally free stones in the active timeslice for which no flags exist,
+        # the player still hasn't finished their turn.
+
+        # TODO: not true! In the final timeslice, we can pass on stones and
+        # leave them causally free for the next round, yet our turn ends.
+        # paradigm for now: after touching every stone, your turn ends!
+        if player in self.flags_by_turn[turn_index].keys():
+            return(True)
+
+        # This function assumes that moves were executed prior to asking,
+        # and activity maps were applied.
+        if player not in self.flags_by_turn[turn_index].keys():
+            return(False)
+
+        round_number, active_timeslice = self.round_from_turn(turn_index)
+        currently_causally_free_stones = self.causally_free_stones_at_time_by_player(active_timeslice, player)
+        does_every_stone_have_a_corresponding_flag = True
+        for free_stone_ID in currently_causally_free_stones:
+            does_stone_have_a_corresponding_flag = False
+            for flag_ID in self.flags_by_turn[turn_index][player]:
+                if self.flags[flag_ID].is_active and self.flags[flag_ID].stone_ID == free_stone_ID:
+                    does_stone_have_a_corresponding_flag = True
+                    break
+            if not does_stone_have_a_corresponding_flag:
+                does_every_stone_have_a_corresponding_flag = False
+                break
+        if does_every_stone_have_a_corresponding_flag:
+            return(True)
+        else:
+            return(False) # Uncommanded causally free stones still exist
+
+    def did_everyone_finish_turn(self, turn_index):
+        for faction in self.factions:
+            #if faction not in dynamic_data_representation[-1].keys():
+            if not self.did_player_finish_turn(faction, turn_index):
+                return(False) # Some players still need to add their commands to this turn
+        return(True)
+
+
     # ---------------------------- Flag management ----------------------------
 
     # ----------------------------- Flag addition
@@ -491,6 +532,7 @@ class Gamemaster():
 
     def add_flag_timejump(self, stone_ID, old_t, old_x, old_y, new_t, new_x, new_y, new_a, adopted_stone_ID = -1):
 
+        round_number, active_timeslice = self.round_from_turn(self.current_turn_index)
         # If adopted_stone_ID specified, instead of creating a new TJI, we adopt an existing one.
         if adopted_stone_ID == -1:
             # The TJI is placed inactive, and may be activated during causal consistency resolution
@@ -513,7 +555,7 @@ class Gamemaster():
 
             # Trackers
             self.tji_ID_buffer[tji_flag.flag_ID] = tjo_flag.flag_ID
-            self.TJIs_by_round[self.round_number].append(tji_flag.flag_ID)
+            self.TJIs_by_round[round_number].append(tji_flag.flag_ID)
 
             # We add the new stone into the army
             self.stones[tji_flag.stone_ID] = Stone(tji_flag.stone_ID, tji_flag.flag_ID, self.stones[stone_ID].player_faction, self.t_dim)
@@ -534,7 +576,7 @@ class Gamemaster():
                         if self.flags[TJI_ID].flag_args[0] != new_a:
                             return(Message("exception", "Specified stone jumps in at a different azimuth than proposed"))
                         #if TJI_ID in self.tji_ID_buffer.keys():
-                        if round_n == self.round_number:
+                        if round_n == round_number:
                             return(Message("exception", "Specified time-jump-in has been added only this round, and thus hasn't been realised yet."))
                         # This last one is important, since TJIs added this round are always active, but aren't subject to trackers,
                         # and thus their linkage couldn't be resolved!
@@ -569,6 +611,43 @@ class Gamemaster():
                 self.round_canonization[0]["setup_AM"][new_flag.flag_ID] = True
 
         return(new_flag.flag_ID)
+
+    def commit_flags(self, flag_ID_list, turn_index, move_author):
+        # This updates
+        #     -self.flags_by_turn for move execution purposes
+        #     -self.new_dynamic_representation for data saving purposes
+        # It is a method representing the change of the dynamic state of the game
+
+        # NOTE: move_author is not necessarily equal to the flag.player_faction
+        # value - e.g. setup moves are always authored by "GM".
+        if len(self.flags_by_turn) <= turn_index:
+            print(f"ERROR: Attempted to canonize flags {flag_ID_list} on turn {turn_index}, but the highest available turn index in self.flags_by_turn is {len(self.flags_by_turn) - 1}.")
+            return(-1)
+        if move_author not in self.flags_by_turn[turn_index]:
+            # First batch of flags canonized for this author for this turn.
+            self.flags_by_turn[turn_index][move_author] = []
+        self.flags_by_turn[turn_index][move_author] += flag_ID_list
+
+        # We fill self.new_dynamic_representation with empty dictionaries until
+        # the correct index exists!
+        while(len(self.new_dynamic_representation) <= turn_index):
+            self.new_dynamic_representation.append({})
+        if move_author not in self.new_dynamic_representation[turn_index]:
+            # First batch of flags canonized for this author for this turn.
+            self.new_dynamic_representation[turn_index][move_author] = self.encode_move_representation(flag_ID_list)
+        else:
+            self.new_dynamic_representation[turn_index][move_author] += (constants.Gamemaster_delim) + self.encode_move_representation(flag_ID_list)
+
+        # We also record everything into self.dynamic_representation, for full
+        # copy and legacy purposes
+        while(len(self.dynamic_representation) <= turn_index):
+            self.dynamic_representation.append({})
+        if move_author not in self.dynamic_representation[turn_index]:
+            # First batch of flags canonized for this author for this turn.
+            self.dynamic_representation[turn_index][move_author] = self.encode_move_representation(flag_ID_list)
+        else:
+            self.dynamic_representation[turn_index][move_author] += (constants.Gamemaster_delim) + self.encode_move_representation(flag_ID_list)
+
 
 
 
@@ -607,14 +686,13 @@ class Gamemaster():
             else:
                 self.board_dynamic[self.flags[flag_ID].pos.t][self.flags[flag_ID].pos.x][self.flags[flag_ID].pos.y].deactivate_flag(flag_ID)
 
-    def realise_activity_map(self, activity_map):
+    def realise_activity_map(self, activity_map, max_turn_index = None):
         # activity map = {"setup_AM" : {flag_ID : is active?...}, "TJI_AM" : {flag_ID : is active?...}}
         for current_activity_map in activity_map.values():
             for specific_flag_ID, is_active_val in current_activity_map.items():
-                #self.flags[specific_flag_ID].is_active = is_active_val
                 self.set_flag_activity(specific_flag_ID, is_active_val)
         # Execute moves to update trackers
-        self.execute_moves(reset_timejump_trackers = True)
+        self.execute_moves(reset_timejump_trackers = True, max_turn_index = max_turn_index)
 
 
     # -------------------------- Board canonization ---------------------------
@@ -791,10 +869,11 @@ class Gamemaster():
             for activity_map in activity_maps:
                 # We set active add_stone flags according to current activity map
                 for i in range(len(active_setup_stones)):
-                    self.flags[self.setup_stones[ordered_setup_stones[i]]].is_active = not activity_map[i]
+                    #self.flags[self.setup_stones[ordered_setup_stones[i]]].is_active = not activity_map[i]
+                    self.set_flag_activity(self.setup_stones[ordered_setup_stones[i]], not activity_map[i])
 
                 # We find all causally consistent scenarios for this activity map
-                causally_consistent_scenarios = self.find_causally_consistent_scenarios()
+                causally_consistent_scenarios = self.find_causally_consistent_scenarios(max_turn_index = max_turn_index)
                 if len(causally_consistent_scenarios) == 0:
                     continue # Paradox
                 else:
@@ -834,9 +913,11 @@ class Gamemaster():
         reference_TJI_ID_list = []
         # We include all TJIs from all rounds with a smaller number than the one in max_turn_index
         if max_turn_index is None:
-            max_turn_index = len(self.flags_by_turn) - 1
+            max_turn_index = self.current_turn_index - 1 #len(self.flags_by_turn) - 1
 
         max_round_number, _ = self.round_from_turn(max_turn_index)
+        # Usually we pass this on the final turn of a round, in which case we
+        # ignore all the flags added on that round.
         if max_round_number == 0:
             # In the zeroth round, the activity map is trivial
             return([{}])
@@ -933,7 +1014,7 @@ class Gamemaster():
         # placed on up to (and including) turn with i = max_turn_index.
 
         if max_turn_index is None:
-            max_turn_index = len(self.flags_by_turn) - 1
+            max_turn_index = self.current_turn_index #len(self.flags_by_turn) - 1
         max_round_number, max_timeslice = self.round_from_turn(max_turn_index)
 
         # First, we clear the board
@@ -1038,6 +1119,23 @@ class Gamemaster():
         current_timeslice    = (turn_index - 1) % self.t_dim
         return(current_round_number, current_timeslice)
 
+    def bring_board_to_turn(self, turn_index):
+
+        # NOTE: The state of the board at turn index N (round M, timeslice t)
+        # depends on the flags placed on turns 0, 1... N - 1, but the activity
+        # map is given by M anyway. That's why we pass turn_index - 1.
+
+        round_number, active_timeslice = self.round_from_turn(turn_index)
+        self.print_log(f"Reverting board state to that right before turn {turn_index} (round {round_number}, t {active_timeslice})...", 0)
+        if len(self.round_canonization) <= round_number:
+            self.print_log(f"Canonizing activity maps recorded only up to round {len(self.round_canonization) - 1}; a temporary activity map will be initialized.", 1)
+            current_activity_map = self.resolve_causal_consistency(max_turn_index = turn_index - 1)
+        else:
+            current_activity_map = self.round_canonization[round_number]
+        self.realise_activity_map(current_activity_map, max_turn_index = turn_index - 1) # This also executes moves
+
+
+
 
     def prompt_player_input(self, cur_time, player):
         # Wrapper for player input
@@ -1051,7 +1149,7 @@ class Gamemaster():
         self.print_heading_message(f"Player {player}, it is your turn to command your stones now.", 2)
         if len(currently_causally_free_stones) == 0:
             self.print_heading_message("No causally free stones to command.", 3)
-            return([])
+            return(Message("pass"))
         stone_index = 0
         flags_added_this_turn = repeated_list(len(currently_causally_free_stones), None)
         while(stone_index < len(currently_causally_free_stones)):
@@ -1068,7 +1166,8 @@ class Gamemaster():
                 # The user is interacting with gamemaster options
                 if move_msg.msg == "quit":
                     #return(-1)
-                    quit()
+                    #quit()
+                    return(Message("option", "quit"))
                 if move_msg.msg == "undo":
                     # We revert back to the previous stone
                     stone_index = max(stone_index-1, 0)
@@ -1096,7 +1195,7 @@ class Gamemaster():
                 flat_flags_added_this_turn.append(flags_added_this_turn[stone_index][flag_index])
         #added_dynamic_representation = self.encode_move_representation(flat_flags_added_this_turn)
         #print(added_dynamic_representation) # TODO this should be returned instead
-        return(flat_flags_added_this_turn)
+        return(Message("flags added", flat_flags_added_this_turn))
 
     def standard_game_loop(self):
 
@@ -1105,14 +1204,14 @@ class Gamemaster():
         self.round_number = 0
         self.current_time = 0
 
-        turn_index = 0
+        self.current_turn_index = 0
 
         while(True):
             self.print_heading_message(f"Round {self.round_number} commences", 0)
 
             for self.current_time in range(self.t_dim):
-                turn_index += 1
-                self.flags_by_turn.append({})
+                self.current_turn_index += 1
+                self.flags_by_turn.append({}) # NOTE  nahh
                 # First, we find the canonical state of the board
                 self.execute_moves()
 
@@ -1122,8 +1221,16 @@ class Gamemaster():
 
                 # Third, for every causally free stone, we ask its owner to place a flag
                 for player in self.factions:
-                    flags_added_by_player = self.prompt_player_input(self.current_time, player)
-                    self.flags_by_turn[turn_index][player] = flags_added_by_player
+                    output_message = self.prompt_player_input(self.current_time, player)
+                    #flags_added_by_player = self.prompt_player_input(self.current_time, player)
+                    if output_message.header == "flags added":
+                        self.commit_flags(output_message.msg, self.current_turn_index, player)
+                    elif output_message.header == "pass":
+                        # We need to commit an empty datapoint, otherwise game status will think the player still needs to make his turn
+                        self.commit_flags([], self.current_turn_index, player)
+                    elif output_message.header == "option":
+                        if output_message.msg == "quit":
+                            return(0)
 
 
 
@@ -1149,6 +1256,69 @@ class Gamemaster():
 
             self.round_number += 1
             self.TJIs_by_round.append([])
+
+    def open_game(self, player):
+        # This is the method to be called by client!
+
+        self.bring_board_to_turn(self.current_turn_index)
+        current_round, active_timeslice = self.round_from_turn(self.current_turn_index)
+        self.print_heading_message(f"Resumed: round {current_round}, active timeslice {active_timeslice}", 0)
+        self.print_board_horizontally(active_timeslice)
+
+        if self.did_player_finish_turn(player, self.current_turn_index):
+            # This player has already submitted his moves
+            self.print_heading_message(f"Player {player} has already finished his turn, and is waiting for his opponent.", 2)
+            # In case key does not exist, we go ahead and populate with empty string
+            self.commit_flags([], self.current_turn_index, player)
+        else:
+            output_message = self.prompt_player_input(active_timeslice, player)
+            #flags_added_by_player = self.prompt_player_input(self.current_time, player)
+            if output_message.header == "flags added":
+                self.commit_flags(output_message.msg, self.current_turn_index, player)
+            elif output_message.header == "pass":
+                # We need to commit an empty datapoint, otherwise game status will think the player still needs to make his turn
+                self.commit_flags([], self.current_turn_index, player)
+            elif output_message.header == "option":
+                if output_message.msg == "quit":
+                    return(0)
+
+        # For every player that didn't play their turn yet, but has no causally
+        # free stones, an empty command is added
+        for faction in self.factions:
+            if not self.did_player_finish_turn(faction, self.current_turn_index):
+                currently_causally_free_stones = self.causally_free_stones_at_time_by_player(active_timeslice, faction)
+                if len(currently_causally_free_stones) == 0:
+                    self.commit_flags([], self.current_turn_index, faction)
+
+
+        if self.did_everyone_finish_turn(self.current_turn_index):
+            # Turn ended
+            next_round, next_timeslice = self.round_from_turn(self.current_turn_index + 1)
+            if next_round > current_round:
+                # Change of round! Canonization routine!
+                self.print_heading_message("Selecting a causally-consistent scenario", 1)
+                activity_map_for_next_round = self.resolve_causal_consistency(max_turn_index = self.current_turn_index)
+
+                # We now set all newly added TJIs as active and flush tji_ID_buffer. We update the trackers.
+                for new_tji_ID, new_tjo_ID in self.tji_ID_buffer.items():
+                    activity_map_for_next_round["TJI_AM"][new_tji_ID] = True
+
+                # Commit to the activity map
+                self.round_canonization.append({})
+                self.round_canonization[next_round] = activity_map_for_next_round
+                self.realise_activity_map(activity_map_for_next_round) # this resets trackers
+                for new_tji_ID, new_tjo_ID in self.tji_ID_buffer.items():
+                    self.timejump_bijection[new_tji_ID] = new_tjo_ID
+                    self.stone_inheritance[self.flags[new_tjo_ID].stone_ID] = self.flags[new_tji_ID].stone_ID
+                self.tji_ID_buffer = {}
+
+                self.TJIs_by_round.append([])
+
+
+            self.flags_by_turn.append({})
+            self.current_turn_index += 1
+            self.open_game(player)
+
 
 
     # -------------------------------------------------------------------------
@@ -1180,6 +1350,14 @@ class Gamemaster():
 
     # -------------------------------- Saving ---------------------------------
 
+    def encode_static_data_representation(self):
+        board_representation = ""
+        for y in range(self.y_dim):
+            for x in range(self.x_dim):
+                cur_char = self.board_static[x][y]
+                board_representation += cur_char
+        return([self.t_dim, self.x_dim, self.y_dim, board_representation])
+
     def encode_move_representation(self, list_of_flag_IDs):
         # Since the order of flag addition matters, we order the list in an ascending order by the first element of each element
         sorted_list_of_flag_IDs = sorted(list_of_flag_IDs)
@@ -1188,6 +1366,38 @@ class Gamemaster():
         for cur_flag_ID in sorted_list_of_flag_IDs:
             flag_representation_list.append(self.flags[cur_flag_ID].get_flag_representation())
         return((constants.Gamemaster_delim).join(flag_representation_list))
+
+    def trim_empty_turns(self, dynamic_data, tail_element = {}):
+        # dynamic_data is a list of dictionaries
+        # This method trims empty dictionaries off of the list's tail
+        # and also performs a deepcopy on the rest.
+        tail_index = len(dynamic_data) - 1
+        trimmed_dynamic_data = []
+        end_of_tail = False
+        for i in range(tail_index, -1, -1):
+            if not end_of_tail and dynamic_data[i] == tail_element:
+                continue
+            else:
+                end_of_tail = True
+                trimmed_dynamic_data.insert(0, dynamic_data[i])
+        return(trimmed_dynamic_data)
+
+    def dump_to_database(self):
+        # This method dumps all of the data, and as such should not be used
+        # when saving just the changes to an existing game's state.
+        static_data_representation = self.encode_static_data_representation()
+        dynamic_data_representation = []
+
+        for turn_i in range(len(self.flags_by_turn)):
+            dynamic_data_representation.append({})
+            for move_author, move_flag_IDs in self.flags_by_turn[turn_i].items():
+                dynamic_data_representation[turn_i][move_author] = self.encode_move_representation(move_flag_IDs)
+        return(static_data_representation, self.trim_empty_turns(dynamic_data_representation))
+
+    def dump_changes(self):
+        return(self.trim_empty_turns(self.new_dynamic_representation))
+
+
 
     # -------------------------------- Loading --------------------------------
 
@@ -1230,6 +1440,7 @@ class Gamemaster():
 
         # Initialize the board initializing flags
         self.flags = {}
+        self.new_dynamic_representation = [] # A fresh start
         self.flags_by_turn = [{"GM" : []}]
         self.round_number_by_turn = [0]
         self.setup_squares = []
@@ -1259,6 +1470,9 @@ class Gamemaster():
                 if cur_char.upper() in self.factions:
                     setup_flag_ID = self.add_stone_on_setup(cur_char.upper(), x, y, faction_orientations[cur_char.upper()])
                     self.flags_by_turn[0]["GM"].append(setup_flag_ID)
+                    # NOTE: setup flags are never added to
+                    # self.new_dynamic_representation, since they are copied
+                    # there automatically for every new game on creation.
                 else:
                     self.board_static[x][y] = cur_char
 
@@ -1277,6 +1491,10 @@ class Gamemaster():
         # Calculate TUI parameters for printing
         self.single_board_width = self.x_dim * 2 + len(str(self.y_dim - 1))
         self.header_width = self.single_board_width * self.t_dim + len(self.board_delim) * (self.t_dim - 1)
+
+        # First turn next
+        self.current_turn_index = 1
+        self.flags_by_turn.append({})
 
     def load_board_representation(self, t_dim, x_dim, y_dim, board_representation):
         # Initializes everything from dimensions and a board representation string
@@ -1334,6 +1552,8 @@ class Gamemaster():
 
     def load_flags_from_representation(self, dynamic_data_representation):
         # This overwrites ALL the flags.
+        # We do not commit these into self.new_dynamic_representation, as they
+        # represent the old state of the board.
 
         # Initialize the board initializing flags
         self.flags = {}
@@ -1345,30 +1565,13 @@ class Gamemaster():
         self.TJIs_by_round = [[]]
         self.round_canonization = [{"setup_AM" : {}, "TJI_AM" : {}}]
 
-        # game_status points at the turn index for which moves should be added next.
-        game_status = None
-        if len(dynamic_data_representation) == 1:
-            # only setup occured so far
-            game_status = 1
-        else:
-            all_factions_ready_for_next_turn = True
-            for faction in self.factions:
-                if faction not in dynamic_data_representation[-1].keys():
-                    all_factions_ready_for_next_turn = False # Some players still need to add their commands to this turn
-                    break
-            if all_factions_ready_for_next_turn:
-                game_status = len(dynamic_data_representation)
-            else:
-                game_status = len(dynamic_data_representation) - 1
-
         # round number = number of causally-consistent-scenario selections
         # executed so far (i.e. the number of canonized rounds).
-        # NOTE: For EVERY element of dynamic_data_representation, there is an
-        # extra special key "round_number", which points not to a move rep, but
-        # the round number corresponding to that turn.
-        current_round_number = int(np.floor((game_status - 1) / self.t_dim))
-        self.TJIs_by_round = repeated_list(current_round_number + 1, [])
+        #current_round_number = int(np.floor((game_status - 1) / self.t_dim))
+        #self.TJIs_by_round = repeated_list(current_round_number + 1, [])
+        self.TJIs_by_round = []
 
+        historic_TJI_ID_buffers = []
 
         # NOTE: we need to consider game status! if player A played turn 2 for tlim 2, but player B
         # hasn't yet, the len is 3, but the current round is still 0
@@ -1378,16 +1581,53 @@ class Gamemaster():
             self.round_number_by_turn.append(historic_round_number)
 
             self.flags_by_turn.append({})
-            for faction in set(dynamic_data_representation[turn_id]) - {"round_number"}:
+            for faction in dynamic_data_representation[turn_id].keys():
                 move_representation = dynamic_data_representation[turn_id][faction]
                 self.flags_by_turn[turn_id][faction] = []
                 move_flags = self.decode_move_representation(move_representation)
 
+                TJOs_added_this_turn = []
+                TJIs_added_this_turn = []
                 for move_flag in move_flags:
                     self.add_canonized_flag(move_flag, turn_id == 0)
                     self.flags_by_turn[turn_id][faction].append(move_flag.flag_ID)
-                # If this is a TJI added in the final round, it needs to be
-                # in the TJI buffer
+                    if move_flag.flag_type == "time_jump_out":
+                        TJOs_added_this_turn.append(move_flag.flag_ID)
+                    if move_flag.flag_type == "time_jump_in":
+                        TJIs_added_this_turn.append(move_flag.flag_ID)
+                self.TJIs_by_round = add_tail_to_list(self.TJIs_by_round, historic_round_number + 1)
+                self.TJIs_by_round[historic_round_number] += TJIs_added_this_turn
+                historic_TJI_ID_buffers = add_tail_to_list(historic_TJI_ID_buffers, historic_round_number + 1, {})
+                for recent_TJO in TJOs_added_this_turn:
+                    if self.flags[recent_TJO].flag_args[1] in TJIs_added_this_turn:
+                        # NOTE when prompting player, forbid linking to TJIs still in the buffer
+                        historic_TJI_ID_buffers[historic_round_number][self.flags[recent_TJO].flag_args[1]] = recent_TJO
+
+        # If all of the loaded turns are finished, we prepare the next turn.
+        # TODO find the activity map for each round here!!!!
+
+        # game_status points at the turn index for which moves should be added next.
+        self.current_turn_index = None
+        if len(dynamic_data_representation) == 1:
+            # only setup occured so far
+            self.current_turn_index = 1
+        else:
+            # We execute all moves except the last one to see if it was finished
+            self.execute_moves(max_turn_index = len(dynamic_data_representation) - 2)
+
+
+            if self.did_everyone_finish_turn(len(dynamic_data_representation) - 1):
+                self.current_turn_index = len(dynamic_data_representation)
+            else:
+                self.current_turn_index = len(dynamic_data_representation) - 1
+
+        if self.current_turn_index == len(self.flags_by_turn):
+            self.flags_by_turn.append({})
+
+        # We initialize TJI_ID_buffer for timejumps added in the round which wasn't canonized yet.
+        """current_round_number, active_timeslice = self.round_from_turn(self.current_turn_index)
+        for turn_id in range(self.t_dim * current_round_number + 1, len(dynamic_data_representation)):
+            for faction in dynamic_data_representation[turn_id].keys():
                 TJOs_added_this_turn = []
                 TJIs_added_this_turn = []
                 for move_flag in move_flags:
@@ -1395,12 +1635,27 @@ class Gamemaster():
                         TJOs_added_this_turn.append(move_flag.flag_ID)
                     if move_flag.flag_type == "time_jump_in":
                         TJIs_added_this_turn.append(move_flag.flag_ID)
-                self.TJIs_by_round[historic_round_number] += TJIs_added_this_turn
-                if historic_round_number == current_round_number:
-                    for recent_TJO in TJOs_added_this_turn:
-                        if self.flags[recent_TJO].flag_args[1] in TJIs_added_this_turn:
-                            # NOTE when prompting player, forbid linking to TJIs still in the buffer
-                            self.tji_ID_buffer[self.flags[recent_TJO].flag_args[1]] = recent_TJO
+                for recent_TJO in TJOs_added_this_turn:
+                    if self.flags[recent_TJO].flag_args[1] in TJIs_added_this_turn:
+                        # NOTE when prompting player, forbid linking to TJIs still in the buffer
+                        self.tji_ID_buffer[self.flags[recent_TJO].flag_args[1]] = recent_TJO"""
+        current_round_number, active_timeslice = self.round_from_turn(self.current_turn_index)
+        self.tji_ID_buffer = historic_TJI_ID_buffers[current_round_number]
+
+        # Now we create the activity map!
+        #for round_last_turn_index in range(self.t_dim, self.current_turn_index, self.t_dim):
+        for round_number in range(current_round_number):
+            round_last_turn_index = self.t_dim * (round_number + 1)
+            self.print_log(f"Finding activity map for turns up to {round_last_turn_index} (round {round_number}, t {self.t_dim - 1})...", 1)
+            self.round_canonization.append(self.resolve_causal_consistency(max_turn_index = round_last_turn_index))
+
+            # We also need to add all the historic buffer flags into the map
+            for new_tji_ID, new_tjo_ID in historic_TJI_ID_buffers[round_number].items():
+                self.round_canonization[round_number + 1]["TJI_AM"][new_tji_ID] = True
+                self.timejump_bijection[new_tji_ID] = new_tjo_ID
+                self.stone_inheritance[self.flags[new_tjo_ID].stone_ID] = self.flags[new_tji_ID].stone_ID
+
+
 
 
 
@@ -1418,7 +1673,7 @@ class Gamemaster():
         self.new_dynamic_representation = []
 
         try:
-            t_dim = int(static_data_representation[0])
+            t_dim = int(static_data_representation[0]) #TODO i don't think we need to convert anything here
             x_dim = int(static_data_representation[1])
             y_dim = int(static_data_representation[2])
             board_representation = static_data_representation[3]

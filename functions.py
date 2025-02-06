@@ -25,6 +25,11 @@ def repeated_list(length, element=''):
             result.append(element)
     return(result)
 
+def add_tail_to_list(old_list, new_length, tail_element = []):
+    while(len(old_list) < new_length):
+        old_list.append(tail_element.copy())
+    return(old_list)
+
 # find the position in our convention that is one step from pos in the direction azimuth
 def pos_step(pos, azimuth):
     x, y = pos

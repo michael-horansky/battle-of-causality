@@ -1,4 +1,5 @@
 from class_Gamemaster import Gamemaster
 
-lol = Gamemaster(1, display_logs = True)
+lol = Gamemaster(display_logs = True)
+lol.load_board(1)
 lol.standard_game_loop()
