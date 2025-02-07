@@ -1139,9 +1139,13 @@ class Gamemaster():
             current_activity_map = self.round_canonization[round_number]
         self.realise_activity_map(current_activity_map, max_turn_index = turn_index - 1) # This also executes moves
 
+        print("trackers from execute_moves =", self.timejump_bijection)
+
         # Load historic trackers
         self.timejump_bijection = self.round_canonized_trackers[round_number]["timejump_bijection"]
         self.stone_inheritance = self.round_canonized_trackers[round_number]["stone_inheritance"]
+
+        print("trackers from history =", self.timejump_bijection)
 
 
 
@@ -1265,8 +1269,6 @@ class Gamemaster():
             self.round_canonized_trackers = add_tail_to_list(self.round_canonized_trackers, self.round_number + 2, {})
             self.round_canonized_trackers[self.round_number + 1]["timejump_bijection"] = self.timejump_bijection
             self.round_canonized_trackers[self.round_number + 1]["stone_inheritance"] = self.stone_inheritance
-
-            print(self.timejump_bijection)
 
             self.round_number += 1
             self.TJIs_by_round.append([])
@@ -1588,8 +1590,6 @@ class Gamemaster():
 
         # round number = number of causally-consistent-scenario selections
         # executed so far (i.e. the number of canonized rounds).
-        #current_round_number = int(np.floor((game_status - 1) / self.t_dim))
-        #self.TJIs_by_round = repeated_list(current_round_number + 1, [])
         self.TJIs_by_round = []
 
         historic_TJI_ID_buffers = []
@@ -1625,9 +1625,6 @@ class Gamemaster():
                         historic_TJI_ID_buffers[historic_round_number][self.flags[recent_TJO].flag_args[1]] = recent_TJO
 
         # If all of the loaded turns are finished, we prepare the next turn.
-        # TODO find the activity map for each round here!!!!
-
-        # game_status points at the turn index for which moves should be added next.
         self.current_turn_index = None
         if len(dynamic_data_representation) == 1:
             # only setup occured so far
@@ -1646,20 +1643,6 @@ class Gamemaster():
             self.flags_by_turn.append({})
 
         # We initialize TJI_ID_buffer for timejumps added in the round which wasn't canonized yet.
-        """current_round_number, active_timeslice = self.round_from_turn(self.current_turn_index)
-        for turn_id in range(self.t_dim * current_round_number + 1, len(dynamic_data_representation)):
-            for faction in dynamic_data_representation[turn_id].keys():
-                TJOs_added_this_turn = []
-                TJIs_added_this_turn = []
-                for move_flag in move_flags:
-                    if move_flag.flag_type == "time_jump_out":
-                        TJOs_added_this_turn.append(move_flag.flag_ID)
-                    if move_flag.flag_type == "time_jump_in":
-                        TJIs_added_this_turn.append(move_flag.flag_ID)
-                for recent_TJO in TJOs_added_this_turn:
-                    if self.flags[recent_TJO].flag_args[1] in TJIs_added_this_turn:
-                        # NOTE when prompting player, forbid linking to TJIs still in the buffer
-                        self.tji_ID_buffer[self.flags[recent_TJO].flag_args[1]] = recent_TJO"""
         current_round_number, active_timeslice = self.round_from_turn(self.current_turn_index)
         self.tji_ID_buffer = historic_TJI_ID_buffers[current_round_number]
 
@@ -1668,7 +1651,11 @@ class Gamemaster():
         for round_number in range(current_round_number):
             round_last_turn_index = self.t_dim * (round_number + 1)
             self.print_log(f"Finding activity map for turns up to {round_last_turn_index} (round {round_number}, t {self.t_dim - 1})...", 1)
-            self.round_canonization.append(self.resolve_causal_consistency(max_turn_index = round_last_turn_index))
+            next_round_canon_scenario = self.resolve_causal_consistency(max_turn_index = round_last_turn_index)
+            self.round_canonization.append(next_round_canon_scenario)
+            self.realise_activity_map(next_round_canon_scenario, max_turn_index = round_last_turn_index) # this resets trackers
+            self.print_log(f"Round canonization for next round = {self.round_canonization[round_number + 1]}", 1)
+
 
             # We also need to add all the historic buffer flags into the map
             for new_tji_ID, new_tjo_ID in historic_TJI_ID_buffers[round_number].items():
@@ -1678,10 +1665,9 @@ class Gamemaster():
             self.round_canonized_trackers = add_tail_to_list(self.round_canonized_trackers, round_number + 2, {})
             self.round_canonized_trackers[round_number + 1]["timejump_bijection"] = self.timejump_bijection
             self.round_canonized_trackers[round_number + 1]["stone_inheritance"] = self.stone_inheritance
+            self.print_log(f"Trackers for next round are {self.round_canonized_trackers[round_number + 1]}", 1)
+            self.print_log(f"Flags added in this round are {historic_TJI_ID_buffers[round_number]}", 1)
 
-            print(f"studying round no. {round_number}, Flags added in this round are {historic_TJI_ID_buffers[round_number]}")
-
-        print(self.round_canonized_trackers)
 
 
 
