@@ -194,4 +194,3 @@ def ordered_switch_flips(N, S):
 
 
 
-

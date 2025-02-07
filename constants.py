@@ -9,3 +9,13 @@
 STPos_delim = ","
 Flag_delim = ":"
 Gamemaster_delim = ";"
+
+
+
+# ----------------------------- Legacy constants ------------------------------
+stone_type_representations = {
+        "T" : ["A", "tank"],
+        "L" : ["B", "tank"],
+        "Y" : ["A", "bombardier"],
+        "V" : ["B", "bombardier"]
+    }

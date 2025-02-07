@@ -3,6 +3,8 @@ rest of lines: board squares
     'X': immovable wall; forbidden square to access
     ' ': empty square
     'M': movable box
-    'a': Player A stone (facing to the right)
-    'b': Player B stone (facing to the left)
+    'T': Player A tank
+    'L': Player B tank
+    'Y': Player A bombardier
+    'V': Player B bombardier
     

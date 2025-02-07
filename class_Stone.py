@@ -3,23 +3,6 @@ from functions import *
 from class_STPos import STPos
 from class_Message import Message
 
-# -------------- Custom exceptions ------------
-# We will use these during command parsing, to
-# accurately inform the user about what they
-# did wrong
-
-"""class UnparsableException(Exception):
-    def __init__(self, message='Input not parsable'):
-        # Call the base class constructor with the parameters it needs
-        super(UnparsableException, self).__init__(message)
-
-class UnparsableException(Exception):
-    def __init__(self, message='Input not parsable'):
-        # Call the base class constructor with the parameters it needs
-        super(UnparsableException, self).__init__(message)"""
-
-
-
 # ---------------------------------------------
 # ---------------- class Stone ----------------
 # ---------------------------------------------
@@ -28,13 +11,11 @@ class Stone():
     # --- Constructors, destructors, descriptors ---
     def __init__(self, stone_ID, progenitor_flag_ID, player_faction, t_dim):
 
+        self.stone_type = "undefined"
+
         self.ID = stone_ID
         self.progenitor_flag_ID = progenitor_flag_ID
         self.player_faction = player_faction
-
-
-        self.events = {'death':[], 'time_jump':[]} #keeps track of whether the stone is causally free
-        self.causal_freedom_time = 0 # if it spawns into t, it can be moved from t
 
         self.history = [None] * t_dim # This allows the stone to remember its positions in time, shortening tracking time. [t] = (x,y,a)
 
@@ -51,24 +32,13 @@ class Stone():
         # The following is the help-log for type specific commands. Change this when inheriting Stone
         # type_specific_commands[command name] = [required args, optional args, message]
         # Use '/' as an alias delimiter and ', ' as an argument delimiter
-        self.stone_type = "tank"
-        self.type_specific_commands = {
-                "wait" : [None, None, "The stone will wait in its place. This is also selected on an empty submission!"],
-                "forward/fwd" : [None, "turn", "Moves forward by 1, turning clockwise/cw or anticlockwise/acw by 90 deg. if specified."],
-                "backward/bwd" : [None, "turn", "Moves backward by 1, turning clockwise/cw or anticlockwise/acw by 90 deg. if specified."],
-                "turn" : ["azimuth", None, "Faces the specified direction (up/right/down/left)."],
-                "attack/atk" : [None, None, "Fires, destroying the stone in line of sight."]
-            }
-
-        self.type_specific_final_commands = {
-                "pass" : [None, None, "No plag is placed, and this stone remains causally free. This is also selected on an empty submission!"],
-                "timejump/tj" : ["time", "stone ID", "Jumps back into the specified time (spatial position unchanged). If stone ID specified, will adopt a time-jump-in which generates said stone."]
-            }
+        self.type_specific_commands = {}
+        self.type_specific_final_commands = {}
 
         self.opposable = True
 
     def __str__(self):
-        return("Stone " + color.DARKCYAN + "TANK" + color.END + " (ID " + color.CYAN + str(self.ID) + color.END + ")")
+        return("Stone " + color.DARKCYAN + self.stone_type.upper() + color.END + " (ID " + color.CYAN + str(self.ID) + color.END + ")")
 
     def display_commands_in_helplog(self, commands):
         for cmd, options in commands.items():
@@ -200,58 +170,6 @@ class Stone():
                 elif generic_msg.header == "option":
                     return(generic_msg) # The Gamemaster handles options!
 
-
-                if input_cmd_raw in ['', 'w', 'wait']:
-                    new_flag_ID = gm.add_flag_spatial_move(self.ID, t, cur_x, cur_y, cur_x, cur_y, cur_a)
-                    return(Message("flags added", [new_flag_ID]))
-
-                # From now on, we need to consider the command arguments
-
-                input_cmd_list = input_cmd_raw.split(' ')
-
-                if input_cmd_list[0] in ['f', 'fwd', 'forward']:
-                    if len(input_cmd_list) == 1:
-                        new_a = cur_a
-                    else:
-                        if input_cmd_list[1] in ['clockwise', 'clock', 'cw', 'c']:
-                            new_a = azimuth_addition(cur_a, 1)
-                        elif input_cmd_list[1] in ['anticlockwise', 'anti', 'acw', 'a']:
-                            new_a = azimuth_addition(cur_a, 3)
-                        else:
-                            raise Exception("Your input couldn't be parsed")
-                    new_x, new_y = pos_step((cur_x, cur_y), cur_a)
-                    if not gm.is_square_available(new_x, new_y):
-                        # The stone is attempting to move into a wall
-                        raise Exception("Invalid move")
-                    new_flag_ID = gm.add_flag_spatial_move(self.ID, t, cur_x, cur_y, new_x, new_y, new_a)
-                    return(Message("flags added", [new_flag_ID]))
-                if input_cmd_list[0] in ['b', 'bwd', 'backward']:
-                    if len(input_cmd_list) == 1:
-                        new_a = cur_a
-                    else:
-                        if input_cmd_list[1] in ['clockwise', 'clock', 'cw', 'c']:
-                            new_a = azimuth_addition(cur_a, 1)
-                        elif input_cmd_list[1] in ['anticlockwise', 'anti', 'acw', 'a']:
-                            new_a = azimuth_addition(cur_a, 3)
-                        else:
-                            new_a = cur_a
-                    new_x, new_y = pos_step((cur_x, cur_y), azimuth_addition(cur_a, 2))
-                    if not gm.is_square_available(new_x, new_y):
-                        # The stone is attempting to move into a wall
-                        raise Exception("Invalid move")
-                    new_flag_ID = gm.add_flag_spatial_move(self.ID, t, cur_x, cur_y, new_x, new_y, new_a)
-                    return(Message("flags added", [new_flag_ID]))
-                if input_cmd_list[0] in ['t', 'turn']:
-                    if len(input_cmd_list) == 1:
-                        raise Exception("Required argument missing")
-                    new_a = encode_azimuth(input_cmd_list[1])
-                    if new_a == None:
-                        raise Exception("Your input couldn't be parsed")
-                    new_flag_ID = gm.add_flag_spatial_move(self.ID, t, cur_x, cur_y, cur_x, cur_y, new_a)
-                    return(Message("flags added", [new_flag_ID]))
-                if input_cmd_list[0] in ['a', 'atk', 'attack']:
-                    new_flag_ID = gm.add_flag_attack(self.ID, t, cur_x, cur_y, allow_friendly_fire = True)
-                    return(Message("flags added", [new_flag_ID]))
                 raise Exception("Your input couldn't be parsed")
 
             except Exception as e:
@@ -277,45 +195,6 @@ class Stone():
                 elif generic_msg.header == "option":
                     return(generic_msg) # The Gamemaster handles options!
 
-
-                if input_cmd_raw in ['', 'p', 'pass']:
-                    return(Message("pass"))
-
-                # From now on, we need to consider the command arguments
-
-                input_cmd_list = input_cmd_raw.split(' ')
-
-                if input_cmd_list[0] in ['tj', 'timejump']:
-                    if len(input_cmd_list) == 2:
-                        # Only time specified
-                        target_time = int(input_cmd_list[1])
-                        if target_time < 0:
-                            raise Exception("Lowest target time value is 0")
-                        if target_time >= t:
-                            raise Exception("Target time must be in the past")
-                        tj_msg = gm.add_flag_timejump(self.ID, t, cur_x, cur_y, target_time, cur_x, cur_y, cur_a)
-                        if tj_msg.header == "flags added":
-                            return(tj_msg)
-                        elif tj_msg.header == "exception":
-                            raise Exception(tj_msg.msg)
-                    elif len(input_cmd_list) == 3:
-                        # Both time and stone_ID specified; an adoption of a TJI is attempted
-                        target_time = int(input_cmd_list[1])
-                        adopted_stone_ID = int(input_cmd_list[2])
-                        if target_time < 0:
-                            raise Exception("Lowest target time value is 0")
-                        if target_time >= t:
-                            raise Exception("Target time must be in the past")
-                        if adopted_stone_ID not in gm.stones:
-                            raise Exception("Stone ID invalid")
-                        tj_msg = gm.add_flag_timejump(self.ID, t, cur_x, cur_y, target_time, cur_x, cur_y, cur_a, adopted_stone_ID = adopted_stone_ID)
-                        if tj_msg.header == "flags added":
-                            return(tj_msg)
-                        elif tj_msg.header == "exception":
-                            raise Exception(tj_msg.msg)
-                    else:
-                        raise Exception("Required argument missing")
-
                 raise Exception("Your input couldn't be parsed")
 
             except ValueError:
@@ -328,15 +207,6 @@ class Stone():
     # Message("board action", STPos)
 
     def attack(self, gm, t, attack_args):
-        cur_x, cur_y, cur_a = self.history[t]
-
-        los_pos = STPos(t, cur_x, cur_y)
-        los_pos.step(cur_a)
-
-        while(gm.is_valid_position(los_pos.x, los_pos.y)):
-            if gm.board_dynamic[t][los_pos.x][los_pos.y].occupied:
-                return(Message("destruction", los_pos))
-            los_pos.step(cur_a)
-        return(Message("pass"))
+        pass
 
 

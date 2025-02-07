@@ -100,16 +100,16 @@ class Flag():
         if self.flag_type == 'add_stone':
             # args: [azimuth]
             str_rep = f"Add stone unconditionally (P. '{self.player_faction}', ID {self.stone_ID}): [{human_readable_azimuth(self.flag_args[0])}]"
-            #if self.flag_args[0] == False:
-            #    str_rep += " (DEACTIVATED)"
+            if self.is_active == False:
+                str_rep += " (DEACTIVATED)"
         if self.flag_type == 'time_jump_out':
             # args: [STPos of time-jump-in, flag_ID of child]
             str_rep = f"Time jump OUT (P. '{self.player_faction}', ID {self.stone_ID}): jump into {self.flag_args[0]}, changing ID to {self.flag_args[1]}"
         if self.flag_type == 'time_jump_in':
             # args: [azimuth]
             str_rep = f"Time jump IN (P. '{self.player_faction}', ID {self.stone_ID}): [{human_readable_azimuth(self.flag_args[0])}]"
-            #if self.flag_args[0] == False:
-            #    str_rep += " (DEACTIVATED)"
+            if self.is_active == False:
+                str_rep += " (DEACTIVATED)"
         if self.flag_type == 'spatial_move':
             # args: [new_x, new_y, new_azimuth]
             str_rep = f"Spatial move (P. '{self.player_faction}', ID {self.stone_ID}): move to ({self.flag_args[0]},{self.flag_args[1]}) [{human_readable_azimuth(self.flag_args[2])}]"

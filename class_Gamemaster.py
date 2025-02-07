@@ -7,7 +7,11 @@ import constants
 from functions import *
 from class_STPos import STPos
 from class_Message import Message
+
+# Import the stone types
 from class_Stone import Stone
+from class_Tank import Tank
+
 from class_Flag import Flag
 from class_Board_square import Board_square
 
@@ -454,6 +458,15 @@ class Gamemaster():
                 for y in range(self.y_dim):
                     self.board_dynamic[t][x][y].remove_stones()
 
+    def create_stone(self, new_stone_ID, stone_type, progenitor_flag_ID, player_faction):
+        if stone_type == "tank":
+            return(Tank(new_stone_ID, progenitor_flag_ID, player_faction, self.t_dim))
+        #elif stone_type == "bombardier":
+        #    self.stones[new_flag.stone_ID] = Bombardier(new_flag.stone_ID, new_flag.flag_ID, faction, self.t_dim)
+        else:
+            self.print_log(f"ERROR: Unrecognizable stone type {stone_type} on setup.", 0)
+            quit()
+
     def place_stone_on_board(self, pos, stone_ID, stone_properties):
         # If the square is already occupied or unavailable, we track the square in a list of conflicting squares
         if self.board_dynamic[pos.t][pos.x][pos.y].occupied or (not self.is_square_available(pos.x, pos.y)):
@@ -547,14 +560,16 @@ class Gamemaster():
     # ----------------------------- Flag addition
     # Methods which add new Flags always return the Flag ID
 
-    def add_stone_on_setup(self, faction, x, y, a0):
+    def add_stone_on_setup(self, faction, stone_type, x, y, a0):
         # This function allows Gamemaster to describe the initial state of the board, which is reverted to for every retrace of causal events
         new_flag = Flag(STPos(-1, x, y), 'add_stone', faction, [a0])
         self.setup_squares[x][y].add_flag(new_flag.flag_ID, None)
         self.flags[new_flag.flag_ID] = new_flag
 
+        # Add the correct stone
+        self.stones[new_flag.stone_ID] = self.create_stone(new_flag.stone_ID, stone_type, new_flag.flag_ID, faction)
+
         # Trackers
-        self.stones[new_flag.stone_ID] = Stone(new_flag.stone_ID, new_flag.flag_ID, faction, self.t_dim)
         self.faction_armies[faction].append(new_flag.stone_ID)
         self.setup_stones[new_flag.stone_ID] = new_flag.flag_ID
         self.round_canonization[0]["setup_AM"][new_flag.flag_ID] = True
@@ -573,7 +588,7 @@ class Gamemaster():
         self.flags[new_flag.flag_ID] = new_flag
         return(new_flag.flag_ID)
 
-    def add_flag_timejump(self, stone_ID, old_t, old_x, old_y, new_t, new_x, new_y, new_a, adopted_stone_ID = -1):
+    def add_flag_timejump(self, stone_ID, old_t, old_x, old_y, new_stone_type, new_t, new_x, new_y, new_a, adopted_stone_ID = -1):
 
         round_number, active_timeslice = self.round_from_turn(self.current_turn_index)
         # If adopted_stone_ID specified, instead of creating a new TJI, we adopt an existing one.
@@ -601,7 +616,7 @@ class Gamemaster():
             self.TJIs_by_round[round_number].append(tji_flag.flag_ID)
 
             # We add the new stone into the army
-            self.stones[tji_flag.stone_ID] = Stone(tji_flag.stone_ID, tji_flag.flag_ID, self.stones[stone_ID].player_faction, self.t_dim)
+            self.stones[tji_flag.stone_ID] = self.create_stone(tji_flag.stone_ID, new_stone_type, tji_flag.flag_ID, self.stones[stone_ID].player_faction)
             self.faction_armies[self.stones[stone_ID].player_faction].append(tji_flag.stone_ID)
             return(Message("flags added", [tji_flag.flag_ID, tjo_flag.flag_ID]))
         else:
@@ -1613,8 +1628,12 @@ class Gamemaster():
         for y in range(self.y_dim):
             for x in range(self.x_dim):
                 cur_char = board_lines[y+1][x]
-                if cur_char.upper() in self.factions:
-                    setup_flag_ID = self.add_stone_on_setup(cur_char.upper(), x, y, faction_orientations[cur_char.upper()])
+                #if cur_char.upper() in self.factions:
+                #    setup_flag_ID = self.add_stone_on_setup(cur_char.upper(), x, y, faction_orientations[cur_char.upper()])
+                #    self.flags_by_turn[0]["GM"].append(setup_flag_ID)
+                if cur_char in constants.stone_type_representations.keys():
+                    stone_to_load = constants.stone_type_representations[cur_char]
+                    setup_flag_ID = self.add_stone_on_setup(stone_to_load[0], stone_to_load[1], x, y, faction_orientations[stone_to_load[0]])
                     self.flags_by_turn[0]["GM"].append(setup_flag_ID)
                     # NOTE: setup flags are never added to
                     # self.new_dynamic_representation, since they are copied
