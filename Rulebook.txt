@@ -95,7 +95,8 @@ The conflict resolution routine represents the physicality of the stones. Even t
 
     1. 'Sokoban push': For every square occupied by exactly two stones, if one of these stones occupied the same square in the previous time-slice, it will be pushed in the direction of the other stone's approach. This will not occur if
            1.1. the other stone did not move onto this square from the previous time-slice spatially, but rather was placed here, e.g. through a time-jump-in, or
-           1.2. the square onto which the stone would be pushed is unavailable or occupied (much like in Sokoban, one cannot push two stones with one move).
+           1.2. the square onto which the stone would be pushed is unavailable or occupied (much like in Sokoban, one cannot push two stones with one move), or
+           1.3. the other stone is not opposable.
     2. 'Opposition': For every stone which is tagged as 'opposable', if it moved from position A to position B and there exists another opposable stone which moved from position B to position A, both stones are returned to their origin.
     3. 'Impasse': Now, for every square occupied by more than one stone, all the stones on this square which have NOT been placed on this square in this time-slice (i.e. they are present in the previous time-slice) are moved back to the square which they occupied in the previous time-slice, as well as the stones they pushed through the 'Sokoban push' rule. This rule chains, and is applied repeatedly until all stones which are still placed on squares which are occupied by more than one stone have already been moved by this rule.
     4. 'Explosion': Finally, for every square occupied by more than one stone, all stones on this square are deleted.

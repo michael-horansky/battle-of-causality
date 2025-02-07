@@ -3,9 +3,9 @@ import constants
 from functions import *
 from class_STPos import STPos
 
-# ---------------------------------------------
-# ---------------- class Flag -----------------
-# ---------------------------------------------
+# -----------------------------------------------------------------------------
+# -------------------------------- class Flag ---------------------------------
+# -----------------------------------------------------------------------------
 # Instances of this class are commands associated with a specific spacetime position.
 # The only interface between the board and the players is the adding of flags to board squares.
 # A flag has a type which specifies what action it represents.

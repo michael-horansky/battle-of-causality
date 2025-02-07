@@ -15,9 +15,9 @@ from class_Tank import Tank
 from class_Flag import Flag
 from class_Board_square import Board_square
 
-# ---------------------------------------------
-# ------------- class Gamemaster --------------
-# ---------------------------------------------
+# -----------------------------------------------------------------------------
+# ----------------------------- class Gamemaster ------------------------------
+# -----------------------------------------------------------------------------
 
 class Gamemaster():
 
@@ -422,6 +422,8 @@ class Gamemaster():
     # ------------------------ Static board functions -------------------------
 
     def is_square_available(self, x, y):
+        if not self.is_valid_position(x, y):
+            return(False)
         return(self.board_static[x][y] in [' '])
 
     def is_valid_position(self, x, y):
@@ -582,8 +584,8 @@ class Gamemaster():
         self.flags[new_flag.flag_ID] = new_flag
         return(new_flag.flag_ID)
 
-    def add_flag_attack(self, stone_ID, t, x, y, allow_friendly_fire):
-        new_flag = Flag(STPos(t, x, y), "attack", self.stones[stone_ID].player_faction, [allow_friendly_fire], stone_ID)
+    def add_flag_attack(self, stone_ID, t, x, y, attack_arguments = []):
+        new_flag = Flag(STPos(t, x, y), "attack", self.stones[stone_ID].player_faction, attack_arguments, stone_ID)
         self.board_dynamic[t][x][y].add_flag(new_flag.flag_ID, stone_ID)
         self.flags[new_flag.flag_ID] = new_flag
         return(new_flag.flag_ID)
@@ -629,6 +631,8 @@ class Gamemaster():
                             return(Message("exception", "Specified stone doesn't time-jump-in at the specified square"))
                         if self.stones[stone_ID].player_faction != self.stones[adopted_stone_ID].player_faction:
                             return(Message("exception", "Specified stone belongs to a different faction"))
+                        if self.stones[stone_ID].stone_type not in [self.stones[adopted_stone_ID].stone_type, "wildcard"]:
+                            return(Message("exception", "Specified stone is of incompatible type"))
                         if self.stones[stone_ID].stone_type not in ["wildcard", self.stones[adopted_stone_ID].stone_type]:
                             return(Message("exception", "Specified stone is of a different type"))
                         if self.flags[TJI_ID].flag_args[0] != new_a:

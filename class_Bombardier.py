@@ -6,23 +6,21 @@ from class_Message import Message
 from class_Stone import Stone
 
 # -----------------------------------------------------------------------------
-# -------------------------------- class Tank ---------------------------------
+# ----------------------------- class Bombardier ------------------------------
 # -----------------------------------------------------------------------------
 
-class Tank(Stone):
+class Bombardier(Stone):
     # --- Constructors, destructors, descriptors ---
     def __init__(self, stone_ID, progenitor_flag_ID, player_faction, t_dim):
 
         super().__init__(stone_ID, progenitor_flag_ID, player_faction, t_dim)
 
-        self.stone_type = "tank"
+        self.stone_type = "bombardier"
 
         self.type_specific_commands = {
                 "wait" : [None, None, "The stone will wait in its place. This is also selected on an empty submission!"],
-                "forward/fwd" : [None, "turn", "Moves forward by 1, turning clockwise/cw or anticlockwise/acw by 90 deg. if specified."],
-                "backward/bwd" : [None, "turn", "Moves backward by 1, turning clockwise/cw or anticlockwise/acw by 90 deg. if specified."],
-                "turn/t" : ["azimuth", None, "Faces the specified direction (up/right/down/left)."],
-                "attack/atk" : [None, None, "Fires, destroying the stone in line of sight."]
+                "move/m" : ["direction", None, "Moves in specified direction by 1 square."],
+                "attack/atk" : ["time", None, "Drops a bomb back in time onto the same spatial position. Target time has to be in the past!"]
             }
 
         self.type_specific_final_commands = {
@@ -103,16 +101,22 @@ class Tank(Stone):
                         raise Exception("Invalid move")
                     new_flag_ID = gm.add_flag_spatial_move(self.ID, t, cur_x, cur_y, new_x, new_y, new_a)
                     return(Message("flags added", [new_flag_ID]))
-                if input_cmd_list[0] in ['t', 'turn']:
+
+                if input_cmd_list[0] in ['m', 'move']:
                     if len(input_cmd_list) == 1:
                         raise Exception("Required argument missing")
                     new_a = encode_azimuth(input_cmd_list[1])
                     if new_a == None:
                         raise Exception("Your input couldn't be parsed")
-                    new_flag_ID = gm.add_flag_spatial_move(self.ID, t, cur_x, cur_y, cur_x, cur_y, new_a)
+                    new_x, new_y = pos_step((cur_x, cur_y), new_a)
+                    if not gm.is_square_available(new_x, new_y):
+                        # The stone is attempting to move into a wall
+                        raise Exception("Invalid move")
+                    new_flag_ID = gm.add_flag_spatial_move(self.ID, t, cur_x, cur_y, new_x, new_y, new_a)
                     return(Message("flags added", [new_flag_ID]))
                 if input_cmd_list[0] in ['a', 'atk', 'attack']:
-                    new_flag_ID = gm.add_flag_attack(self.ID, t, cur_x, cur_y)
+
+                    new_flag_ID = gm.add_flag_attack(self.ID, t, cur_x, cur_y, [])
                     return(Message("flags added", [new_flag_ID]))
                 raise Exception("Your input couldn't be parsed")
 
