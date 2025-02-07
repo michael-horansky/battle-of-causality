@@ -25,24 +25,20 @@ def load_full_data_from_file():
 lol = Gamemaster(display_logs = True)
 
 
-"""lol.load_board(1)
-lol.standard_game_loop()
-
-full_static, full_dynamic = lol.dump_to_database()
-
-save_full_data_to_file(full_static, full_dynamic)"""
-
-full_static, full_dynamic = load_full_data_from_file()
-
-lol.load_from_database(full_static, full_dynamic)
-print("activity maps:", lol.round_canonization)
-print("TJI ID buffer:", lol.tji_ID_buffer)
-
-
-lol.open_game(cur_client_player)
+if cur_client_player == "ng":
+    lol.load_board(1)
+    lol.standard_game_loop()
+elif cur_client_player in ["A", "B"]:
+    full_static, full_dynamic = load_full_data_from_file()
+    lol.load_from_database(full_static, full_dynamic)
+    lol.open_game(cur_client_player)
+else:
+    print("Client argument not recognized. Aborting...")
+    quit()
 
 full_static, full_dynamic = lol.dump_to_database()
 save_full_data_to_file(full_static, full_dynamic)
+
 #print("Full static:", full_static)
 #print("Full dynamic:", full_dynamic)
 #print("New dynamic:", lol.dump_changes())

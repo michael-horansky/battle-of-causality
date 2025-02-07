@@ -31,6 +31,7 @@ class Gamemaster():
         self.stones = {} #[ID] = Stone()
         self.faction_armies = {} #[faction] = [ID_1, ID_2 ... ]
         self.factions = ['A', 'B']
+        self.stone_causal_freedom = {} # [stone_ID] = timeslice of causal freedom OR None if stone is not free/not on the board. NOTE: updated ONLY by execute_moves()
         # Setup trackers
         self.setup_stones = {} # Tracker for stones which are added on board setup. This is used when resolving paradoxes. [stone_ID] = flag_ID
         self.removed_setup_stones = {} # [stone_ID] = flag_ID
@@ -199,7 +200,7 @@ class Gamemaster():
                 # Stones
                 if self.board_dynamic[t][x][y].occupied:
                     occupant_ID = self.board_dynamic[t][x][y].stones[0]
-                    is_occupant_causally_free = occupant_ID in self.board_dynamic[t][x][y].causally_free_stones
+                    is_occupant_causally_free = (self.stone_causal_freedom[occupant_ID] == t)
                     print_stone(board_lines, self.stones[occupant_ID].player_faction, (x, y), self.board_dynamic[t][x][y].stone_properties[occupant_ID][0], is_causally_free = is_occupant_causally_free, is_tracked = (track_stone_ID == occupant_ID))
 
                 # Timejumps
@@ -214,7 +215,7 @@ class Gamemaster():
                     TJI_square = self.board_dynamic[t-1][x][y]
                 else:
                     TJI_square = self.setup_squares[x][y]
-                for cur_flag_ID in TJI_square.flags:
+                for cur_flag_ID in TJI_square.all_flags:
                     if has_conflict:
                         break
                     if self.flags[cur_flag_ID].flag_type == "time_jump_in":
@@ -227,7 +228,7 @@ class Gamemaster():
                         else:
                             # Inactive TJI
                             has_inactive_TJI = True
-                for cur_flag_ID in self.board_dynamic[t][x][y].flags:
+                for cur_flag_ID in self.board_dynamic[t][x][y].all_flags:
                     if has_conflict:
                         break
                     if self.flags[cur_flag_ID].flag_type == "time_jump_out":
@@ -331,13 +332,13 @@ class Gamemaster():
             tji_square = self.board_dynamic[t-1][x][y]
         else:
             tji_square = self.setup_squares[x][y]
-        for flag_ID in tji_square.flags:
+        for flag_ID in tji_square.all_flags:
             if self.flags[flag_ID].flag_type == "time_jump_in":
                 if self.flags[flag_ID].is_active:
                     TJI_active.append(flag_ID)
                 else:
                     TJI_inactive.append(flag_ID)
-        for flag_ID in self.board_dynamic[t][x][y].flags:
+        for flag_ID in self.board_dynamic[t][x][y].all_flags:
             if self.flags[flag_ID].flag_type == "time_jump_out":
                 if flag_ID in self.timejump_bijection.values():
                     TJO_active.append(flag_ID)
@@ -395,7 +396,7 @@ class Gamemaster():
             for t in range(self.t_dim - 1, -1, -1):
                 if self.stones[stone_ID].history[t] != None:
                     last_x, last_y, last_a = self.stones[stone_ID].history[t]
-                    for flag_ID in self.board_dynamic[t][last_x][last_y].flags:
+                    for flag_ID in self.board_dynamic[t][last_x][last_y].all_flags:
                         if self.flags[flag_ID].flag_type == "time_jump_out" and self.flags[flag_ID].stone_ID == stone_ID:
                             print(f"The stone time-jumped-out at ({t}, {last_x}, {last_y}) [Flag ID {flag_ID}], changing into {str(self.stones[self.stone_inheritance[stone_ID]])}")
                             break
@@ -443,21 +444,17 @@ class Gamemaster():
         causally_free_armies = {}
         for faction in self.factions:
             causally_free_armies[faction] = []
-
-        for x in range(self.x_dim):
-            for y in range(self.y_dim):
-                for causally_free_stone_ID in self.board_dynamic[t][x][y].causally_free_stones:
-                    causally_free_armies[self.stones[causally_free_stone_ID].player_faction].append(causally_free_stone_ID)
+            for stone_ID in self.faction_armies[faction]:
+                if self.stone_causal_freedom[stone_ID] == t:
+                    causally_free_armies[faction].append(stone_ID)
         return(causally_free_armies)
 
     def causally_free_stones_at_time_by_player(self, t, player):
         causally_free_army = []
+        for stone_ID in self.faction_armies[player]:
+            if self.stone_causal_freedom[stone_ID] == t:
+                causally_free_army.append(stone_ID)
 
-        for x in range(self.x_dim):
-            for y in range(self.y_dim):
-                for causally_free_stone_ID in self.board_dynamic[t][x][y].causally_free_stones:
-                    if self.stones[causally_free_stone_ID].player_faction == player:
-                        causally_free_army.append(causally_free_stone_ID)
         return(causally_free_army)
 
     def did_player_finish_turn(self, player, turn_index):
@@ -508,7 +505,7 @@ class Gamemaster():
     def add_stone_on_setup(self, faction, x, y, a0):
         # This function allows Gamemaster to describe the initial state of the board, which is reverted to for every retrace of causal events
         new_flag = Flag(STPos(-1, x, y), 'add_stone', faction, [a0])
-        self.setup_squares[x][y].add_flag(new_flag.flag_ID, new_flag.stone_ID)
+        self.setup_squares[x][y].add_flag(new_flag.flag_ID, None)
         self.flags[new_flag.flag_ID] = new_flag
 
         # Trackers
@@ -544,10 +541,10 @@ class Gamemaster():
             # The time_jump_in flag is actually placed one t lower than specified (-1 is allowed!), so the child can be controlled on the same time-slice it is placed onto.
             self.board_dynamic[old_t][old_x][old_y].add_flag(tjo_flag.flag_ID, stone_ID)
             if new_t - 1 >= 0:
-                self.board_dynamic[new_t - 1][new_x][new_y].add_flag(tji_flag.flag_ID, tji_flag.stone_ID)
+                self.board_dynamic[new_t - 1][new_x][new_y].add_flag(tji_flag.flag_ID, None)
             if new_t == 0:
                 # We place the flag into a special time-slice
-                self.setup_squares[new_x][new_y].add_flag(tji_flag.flag_ID, tji_flag.stone_ID)
+                self.setup_squares[new_x][new_y].add_flag(tji_flag.flag_ID, None)
             self.flags[tjo_flag.flag_ID] = tjo_flag
             self.flags[tji_flag.flag_ID] = tji_flag
 
@@ -598,10 +595,14 @@ class Gamemaster():
         # and is useful for the self.setup_stones tracker
 
         self.flags[new_flag.flag_ID] = new_flag
-        if new_flag.pos.t == -1:
-            self.setup_squares[new_flag.pos.x][new_flag.pos.y].add_flag(new_flag.flag_ID, new_flag.stone_ID)
+        if new_flag.flag_type in Flag.stone_generating_flag_types:
+            required_actor = None
         else:
-            self.board_dynamic[new_flag.pos.t][new_flag.pos.x][new_flag.pos.y].add_flag(new_flag.flag_ID, new_flag.stone_ID)
+            required_actor = new_flag.stone_ID
+        if new_flag.pos.t == -1:
+            self.setup_squares[new_flag.pos.x][new_flag.pos.y].add_flag(new_flag.flag_ID, required_actor)
+        else:
+            self.board_dynamic[new_flag.pos.t][new_flag.pos.x][new_flag.pos.y].add_flag(new_flag.flag_ID, required_actor)
 
         # If this flag creates a stone, that stone is tracked
         if new_flag.flag_type in Flag.stone_generating_flag_types:
@@ -676,16 +677,6 @@ class Gamemaster():
 
     def set_flag_activity(self, flag_ID, new_is_active):
         self.flags[flag_ID].is_active = new_is_active
-        if new_is_active == True:
-            if self.flags[flag_ID].pos.t == -1:
-                self.setup_squares[self.flags[flag_ID].pos.x][self.flags[flag_ID].pos.y].activate_flag(flag_ID)
-            else:
-                self.board_dynamic[self.flags[flag_ID].pos.t][self.flags[flag_ID].pos.x][self.flags[flag_ID].pos.y].activate_flag(flag_ID)
-        else:
-            if self.flags[flag_ID].pos.t == -1:
-                self.setup_squares[self.flags[flag_ID].pos.x][self.flags[flag_ID].pos.y].deactivate_flag(flag_ID)
-            else:
-                self.board_dynamic[self.flags[flag_ID].pos.t][self.flags[flag_ID].pos.x][self.flags[flag_ID].pos.y].deactivate_flag(flag_ID)
 
     def realise_activity_map(self, activity_map, max_turn_index = None):
         # activity map = {"setup_AM" : {flag_ID : is active?...}, "TJI_AM" : {flag_ID : is active?...}}
@@ -1028,17 +1019,42 @@ class Gamemaster():
                 for TJI_ID in self.TJIs_by_round[round_n]:
                     self.tji_bearing[TJI_ID] = 0
 
+        # Since causal freedom of a stone depends on its trajectory, it is
+        # determined in this method and stored in the following dictionary.
+        self.stone_causal_freedom = {}
+        undetermined_stones = [] # list of stones not determined as c.f.
+
+        # If a stone gets interfered out of its old trajectory and a new
+        # trajectory is set for it, it won't slip into the old one in later
+        # timeslices. Hence the GOLDEN RULE is as follows:
+        #   1. A stone on a square follows the earliest of the applicable flags
+        #   2. If a stone follows a flag, it cannot follow an earlier flag in
+        #      later timeslices.
+        # We could to this by rounds but using sequential flag IDs works, too.
+        # Local tracker for this:
+        stone_latest_flag_ID = {} # [stone_ID] = flag_ID of latest flag
+        # Reset these trackers
+        for stone_ID in self.stones.keys():
+            self.stone_causal_freedom[stone_ID] = None
+            undetermined_stones.append(stone_ID)
+            stone_latest_flag_ID[stone_ID] = -1
+
+
         # Then, we execute setup flags, i.e. initial stone creation
         for x in range(self.x_dim):
             for y in range(self.y_dim):
-                for cur_flag_ID in self.setup_squares[x][y].flags:
+                # For setup squares, they are all empty, and so only FLags with
+                # no required actor are executed
+                for cur_flag_ID in self.setup_squares[x][y].flags[None]:
                     cur_flag = self.flags[cur_flag_ID]
                     if not cur_flag.is_active:
                         continue
                     if cur_flag.flag_type == "add_stone":
                         self.place_stone_on_board(STPos(0, x, y), cur_flag.stone_ID, [cur_flag.flag_args[0]])
+                        self.stone_causal_freedom[cur_flag.stone_ID] = 0
                     if cur_flag.flag_type == "time_jump_in":
                         self.place_stone_on_board(STPos(0, x, y), cur_flag.stone_ID, [cur_flag.flag_args[0]])
+                        self.stone_causal_freedom[cur_flag.stone_ID] = 0
 
         # Then we prepare a flat list of all flag IDs to execute
         flags_to_execute = []
@@ -1070,45 +1086,68 @@ class Gamemaster():
                 if not cur_ID in recorded_stones:
                     self.stones[cur_ID].history[t] = None
 
+            # As stones may have been removed from the board, we reset all the
+            # stones which haven't been committed.
+            for stone_ID in undetermined_stones:
+                self.stone_causal_freedom[stone_ID] = None
+
             # Naive flag execution
             for x in range(self.x_dim):
                 for y in range(self.y_dim):
-                    for cur_flag_ID in self.board_dynamic[t][x][y].flags:
-                        if cur_flag_ID not in flags_to_execute:
-                            continue # This allows us to see the past.
-                        cur_flag = self.flags[cur_flag_ID]
-                        if not cur_flag.is_active:
-                            continue
-                        # Flag switch here
+                    # We execute the Flags with no required actor, and then the
+                    # earliest Flag for each Stone present (should only be one)
+                    local_flags_to_execute = []
+                    for cur_flag_ID in self.board_dynamic[t][x][y].flags[None]:
+                        if cur_flag_ID in flags_to_execute and self.flags[cur_flag_ID].is_active:
+                            local_flags_to_execute.append(cur_flag_ID)
+                    for stone_ID in self.board_dynamic[t][x][y].stones:
+                        # Stone exists on board, so we preliminarily set
+                        # its causal freedom to here.
+                        self.stone_causal_freedom[stone_ID] = t
 
+                        # We assume that the list of flags is already ordered
+                        # from earliest to latest
+                        if stone_ID in self.board_dynamic[t][x][y].flags.keys():
+                            for cur_flag_ID in self.board_dynamic[t][x][y].flags[stone_ID]:
+                                if cur_flag_ID in flags_to_execute and self.flags[cur_flag_ID].is_active and stone_latest_flag_ID[stone_ID] < cur_flag_ID:
+                                    stone_latest_flag_ID[stone_ID] = cur_flag_ID
+                                    local_flags_to_execute.append(cur_flag_ID)
+                                    break # only one Flag per stone
+
+
+                    for cur_flag_ID in local_flags_to_execute:
                         # These flags propagate the stone into the next time-slice, and as such are forbidden at t = self.t_dim - 1
                         # If a stone is propagated onto an occupied square, the square is added to self.conflicting_squares
+                        cur_flag = self.flags[cur_flag_ID]
                         if t < self.t_dim - 1:
                             if cur_flag.flag_type == "add_stone":
                                 self.place_stone_on_board(STPos(t+1, x, y), cur_flag.stone_ID, [cur_flag.flag_args[0]])
+                                self.stone_causal_freedom[cur_flag.stone_ID] = t+1
                             if cur_flag.flag_type == "time_jump_in":
                                 self.place_stone_on_board(STPos(t+1, x, y), cur_flag.stone_ID, [cur_flag.flag_args[0]])
+                                self.stone_causal_freedom[cur_flag.stone_ID] = t+1
                             # For the following flags, the stone has to be present in the current time-slice
-                            if cur_flag.stone_ID in self.board_dynamic[t][x][y].stones:
-                                if cur_flag.flag_type == "spatial_move":
-                                    self.place_stone_on_board(STPos(t+1, cur_flag.flag_args[0], cur_flag.flag_args[1]), cur_flag.stone_ID, [cur_flag.flag_args[2]])
-                                if cur_flag.flag_type == "attack":
-                                    self.place_stone_on_board(STPos(t+1, x, y), cur_flag.stone_ID, self.board_dynamic[t][x][y].stone_properties[cur_flag.stone_ID])
-                                    # TODO resolve attack here
+                            if cur_flag.flag_type == "spatial_move":
+                                self.place_stone_on_board(STPos(t+1, cur_flag.flag_args[0], cur_flag.flag_args[1]), cur_flag.stone_ID, [cur_flag.flag_args[2]])
+                                self.stone_causal_freedom[cur_flag.stone_ID] = t+1
+                            if cur_flag.flag_type == "attack":
+                                self.place_stone_on_board(STPos(t+1, x, y), cur_flag.stone_ID, self.board_dynamic[t][x][y].stone_properties[cur_flag.stone_ID])
+                                self.stone_causal_freedom[cur_flag.stone_ID] = t+1
+                                # TODO resolve attack here
                         # The following flags remove the stone from the board, and as such are the only flags which can be placed at t = t_dim - 1
-                        if cur_flag.stone_ID in self.board_dynamic[t][x][y].stones:
-                            if cur_flag.flag_type == "time_jump_out":
-                                # Newly added TJOs which link previous TJIs should be subject to tracker,
-                                # but not TJOs added together with new TJIs
-                                if reset_timejump_trackers and cur_flag.flag_args[1] not in self.TJIs_by_round[max_round_number]:
-                                        self.tji_bearing[cur_flag.flag_args[1]] += 1
-                                        self.timejump_bijection[cur_flag.flag_args[1]] = cur_flag.flag_ID
-                                        self.stone_inheritance[cur_flag.stone_ID] = self.flags[cur_flag.flag_args[1]].stone_ID
+                        if cur_flag.flag_type == "time_jump_out":
+                            # Newly added TJOs which link previous TJIs should be subject to tracker,
+                            # but not TJOs added together with new TJIs
+                            self.stone_causal_freedom[cur_flag.stone_ID] = None
+                            if reset_timejump_trackers and cur_flag.flag_args[1] not in self.TJIs_by_round[max_round_number]:
+                                    self.tji_bearing[cur_flag.flag_args[1]] += 1
+                                    self.timejump_bijection[cur_flag.flag_args[1]] = cur_flag.flag_ID
+                                    self.stone_inheritance[cur_flag.stone_ID] = self.flags[cur_flag.flag_args[1]].stone_ID
+                    # Stones whose causal freedom is still t are determined with finality
+                    for i in range(len(undetermined_stones) - 1, -1, -1):
+                        if self.stone_causal_freedom[undetermined_stones[i]] == t:
+                            undetermined_stones.pop(i)
 
-        # We update the tracker to include all the flags from the historical buffer
-        """for new_tji_ID, new_tjo_ID in self.tji_ID_buffer.items():
-            self.timejump_bijection[new_tji_ID] = new_tjo_ID
-            self.stone_inheritance[self.flags[new_tjo_ID].stone_ID] = self.flags[new_tji_ID].stone_ID"""
 
     # -------------------------------------------------------------------------
     # --------------------------- Game loop methods ---------------------------
@@ -1139,13 +1178,9 @@ class Gamemaster():
             current_activity_map = self.round_canonization[round_number]
         self.realise_activity_map(current_activity_map, max_turn_index = turn_index - 1) # This also executes moves
 
-        print("trackers from execute_moves =", self.timejump_bijection)
-
         # Load historic trackers
         self.timejump_bijection = self.round_canonized_trackers[round_number]["timejump_bijection"]
         self.stone_inheritance = self.round_canonized_trackers[round_number]["stone_inheritance"]
-
-        print("trackers from history =", self.timejump_bijection)
 
 
 
