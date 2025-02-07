@@ -37,3 +37,14 @@ class STPos():
 
     def __str__(self):
         return("(" + (constants.STPos_delim).join(str(x) for x in [self.t, self.x, self.y]) + ")")
+
+    # --- Stepping methods ---
+    def step(self, azimuth):
+        if azimuth == 0:
+            self.y -= 1
+        if azimuth == 1:
+            self.x += 1
+        if azimuth == 2:
+            self.y += 1
+        if azimuth == 3:
+            self.x -= 1

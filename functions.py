@@ -17,7 +17,7 @@ def st(a, w, f = ' '):
 # This generates a list [element, element, element...]
 def repeated_list(length, element=''):
     result = []
-    if type(element) == list:
+    if isinstance(element, list) or isinstance(element, dict):
         for i in range(length):
             result.append(element.copy())
     else:
@@ -29,6 +29,16 @@ def add_tail_to_list(old_list, new_length, tail_element = []):
     while(len(old_list) < new_length):
         old_list.append(tail_element.copy())
     return(old_list)
+
+def get_delta_pos_step(pos, azimuth):
+    if cur_a == 0:
+        return(0, -1)
+    if cur_a == 1:
+        return(1, 0)
+    if cur_a == 2:
+        return(0, 1)
+    if cur_a == 3:
+        return(-1, 0)
 
 # find the position in our convention that is one step from pos in the direction azimuth
 def pos_step(pos, azimuth):

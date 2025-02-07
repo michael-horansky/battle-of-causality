@@ -31,7 +31,7 @@
 -Attacks by deploying a tagscreen
 -Tagscreen explodes one turn later, tagging stones on the 4 adjanced squares
 -Tagged stones cannot time-jump anymore, and become causally locked in the final time-slice
--Friendly fire off, but the Tagger itself cannot be affected by tagscreens (not even by other Taggers)
+-Friendly fire off, but the Tagger itself cannot be affected by tagscreens (not even by other Taggers) (NOTE: maybe not? so that there's a pressure for him to escape)
 -Can only time jump after reaching the end of the round
 
 
@@ -41,5 +41,6 @@
 -Attacks a selected adjanced square
 -Friendly fire on
 -Can time jump any time
+-Cannot conquer bases (fun board where one tank and many wildcards so if the tank dies they have to downgrade to be able to win the game)
 -SPECIAL: Can adopt a time-jump-in of any stone type (i.e. can retroactively become a different stone which is time-jumping-in)
 

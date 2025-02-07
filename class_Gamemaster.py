@@ -36,6 +36,15 @@ class Gamemaster():
         self.setup_stones = {} # Tracker for stones which are added on board setup. This is used when resolving paradoxes. [stone_ID] = flag_ID
         self.removed_setup_stones = {} # [stone_ID] = flag_ID
 
+        # Actions. These are queued by waiting flags and flushed in execute_moves.
+        self.stone_actions = [] # [t][stone_ID] = flag_ID which initiated action
+        self.board_actions = [] # [t][x][y]["board action"] = True or False
+        self.available_board_actions = [ # This is just a reference list, and should not be changed
+                "destruction",  # destroys stone at position if exists
+                "explosion",    # destroys stones at position and adjanced positions if exist
+                "tagscreen"     # tags stones at position and adjanced positions as unable to travel back in time
+            ]
+
         # the board
         self.board_static = [] # [x][y] = type
         self.board_dynamic = [] # [t][x][y] = Board_square
@@ -411,6 +420,29 @@ class Gamemaster():
     def is_square_available(self, x, y):
         return(self.board_static[x][y] in [' '])
 
+    def is_valid_position(self, x, y):
+        if x >= 0 and x < self.x_dim and y >= 0 and y < self.y_dim:
+            return(True)
+        return(False)
+
+    def get_adjanced_positions(self, x, y, number_of_steps):
+        adjanced_positions = []
+        for delta_x in range(number_of_steps + 1):
+            for delta_y in range((number_of_steps - delta_x) + 1):
+                if delta_x == 0 and delta_y == 0:
+                    if self.is_valid_position(x, y):
+                        adjanced_positions.append((x, y))
+                    continue
+                if self.is_valid_position(x + delta_x, y + delta_y):
+                    adjanced_positions.append((x + delta_x, y + delta_y))
+                if self.is_valid_position(x - delta_x, y + delta_y):
+                    adjanced_positions.append((x - delta_x, y + delta_y))
+                if self.is_valid_position(x + delta_x, y - delta_y):
+                    adjanced_positions.append((x + delta_x, y - delta_y))
+                if self.is_valid_position(x - delta_x, y - delta_y):
+                    adjanced_positions.append((x - delta_x, y - delta_y))
+
+
     # ----------------------------- Board access ------------------------------
 
     def clear_board(self):
@@ -439,6 +471,19 @@ class Gamemaster():
             return(-1)
         self.board_dynamic[t][new_x][new_y].add_stone(stone_ID, self.board_dynamic[t][old_x][old_y].stone_properties[stone_ID])
         self.board_dynamic[t][old_x][old_y].remove_stone(stone_ID)
+
+    def record_stones_at_time(self, t):
+        # Overwrites stones.history
+        recorded_stones = []
+        for x in range(self.x_dim):
+            for y in range(self.y_dim):
+                if self.board_dynamic[t][x][y].occupied:
+                    self.stones[self.board_dynamic[t][x][y].stones[0]].history[t] = (x, y, self.board_dynamic[t][x][y].stone_properties[self.board_dynamic[t][x][y].stones[0]][0])
+                    recorded_stones.append(self.board_dynamic[t][x][y].stones[0])
+        # All stones not recorded are set to position None
+        for cur_ID in self.stones.keys():
+            if not cur_ID in recorded_stones:
+                self.stones[cur_ID].history[t] = None
 
     def causally_free_stones_at_time(self, t):
         causally_free_armies = {}
@@ -1001,6 +1046,24 @@ class Gamemaster():
     # It also tracks timejump bearings and bijections, so that after realising
     # the board, we can check if it is also causally consistent.
 
+    def add_stone_action(self, t, stone_ID, flag_ID):
+        if stone_ID not in self.stone_actions[t].keys():
+            self.stone_actions[t][stone_ID] = []
+        self.stone_actions[t][stone_ID].append(flag_ID)
+
+    def resolve_stone_actions(self, t):
+        # Reads tracker and asks Stones to perform actions
+        # Note: these actions ALWAYS have to be initiated AFTER their cause.
+        for stone_ID in self.stone_actions[t].keys():
+            for action_flag_ID in self.stone_actions[t][stone_ID]:
+                if self.flags[action_flag_ID].flag_type == "attack":
+                    stone_action_msg = self.stones[stone_ID].attack(self, t, self.flags[action_flag_ID].flag_args)
+                    if stone_action_msg.header in self.available_board_actions:
+                        self.board_actions[stone_action_msg.msg.t][stone_action_msg.msg.x][stone_action_msg.msg.y][stone_action_msg.header] = True
+
+
+
+
     def execute_moves(self, reset_timejump_trackers = False, max_turn_index = None):
         # This function populates Board_squares with stones according to flags
         # placed on up to (and including) turn with i = max_turn_index.
@@ -1039,6 +1102,18 @@ class Gamemaster():
             undetermined_stones.append(stone_ID)
             stone_latest_flag_ID[stone_ID] = -1
 
+        # Stone actions
+        # We reset the stone actions tracker
+        self.stone_actions = repeated_list(self.t_dim, {})
+        # We reset the board actions tracker
+        for t in range(self.t_dim):
+            for x in range(self.x_dim):
+                for y in range(self.y_dim):
+                    self.board_actions[t][x][y] = {}
+                    for available_board_action in self.available_board_actions:
+                        self.board_actions[t][x][y][available_board_action] = False
+
+
 
         # Then, we execute setup flags, i.e. initial stone creation
         for x in range(self.x_dim):
@@ -1049,6 +1124,10 @@ class Gamemaster():
                     cur_flag = self.flags[cur_flag_ID]
                     if not cur_flag.is_active:
                         continue
+
+                    # TODO for progenitor flags, placing a "Bomb" type stone
+                    # instead adds 'explosion' to self.board_actions
+
                     if cur_flag.flag_type == "add_stone":
                         self.place_stone_on_board(STPos(0, x, y), cur_flag.stone_ID, [cur_flag.flag_args[0]])
                         self.stone_causal_freedom[cur_flag.stone_ID] = 0
@@ -1063,7 +1142,7 @@ class Gamemaster():
                 for move_flag_ID in move_flag_IDs:
                     flags_to_execute.append(move_flag_ID)
 
-        # Then, we execute flags for each time slice sequantially
+        # Then, we execute flags for each time slice sequentially
         for t in range(self.t_dim):
             # At t, we are treating the state of the board at t as canonical, and we use it to
             # calculate the state of the board at t + 1. We do this by first naively resolving
@@ -1074,17 +1153,27 @@ class Gamemaster():
             # Conflict resolution
             self.resolve_conflicts(t)
 
-            # At this moment, the time-slice t is in its canonical state, and stone history may be recorded
-            recorded_stones = []
+            # We preliminarily record stone positions for the actions to be resolvable
+            self.record_stones_at_time(t)
+
+            # Stone actions resolution
+            self.resolve_stone_actions(t)
+            # Board actions resolution
             for x in range(self.x_dim):
                 for y in range(self.y_dim):
-                    if self.board_dynamic[t][x][y].occupied:
-                        self.stones[self.board_dynamic[t][x][y].stones[0]].history[t] = (x, y, self.board_dynamic[t][x][y].stone_properties[self.board_dynamic[t][x][y].stones[0]][0])
-                        recorded_stones.append(self.board_dynamic[t][x][y].stones[0])
-            # All stones not recorded are set to position None
-            for cur_ID in self.stones.keys():
-                if not cur_ID in recorded_stones:
-                    self.stones[cur_ID].history[t] = None
+                    if self.board_actions[t][x][y]["destruction"]:
+                        self.board_dynamic[t][x][y].remove_stones()
+                    if self.board_actions[t][x][y]["explosion"]:
+                        affected_positions = self.get_adjanced_positions(x, y, number_of_steps = 1)
+                        for affected_position in affected_positions:
+                            aff_x, aff_y = affected_position
+                            self.board_dynamic[t][aff_x][aff_y].remove_stones()
+                    if self.board_actions[t][x][y]["tagscreen"]:
+                        print(f"A tagscreen was deployed at ({t},{x},{y})!")
+
+
+            # At this moment, the time-slice t is in its canonical state, and stone history may be recorded
+            self.record_stones_at_time(t)
 
             # As stones may have been removed from the board, we reset all the
             # stones which haven't been committed.
@@ -1133,7 +1222,7 @@ class Gamemaster():
                             if cur_flag.flag_type == "attack":
                                 self.place_stone_on_board(STPos(t+1, x, y), cur_flag.stone_ID, self.board_dynamic[t][x][y].stone_properties[cur_flag.stone_ID])
                                 self.stone_causal_freedom[cur_flag.stone_ID] = t+1
-                                # TODO resolve attack here
+                                self.add_stone_action(t+1, cur_flag.stone_ID, cur_flag.flag_ID)
                         # The following flags remove the stone from the board, and as such are the only flags which can be placed at t = t_dim - 1
                         if cur_flag.flag_type == "time_jump_out":
                             # Newly added TJOs which link previous TJIs should be subject to tracker,
@@ -1533,15 +1622,19 @@ class Gamemaster():
                 else:
                     self.board_static[x][y] = cur_char
 
-        # Setup dynamic board squares
+        # Setup dynamic board squares and board actions
         self.print_log("Setting up dynamic board representation...", 1)
         self.board_dynamic = []
+        self.board_actions = []
         for t in range(self.t_dim):
             self.board_dynamic.append([])
+            self.board_actions.append([])
             for x in range(self.x_dim):
                 self.board_dynamic[t].append([])
+                self.board_actions[t].append([])
                 for y in range(self.y_dim):
                     self.board_dynamic[t][x].append(Board_square(STPos(t, x, y)))
+                    self.board_actions[t][x].append({})
 
         self.conflicting_squares = repeated_list(self.t_dim, [])
 
@@ -1589,15 +1682,19 @@ class Gamemaster():
                 self.board_static[x][y] = cur_char
                 # TODO here, we also load bases :))
 
-        # Setup dynamic board squares
+        # Setup dynamic board squares and board actions
         self.print_log("Setting up dynamic board representation...", 1)
         self.board_dynamic = []
+        self.board_actions = []
         for t in range(self.t_dim):
             self.board_dynamic.append([])
+            self.board_actions.append([])
             for x in range(self.x_dim):
                 self.board_dynamic[t].append([])
+                self.board_actions[t].append([])
                 for y in range(self.y_dim):
                     self.board_dynamic[t][x].append(Board_square(STPos(t, x, y)))
+                    self.board_actions[t][x].append({})
 
         self.conflicting_squares = repeated_list(self.t_dim, [])
 
