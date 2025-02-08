@@ -47,24 +47,25 @@ class Flag():
     def from_str(cls, flag_representation):
         try:
             flag_elements = flag_representation.split(constants.Flag_delim)
-            cur_flag_ID             =            int(flag_elements[0])
-            cur_flag_type           =                flag_elements[1]
-            cur_flag_player_faction =                flag_elements[2]
-            cur_flag_stone_ID       =            int(flag_elements[3])
-            cur_flag_pos            = STPos.from_str(flag_elements[4])
-            cur_flag_is_active      =           bool(flag_elements[5])
-            cur_flag_args_list      =                flag_elements[6:]
+            cur_flag_ID             =                int(flag_elements[0])
+            cur_flag_type           =                    flag_elements[1]
+            cur_flag_player_faction =                    flag_elements[2]
+            cur_flag_stone_ID       =                int(flag_elements[3])
+            cur_flag_pos            =     STPos.from_str(flag_elements[4])
+            cur_flag_effect         = str_to_int_or_none(flag_elements[5])
+            cur_flag_initial_cause  = str_to_int_or_none(flag_elements[6])
+            cur_flag_args_list      =                    flag_elements[7:]
             if cur_flag_type == "add_stone":
-                cur_flag_args = [int(cur_flag_args_list[0])]
+                cur_flag_args = [cur_flag_args_list[0], int(cur_flag_args_list[1])]
             if cur_flag_type == "time_jump_out":
-                cur_flag_args = [STPos.from_str(cur_flag_args_list[0]), int(cur_flag_args_list[1])]
+                cur_flag_args = [STPos.from_str(cur_flag_args_list[0])]
             if cur_flag_type == "time_jump_in":
-                cur_flag_args = [int(cur_flag_args_list[0])]
+                cur_flag_args = [cur_flag_args_list[0], int(cur_flag_args_list[1])]
             if cur_flag_type == "spatial_move":
                 cur_flag_args = [int(cur_flag_args_list[0]), int(cur_flag_args_list[1]), int(cur_flag_args_list[2])]
             if cur_flag_type == "attack":
-                cur_flag_args = [bool(cur_flag_args_list[0])]
-            return(cls(pos = cur_flag_pos, flag_type = cur_flag_type, player_faction = cur_flag_player_faction, flag_args = cur_flag_args, stone_ID = cur_flag_stone_ID, flag_ID = cur_flag_ID, is_active = cur_flag_is_active))
+                cur_flag_args = cur_flag_args_list #[bool(cur_flag_args_list[0])]
+            return(cls(pos = cur_flag_pos, flag_type = cur_flag_type, player_faction = cur_flag_player_faction, flag_args = cur_flag_args, stone_ID = cur_flag_stone_ID, flag_ID = cur_flag_ID, effect = cur_flag_effect, initial_cause = cur_flag_initial_cause))
 
         except:
             print(f"Flag(repr) attempted initialization from a badly formatted string representation: {flag_representation}")
@@ -73,7 +74,7 @@ class Flag():
     # ------ constructors, destructors, descriptors ------
     # ----------------------------------------------------
 
-    def __init__(self, pos, flag_type, player_faction, flag_args, stone_ID = -1, flag_ID = None, is_active = True):
+    def __init__(self, pos, flag_type, player_faction, flag_args, stone_ID = -1, flag_ID = None, is_active = True, effect = None, initial_cause = None):
         self.pos = pos
         self.flag_type = flag_type
         self.player_faction = player_faction
@@ -91,6 +92,8 @@ class Flag():
             Flag.max_flag_ID = max(Flag.max_flag_ID, self.flag_ID + 1)
 
         self.is_active = is_active
+        self.effect = effect # If flag ID, the target flag requires this flag to activate to activate
+        self.initial_cause = initial_cause # If this is a reverse effect, initial cause is always linked when buffered
 
     # NOTE: For flags subject to activity maps ('add_stone', 'time_jump_in'), the zeroth flag_arg is ALWAYS 'is_active'!
     # TODO: Make is_active a separate Flag property. Any flag can be deactivated. This is how we resolve deactivating flags
@@ -98,16 +101,16 @@ class Flag():
     def __str__(self):
         str_rep = 'UNDEFINED_MOVE'
         if self.flag_type == 'add_stone':
-            # args: [azimuth]
-            str_rep = f"Add stone unconditionally (P. '{self.player_faction}', ID {self.stone_ID}): [{human_readable_azimuth(self.flag_args[0])}]"
+            # args: [stone_type, azimuth]
+            str_rep = f"Add stone {self.flag_args[0].upper()} unconditionally (P. '{self.player_faction}', ID {self.stone_ID}): [{human_readable_azimuth(self.flag_args[1])}]"
             if self.is_active == False:
                 str_rep += " (DEACTIVATED)"
         if self.flag_type == 'time_jump_out':
-            # args: [STPos of time-jump-in, flag_ID of child]
-            str_rep = f"Time jump OUT (P. '{self.player_faction}', ID {self.stone_ID}): jump into {self.flag_args[0]}, changing ID to {self.flag_args[1]}"
+            # args: [STPos of time-jump-in]
+            str_rep = f"Time jump OUT (P. '{self.player_faction}', ID {self.stone_ID}): jump into {self.flag_args[0]}"
         if self.flag_type == 'time_jump_in':
-            # args: [azimuth]
-            str_rep = f"Time jump IN (P. '{self.player_faction}', ID {self.stone_ID}): [{human_readable_azimuth(self.flag_args[0])}]"
+            # args: [stone_type, azimuth]
+            str_rep = f"Stone {self.flag_args[0].upper()} time-jumps-IN (P. '{self.player_faction}', ID {self.stone_ID}): [{human_readable_azimuth(self.flag_args[1])}]"
             if self.is_active == False:
                 str_rep += " (DEACTIVATED)"
         if self.flag_type == 'spatial_move':
@@ -126,7 +129,7 @@ class Flag():
         return(self.__str__())
 
     def get_flag_representation(self):
-        flag_representation = (constants.Flag_delim).join(str(x) for x in [self.flag_ID, self.flag_type, self.player_faction, self.stone_ID, self.pos, self.is_active]) + (constants.Flag_delim)
+        flag_representation = (constants.Flag_delim).join(str(x) for x in [self.flag_ID, self.flag_type, self.player_faction, self.stone_ID, self.pos, self.effect, self.initial_cause]) + (constants.Flag_delim)
         flag_representation += (constants.Flag_delim).join(str(x) for x in self.flag_args)
         return(flag_representation)
 

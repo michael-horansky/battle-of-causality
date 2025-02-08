@@ -115,6 +115,8 @@ class Bombardier(Stone):
                     new_flag_ID = gm.add_flag_spatial_move(self.ID, t, cur_x, cur_y, new_x, new_y, new_a)
                     return(Message("flags added", [new_flag_ID]))
                 if input_cmd_list[0] in ['a', 'atk', 'attack']:
+                    if len(input_cmd_list) == 1:
+                        raise Exception("Required argument missing")
 
                     new_flag_ID = gm.add_flag_attack(self.ID, t, cur_x, cur_y, [])
                     return(Message("flags added", [new_flag_ID]))
@@ -194,15 +196,9 @@ class Bombardier(Stone):
     # Message("board action", STPos)
 
     def attack(self, gm, t, attack_args):
-        cur_x, cur_y, cur_a = self.history[t]
-
-        los_pos = STPos(t, cur_x, cur_y)
-        los_pos.step(cur_a)
-
-        while(gm.is_valid_position(los_pos.x, los_pos.y)):
-            if gm.board_dynamic[t][los_pos.x][los_pos.y].occupied:
-                return(Message("destruction", los_pos))
-            los_pos.step(cur_a)
+        # This stone doesn't have an attack action; instead, the 'attack' cmd
+        # places a bomb effect flag, as resolved in self.parse_move_cdm()
+        # The attack flag is placed as a cause tracker.
         return(Message("pass"))
 
 

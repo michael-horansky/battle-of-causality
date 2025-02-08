@@ -105,6 +105,14 @@ def encode_azimuth(human_readable_a):
         return(3)
     return(None)
 
+
+def str_to_int_or_none(s):
+    if s in ['', 'None']:
+        return(None)
+    return(int(s))
+
+
+
 class color:
    PURPLE = '\033[95m'
    CYAN = '\033[96m'
