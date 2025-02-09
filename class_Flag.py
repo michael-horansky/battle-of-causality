@@ -74,12 +74,12 @@ class Flag():
     # ------ constructors, destructors, descriptors ------
     # ----------------------------------------------------
 
-    def __init__(self, pos, flag_type, player_faction, flag_args, stone_ID = -1, flag_ID = None, is_active = True, effect = None, initial_cause = None):
+    def __init__(self, pos, flag_type, player_faction, flag_args, stone_ID = None, flag_ID = None, is_active = True, effect = None, initial_cause = None):
         self.pos = pos
         self.flag_type = flag_type
         self.player_faction = player_faction
         self.flag_args = flag_args.copy()
-        self.stone_ID = stone_ID #-1 for anonymous flags, a non-negative integer otherwise
+        self.stone_ID = stone_ID #None for anonymous flags, a non-negative integer otherwise
         if self.flag_type in Flag.stone_generating_flag_types:
             self.stone_ID = Flag.get_stone_ID_tag()
 
@@ -117,12 +117,11 @@ class Flag():
             # args: [new_x, new_y, new_azimuth]
             str_rep = f"Spatial move (P. '{self.player_faction}', ID {self.stone_ID}): move to ({self.flag_args[0]},{self.flag_args[1]}) [{human_readable_azimuth(self.flag_args[2])}]"
         if self.flag_type == 'attack':
-            # args: [allow_friendly_fire]
+            # args: []
             str_rep = f"Attack (P. '{self.player_faction}', ID {self.stone_ID})"
-            if self.flag_args[0]:
-                str_rep += ": allows friendly fire"
-            else:
-                str_rep += ": forbids friendly fire"
+        if self.flag_type == 'spawn_bomb':
+            # args: []
+            str_rep = f"Spawn bomb (P. '{self.player_faction}')"
 
         return(str_rep)
     def __repr__(self):

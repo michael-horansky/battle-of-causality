@@ -31,6 +31,7 @@ class Tank(Stone):
             }
 
         self.opposable = True
+        self.orientable = True
 
     # -------------------------------------------------------------------------
     # -------------------------- Overridden methods ---------------------------

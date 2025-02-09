@@ -12,6 +12,7 @@ from class_Scenario import Scenario
 # Import the stone types
 from class_Stone import Stone
 from class_Tank import Tank
+from class_Bombardier import Bombardier
 
 from class_Flag import Flag
 from class_Board_square import Board_square
@@ -152,7 +153,7 @@ class Gamemaster():
 
     def print_board_at_time(self, round_n, t, print_to_output = True, include_header_line = False, is_active = False, track_stone_ID = -1):
 
-        def print_stone(board_lines, stone_symbol, stone_position, stone_azimuth, is_causally_free = False, is_tracked = False):
+        def print_stone(board_lines, stone_symbol, stone_position, stone_azimuth, is_orientable = False, is_causally_free = False, is_tracked = False):
             if stone_position == -1 or stone_azimuth == -1:
                 return(-1)
             stone_x, stone_y = stone_position
@@ -173,30 +174,31 @@ class Gamemaster():
                     stone_formatting_suf += color.END
 
             board_lines[cur_y][cur_x] = stone_formatting_pre + stone_symbol + stone_formatting_suf
-            if stone_a == 0:
-                cur_y -= 1
-                if board_lines[cur_y][cur_x] == 'v':
-                    board_lines[cur_y][cur_x] = 'X'
-                else:
-                    board_lines[cur_y][cur_x] = '^'
-            if stone_a == 1:
-                cur_x += 1
-                if board_lines[cur_y][cur_x] == '<':
-                    board_lines[cur_y][cur_x] = 'X'
-                else:
-                    board_lines[cur_y][cur_x] = '>'
-            if stone_a == 2:
-                cur_y += 1
-                if board_lines[cur_y][cur_x] == '^':
-                    board_lines[cur_y][cur_x] = 'X'
-                else:
-                    board_lines[cur_y][cur_x] = 'v'
-            if stone_a == 3:
-                cur_x -= 1
-                if board_lines[cur_y][cur_x] == '>':
-                    board_lines[cur_y][cur_x] = 'X'
-                else:
-                    board_lines[cur_y][cur_x] = '<'
+            if is_orientable:
+                if stone_a == 0:
+                    cur_y -= 1
+                    if board_lines[cur_y][cur_x] == 'v':
+                        board_lines[cur_y][cur_x] = 'X'
+                    else:
+                        board_lines[cur_y][cur_x] = '^'
+                if stone_a == 1:
+                    cur_x += 1
+                    if board_lines[cur_y][cur_x] == '<':
+                        board_lines[cur_y][cur_x] = 'X'
+                    else:
+                        board_lines[cur_y][cur_x] = '>'
+                if stone_a == 2:
+                    cur_y += 1
+                    if board_lines[cur_y][cur_x] == '^':
+                        board_lines[cur_y][cur_x] = 'X'
+                    else:
+                        board_lines[cur_y][cur_x] = 'v'
+                if stone_a == 3:
+                    cur_x -= 1
+                    if board_lines[cur_y][cur_x] == '>':
+                        board_lines[cur_y][cur_x] = 'X'
+                    else:
+                        board_lines[cur_y][cur_x] = '<'
 
         # board lines: list of rows
         board_lines = repeated_list(self.y_dim * 2 - 1, repeated_list(self.x_dim * 2 - 1, ' '))
@@ -210,7 +212,8 @@ class Gamemaster():
                 if self.board_dynamic[t][x][y].occupied:
                     occupant_ID = self.board_dynamic[t][x][y].stones[0]
                     is_occupant_causally_free = (self.stone_causal_freedom[occupant_ID] == t)
-                    print_stone(board_lines, self.stones[occupant_ID].player_faction, (x, y), self.board_dynamic[t][x][y].stone_properties[occupant_ID][0], is_causally_free = is_occupant_causally_free, is_tracked = (track_stone_ID == occupant_ID))
+                    stone_symbol = constants.stone_symbols[self.stones[occupant_ID].player_faction][self.stones[occupant_ID].stone_type]
+                    print_stone(board_lines, stone_symbol, (x, y), self.board_dynamic[t][x][y].stone_properties[occupant_ID][0], is_orientable = self.stones[occupant_ID].orientable, is_causally_free = is_occupant_causally_free, is_tracked = (track_stone_ID == occupant_ID))
 
                 # Timejumps
                 # An active TJI is bg.ORANGE, an active TJO is bg.PURPLE. Inactive portals of either kind are bg.BLACK. Conflicts are bg.RED
@@ -454,6 +457,7 @@ class Gamemaster():
                     adjanced_positions.append((x + delta_x, y - delta_y))
                 if self.is_valid_position(x - delta_x, y - delta_y):
                     adjanced_positions.append((x - delta_x, y - delta_y))
+        return(adjanced_positions)
 
 
     # ----------------------------- Board access ------------------------------
@@ -470,8 +474,8 @@ class Gamemaster():
     def create_stone(self, new_stone_ID, stone_type, progenitor_flag_ID, player_faction):
         if stone_type == "tank":
             return(Tank(new_stone_ID, progenitor_flag_ID, player_faction, self.t_dim))
-        #elif stone_type == "bombardier":
-        #    self.stones[new_flag.stone_ID] = Bombardier(new_flag.stone_ID, new_flag.flag_ID, faction, self.t_dim)
+        elif stone_type == "bombardier":
+            return(Bombardier(new_stone_ID, progenitor_flag_ID, player_faction, self.t_dim))
         else:
             self.print_log(f"ERROR: Unrecognizable stone type {stone_type} on setup.", 0)
             quit()
@@ -615,8 +619,8 @@ class Gamemaster():
             if new_t == 0:
                 # We place the flag into a special time-slice
                 self.setup_squares[new_x][new_y].add_flag(tji_flag.flag_ID, None)
-            self.flags[tjo_flag.flag_ID] = tjo_flag
             self.flags[tji_flag.flag_ID] = tji_flag
+            self.flags[tjo_flag.flag_ID] = tjo_flag
 
             # effects start inactive
             self.set_flag_activity(tji_flag.flag_ID, False)
@@ -656,6 +660,29 @@ class Gamemaster():
 
             return(Message("exception", "Specified stone not associated with a time-jump-in"))
 
+    def add_bomb_flag(self, stone_ID, old_t, old_x, old_y, new_t, new_x, new_y):
+        round_number, active_timeslice = self.round_from_turn(self.current_turn_index)
+        spawn_bomb_flag = Flag(STPos(new_t - 1, new_x, new_y), "spawn_bomb", self.stones[stone_ID].player_faction, [], stone_ID = None)
+        attack_flag = Flag(STPos(old_t, old_x, old_y), "attack", self.stones[stone_ID].player_faction, [], stone_ID = stone_ID, effect = spawn_bomb_flag.flag_ID)
+        spawn_bomb_flag.initial_cause = attack_flag.flag_ID
+
+        # We place the flags.
+        self.board_dynamic[old_t][old_x][old_y].add_flag(attack_flag.flag_ID, stone_ID)
+        if new_t - 1 >= 0:
+            self.board_dynamic[new_t - 1][new_x][new_y].add_flag(spawn_bomb_flag.flag_ID, None)
+        if new_t == 0:
+            # We place the flag into a special time-slice
+            self.setup_squares[new_x][new_y].add_flag(spawn_bomb_flag.flag_ID, None)
+        self.flags[spawn_bomb_flag.flag_ID] = spawn_bomb_flag
+        self.flags[attack_flag.flag_ID] = attack_flag
+
+        # effects start inactive
+        self.set_flag_activity(spawn_bomb_flag.flag_ID, False)
+
+        # Trackers
+        self.effects_by_round[round_number].append(spawn_bomb_flag.flag_ID)
+
+        return(Message("flags added", [spawn_bomb_flag.flag_ID, attack_flag.flag_ID]))
 
     def add_canonized_flag(self, new_flag, is_setup = False):
         # This is a function used in loading, which can add any flag type, with
@@ -1016,9 +1043,6 @@ class Gamemaster():
         # We now do an ordering according to the Ruleset. First element = lowest priority.
         ordered_effect_flags = reference_effect_ID_list
 
-        print("Ordered effect flags:")
-
-
         number_of_effects = len(ordered_effect_flags)
         if number_of_effects == 0:
             return({}, empty_causality_trackers) # The only possible scenario is also, by design, causally consistent
@@ -1178,6 +1202,8 @@ class Gamemaster():
                         if cur_flag.flag_type == "time_jump_in":
                             self.place_stone_on_board(STPos(0, x, y), cur_flag.stone_ID, [cur_flag.flag_args[1]])
                             self.stone_causal_freedom[cur_flag.stone_ID] = 0
+                        if cur_flag.flag_type == "spawn_bomb":
+                            self.board_actions[0][x][y]["explosion"] = True
 
         # Then, we execute flags for each time slice sequentially
         for t in range(self.t_dim):
@@ -1260,6 +1286,8 @@ class Gamemaster():
                                 self.place_stone_on_board(STPos(t+1, x, y), cur_flag.stone_ID, self.board_dynamic[t][x][y].stone_properties[cur_flag.stone_ID])
                                 self.stone_causal_freedom[cur_flag.stone_ID] = t+1
                                 self.add_stone_action(t+1, cur_flag.stone_ID, cur_flag.flag_ID)
+                            if cur_flag.flag_type == "spawn_bomb":
+                                self.board_actions[t+1][x][y]["explosion"] = True
                         # The following flags remove the stone from the board, and as such are the only flags which can be placed at t = t_dim - 1
                         if cur_flag.flag_type == "time_jump_out":
                             # Newly added TJOs which link previous TJIs should be subject to tracker,

@@ -29,6 +29,7 @@ class Bombardier(Stone):
             }
 
         self.opposable = True
+        self.orientable = False
 
     # -------------------------------------------------------------------------
     # -------------------------- Overridden methods ---------------------------
@@ -69,39 +70,6 @@ class Bombardier(Stone):
 
                 input_cmd_list = input_cmd_raw.split(' ')
 
-                if input_cmd_list[0] in ['f', 'fwd', 'forward']:
-                    if len(input_cmd_list) == 1:
-                        new_a = cur_a
-                    else:
-                        if input_cmd_list[1] in ['clockwise', 'clock', 'cw', 'c']:
-                            new_a = azimuth_addition(cur_a, 1)
-                        elif input_cmd_list[1] in ['anticlockwise', 'anti', 'acw', 'a']:
-                            new_a = azimuth_addition(cur_a, 3)
-                        else:
-                            raise Exception("Your input couldn't be parsed")
-                    new_x, new_y = pos_step((cur_x, cur_y), cur_a)
-                    if not gm.is_square_available(new_x, new_y):
-                        # The stone is attempting to move into a wall
-                        raise Exception("Invalid move")
-                    new_flag_ID = gm.add_flag_spatial_move(self.ID, t, cur_x, cur_y, new_x, new_y, new_a)
-                    return(Message("flags added", [new_flag_ID]))
-                if input_cmd_list[0] in ['b', 'bwd', 'backward']:
-                    if len(input_cmd_list) == 1:
-                        new_a = cur_a
-                    else:
-                        if input_cmd_list[1] in ['clockwise', 'clock', 'cw', 'c']:
-                            new_a = azimuth_addition(cur_a, 1)
-                        elif input_cmd_list[1] in ['anticlockwise', 'anti', 'acw', 'a']:
-                            new_a = azimuth_addition(cur_a, 3)
-                        else:
-                            new_a = cur_a
-                    new_x, new_y = pos_step((cur_x, cur_y), azimuth_addition(cur_a, 2))
-                    if not gm.is_square_available(new_x, new_y):
-                        # The stone is attempting to move into a wall
-                        raise Exception("Invalid move")
-                    new_flag_ID = gm.add_flag_spatial_move(self.ID, t, cur_x, cur_y, new_x, new_y, new_a)
-                    return(Message("flags added", [new_flag_ID]))
-
                 if input_cmd_list[0] in ['m', 'move']:
                     if len(input_cmd_list) == 1:
                         raise Exception("Required argument missing")
@@ -117,9 +85,16 @@ class Bombardier(Stone):
                 if input_cmd_list[0] in ['a', 'atk', 'attack']:
                     if len(input_cmd_list) == 1:
                         raise Exception("Required argument missing")
-
-                    new_flag_ID = gm.add_flag_attack(self.ID, t, cur_x, cur_y, [])
-                    return(Message("flags added", [new_flag_ID]))
+                    target_time = int(input_cmd_list[1])
+                    if target_time < 0:
+                        raise Exception("Lowest target time value is 0")
+                    if target_time >= t:
+                        raise Exception("Target time must be in the past")
+                    add_bomb_msg = gm.add_bomb_flag(self.ID, t, cur_x, cur_y, target_time, cur_x, cur_y)
+                    if add_bomb_msg.header == "flags added":
+                        return(add_bomb_msg)
+                    elif add_bomb_msg.header == "exception":
+                        raise Exception(add_bomb_msg.msg)
                 raise Exception("Your input couldn't be parsed")
 
             except Exception as e:

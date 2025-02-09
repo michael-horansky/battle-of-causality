@@ -36,6 +36,7 @@ class Stone():
         self.type_specific_final_commands = {}
 
         self.opposable = True
+        self.orientable = False
 
     def __str__(self):
         return("Stone " + color.DARKCYAN + self.stone_type.upper() + color.END + " (ID " + color.CYAN + str(self.ID) + color.END + ")")
@@ -68,10 +69,7 @@ class Stone():
 
     def print_help_message(self, is_final_command = False):
         print("You are now placing a command flag for your stone. Select one from the following options.")
-        print("(The format is \"" + color.GREEN + "command name" + color.END + " [" + color.BLUE + "arguments" + color.END + ", " + color.CYAN + "optional arguments" + color.END + "]\". Forward slash denotes alias.)")
-        #print("  -'" + color.GREEN + "help" + color.END + "': Display this message again.")
-        #print("  -'" + color.GREEN + "quit" + color.END + "/" + color.GREEN + "exit" + color.END + "': Quit the game.")
-        #print("  -'" + color.GREEN + "undo" + color.END + "': Revert back to commanding the previous stone, erasing the previously placed flag.")
+        print("(The format is \"" + color.GREEN + "command name" + color.END + " [" + color.BLUE + "arguments" + color.END + "; " + color.CYAN + "optional arguments" + color.END + "]\". Forward slash denotes alias.)")
         self.display_commands_in_helplog(self.generic_commands)
         if is_final_command:
             available_commands = self.type_specific_final_commands

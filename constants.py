@@ -19,3 +19,14 @@ stone_type_representations = {
         "Y" : ["A", "bombardier"],
         "V" : ["B", "bombardier"]
     }
+
+stone_symbols = {
+        "A" : {
+                "tank" : "T",
+                "bombardier" : "Y"
+            },
+        "B" : {
+                "tank" : "L",
+                "bombardier" : "V"
+            }
+    }
