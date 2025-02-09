@@ -55,7 +55,7 @@ BOMBARDIER's attacks are of course an exception
 
 The board contains one or more squares labelled as "bases". A base is a special square, because although it is not an entity (i.e. it is static and can occupy the same space as a different entity), it has an additional property of "belonging". At the beginning, a base may belong to either faction or none at all, remaining neutral. The belonging of a base may change as the game progresses. The following win condition is universal for every game in the basic rulesets:
 
-    A player wins the game in the moment a full round comes to an end after a causally consistent scenario has been selected if and only if every base on the board belongs to him in the final timeslice of the board.
+    A player wins the game in the moment a full round comes to an end after a causally consistent scenario has been selected if and only if every base on the board belongs to him in the final timeslice of the board after executing moves excluding buffered effects.
 
 It is important to note that the process of selecting a causally consistent scenario may change the realisation of the board after the last player input prompt, and so players must mind that their actions are not only able to conquer every base, but do it in a causally consistent way.
 

@@ -208,6 +208,11 @@ class Gamemaster():
                 board_lines[2 * y][2 * x] = self.board_static[x][y]
                 # Dynamic board properties
 
+                # Bases:
+                if self.board_dynamic[t][x][y].has_base:
+                    base_symbol = constants.base_symbols[self.board_dynamic[t][x][y].base_allegiance]
+                    board_lines[2 * y][2 * x] = base_symbol
+
                 # Stones
                 if self.board_dynamic[t][x][y].occupied:
                     occupant_ID = self.board_dynamic[t][x][y].stones[0]
@@ -567,6 +572,18 @@ class Gamemaster():
                 return(False) # Some players still need to add their commands to this turn
         return(True)
 
+    def game_winner(self):
+        result = None
+        for x in range(self.x_dim):
+            for y in range(self.y_dim):
+                if self.board_dynamic[self.t_dim - 1][x][y].has_base:
+                    if self.board_dynamic[self.t_dim - 1][x][y].base_allegiance == "neutral" or (result is not None and self.board_dynamic[self.t_dim - 1][x][y].base_allegiance != result):
+                        return(None)
+                    else:
+                        result = self.board_dynamic[self.t_dim - 1][x][y].base_allegiance
+        return(result)
+
+
 
     # ---------------------------- Flag management ----------------------------
 
@@ -586,6 +603,14 @@ class Gamemaster():
         self.faction_armies[faction].append(new_flag.stone_ID)
         self.setup_stones[new_flag.stone_ID] = new_flag.flag_ID
         self.scenarios_by_round[0].setup_activity_map[new_flag.flag_ID] = True
+
+        return(new_flag.flag_ID)
+
+    def add_base(self, initial_faction, x, y):
+        # This function spawns a flag initially belonging to the specified faction, or neutral if "neutral"
+        new_flag = Flag(STPos(-1, x, y), "add_base", initial_faction, [])
+        self.setup_squares[x][y].add_flag(new_flag.flag_ID, None)
+        self.flags[new_flag.flag_ID] = new_flag
 
         return(new_flag.flag_ID)
 
@@ -1196,6 +1221,8 @@ class Gamemaster():
                         # TODO for progenitor flags, placing a "Bomb" type stone
                         # instead adds 'explosion' to self.board_actions
 
+                        if cur_flag.flag_type == "add_base":
+                            self.board_dynamic[0][x][y].add_base(cur_flag.player_faction)
                         if cur_flag.flag_type == "add_stone":
                             self.place_stone_on_board(STPos(0, x, y), cur_flag.stone_ID, [cur_flag.flag_args[1]])
                             self.stone_causal_freedom[cur_flag.stone_ID] = 0
@@ -1237,6 +1264,18 @@ class Gamemaster():
 
             # At this moment, the time-slice t is in its canonical state, and stone history may be recorded
             self.record_stones_at_time(t)
+
+            # Since the position of the stones in this timeslice will no longer
+            # change, we can determmine changes to base allegiances and
+            # propagate their positions
+            for x in range(self.x_dim):
+                for y in range(self.y_dim):
+                    if self.board_dynamic[t][x][y].has_base:
+                        if self.board_dynamic[t][x][y].occupied:
+                            self.board_dynamic[t][x][y].base_allegiance = self.stones[self.board_dynamic[t][x][y].stones[0]].player_faction
+                        if t < self.t_dim - 1:
+                            self.board_dynamic[t+1][x][y].add_base(self.board_dynamic[t][x][y].base_allegiance)
+
 
             # As stones may have been removed from the board, we reset all the
             # stones which haven't been committed.
@@ -1455,6 +1494,17 @@ class Gamemaster():
                 self.print_log(f"ERROR: self.scenarios_by_round has wrong length ({len(self.scenarios_by_round)}, expected {self.round_number + 1})")
             self.scenarios_by_round.append(scenario_for_next_round)
 
+            # Check if win condition satisfied
+            # NOTE: The win condition must be satisfied when board state is determined WITHOUT buffered effects! (so timejumps etc... added this round)
+            self.realise_scenario(scenario_for_next_round)
+            self.execute_moves(read_causality_trackers = False, max_turn_index = self.current_turn_index, ignore_buffer_effects = True)
+            self.print_heading_message(f"Canonized board for next round, omitting reverse-causality effects added this round.", 1)
+            self.print_board_horizontally(active_turn = self.current_turn_index, highlight_active_timeslice = False)
+            current_game_winner = self.game_winner()
+            if current_game_winner is not None:
+                self.print_heading_message(f"Player {current_game_winner} wins the game!", 0)
+                return(0)
+
             self.round_number += 1
             self.effects_by_round.append([])
 
@@ -1667,6 +1717,9 @@ class Gamemaster():
                     # NOTE: setup flags are never added to
                     # self.new_dynamic_representation, since they are copied
                     # there automatically for every new game on creation.
+                elif cur_char in constants.base_representations.keys():
+                    base_flag_ID = self.add_base(constants.base_representations[cur_char], x, y)
+                    self.flags_by_turn[0]["GM"].append(base_flag_ID)
                 else:
                     self.board_static[x][y] = cur_char
 

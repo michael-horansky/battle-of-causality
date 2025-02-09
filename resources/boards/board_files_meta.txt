@@ -2,6 +2,9 @@ first line: temporal dimension T (should be a multiple of len(factions))
 rest of lines: board squares
     'X': immovable wall; forbidden square to access
     ' ': empty square
+    'A': base belonging to A
+    'B': base belonging to B
+    '!': base not belonging to anyone
     'M': movable box
     'T': Player A tank
     'L': Player B tank

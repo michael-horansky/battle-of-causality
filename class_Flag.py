@@ -105,6 +105,12 @@ class Flag():
             str_rep = f"Add stone {self.flag_args[0].upper()} unconditionally (P. '{self.player_faction}', ID {self.stone_ID}): [{human_readable_azimuth(self.flag_args[1])}]"
             if self.is_active == False:
                 str_rep += " (DEACTIVATED)"
+        if self.flag_type == 'add_base':
+            # args: []
+            if self.player_faction != "neutral":
+                str_rep = f"Add base initially belonging to P. '{self.player_faction}'"
+            else:
+                str_rep = f"Add base initially neutral"
         if self.flag_type == 'time_jump_out':
             # args: [STPos of time-jump-in]
             str_rep = f"Time jump OUT (P. '{self.player_faction}', ID {self.stone_ID}): jump into {self.flag_args[0]}"

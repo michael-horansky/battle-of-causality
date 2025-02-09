@@ -18,7 +18,7 @@
 
 
 # SNIPER
--Doesn't move on its own, can only be sokoban-pushed
+-Doesn't move on its own, can only be sokoban-pushed (of course, can turn to change azimuth)
 -Opposable
 -Attacks by firing in line of sight
 -Friendly fire off

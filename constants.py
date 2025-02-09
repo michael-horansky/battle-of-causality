@@ -30,3 +30,16 @@ stone_symbols = {
                 "bombardier" : "V"
             }
     }
+
+
+base_representations = {
+        "A" : "A",
+        "B" : "B",
+        "!" : "neutral"
+    }
+
+base_symbols = {
+        "A" : "A",
+        "B" : "B",
+        "neutral" : "!"
+    }
