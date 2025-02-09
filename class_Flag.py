@@ -50,13 +50,15 @@ class Flag():
             cur_flag_ID             =                int(flag_elements[0])
             cur_flag_type           =                    flag_elements[1]
             cur_flag_player_faction =                    flag_elements[2]
-            cur_flag_stone_ID       =                int(flag_elements[3])
+            cur_flag_stone_ID       = str_to_int_or_none(flag_elements[3])
             cur_flag_pos            =     STPos.from_str(flag_elements[4])
             cur_flag_effect         = str_to_int_or_none(flag_elements[5])
             cur_flag_initial_cause  = str_to_int_or_none(flag_elements[6])
             cur_flag_args_list      =                    flag_elements[7:]
             if cur_flag_type == "add_stone":
                 cur_flag_args = [cur_flag_args_list[0], int(cur_flag_args_list[1])]
+            if cur_flag_type == "add_base":
+                cur_flag_args = cur_flag_args_list
             if cur_flag_type == "time_jump_out":
                 cur_flag_args = [STPos.from_str(cur_flag_args_list[0])]
             if cur_flag_type == "time_jump_in":
@@ -65,6 +67,8 @@ class Flag():
                 cur_flag_args = [int(cur_flag_args_list[0]), int(cur_flag_args_list[1]), int(cur_flag_args_list[2])]
             if cur_flag_type == "attack":
                 cur_flag_args = cur_flag_args_list #[bool(cur_flag_args_list[0])]
+            if cur_flag_type == "spawn_bomb":
+                cur_flag_args = cur_flag_args_list
             return(cls(pos = cur_flag_pos, flag_type = cur_flag_type, player_faction = cur_flag_player_faction, flag_args = cur_flag_args, stone_ID = cur_flag_stone_ID, flag_ID = cur_flag_ID, effect = cur_flag_effect, initial_cause = cur_flag_initial_cause))
 
         except:

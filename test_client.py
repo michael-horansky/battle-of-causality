@@ -26,7 +26,7 @@ lol = Gamemaster(display_logs = True)
 
 
 if cur_client_player == "ng":
-    lol.load_board(1)
+    lol.load_board(2)
     lol.standard_game_loop()
 elif cur_client_player in ["A", "B"]:
     full_static, full_dynamic = load_full_data_from_file()
@@ -35,6 +35,14 @@ elif cur_client_player in ["A", "B"]:
 else:
     print("Client argument not recognized. Aborting...")
     quit()
+
+if lol.outcome is not None:
+    outcome_list = lol.outcome.split(";")
+    if outcome_list[0] == "draw":
+        print("Client: setting outcome to draw...")
+    if outcome_list[0] == "win":
+        print(f"Client: setting outcome to win by player {outcome_list[1]}...")
+
 
 full_static, full_dynamic = lol.dump_to_database()
 save_full_data_to_file(full_static, full_dynamic)

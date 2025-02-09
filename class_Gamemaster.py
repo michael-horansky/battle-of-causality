@@ -65,6 +65,7 @@ class Gamemaster():
 
         # ----------------------- Game status variables -----------------------
         self.current_turn_index = None # Index of turn where some or all players need to add commands
+        self.outcome = None # If not None, can be "win;[winning faction]" or "draw"
 
         # ------------------ Trackers for reverse causality -------------------
         # General trackers
@@ -1503,6 +1504,7 @@ class Gamemaster():
             current_game_winner = self.game_winner()
             if current_game_winner is not None:
                 self.print_heading_message(f"Player {current_game_winner} wins the game!", 0)
+                self.outcome = (constants.Gamemaster_delim).join(["win", current_game_winner])
                 return(0)
 
             self.round_number += 1
@@ -1554,6 +1556,17 @@ class Gamemaster():
                 if len(self.scenarios_by_round) != current_round + 1:
                     self.print_log(f"ERROR: self.scenarios_by_round has wrong length ({len(self.scenarios_by_round)}, expected {current_round + 1})")
                 self.scenarios_by_round.append(scenario_for_next_round)
+
+                # Win condition testing
+                self.realise_scenario(scenario_for_next_round)
+                self.execute_moves(read_causality_trackers = False, max_turn_index = self.current_turn_index, ignore_buffer_effects = True)
+                self.print_heading_message(f"Canonized board for next round, omitting reverse-causality effects added this round.", 1)
+                self.print_board_horizontally(active_turn = self.current_turn_index, highlight_active_timeslice = False)
+                current_game_winner = self.game_winner()
+                if current_game_winner is not None:
+                    self.print_heading_message(f"Player {current_game_winner} wins the game!", 0)
+                    self.outcome = (constants.Gamemaster_delim).join(["win", current_game_winner])
+                    return(0)
 
                 self.effects_by_round.append([])
 
