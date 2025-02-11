@@ -7,7 +7,7 @@ from class_Message import Message
 # -----------------------------------------------------------------------------
 # An instance of this class for a given Gamemaster instance iterates through
 # the space of all available activity maps in descending priority order based
-# on the specified total ordering
+# on the lexicographic order
 
 class Activity_map_iterator():
 

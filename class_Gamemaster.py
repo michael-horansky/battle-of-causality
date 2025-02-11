@@ -1116,9 +1116,9 @@ class Gamemaster():
                     consistent_scenario.stone_inheritance[self.flags[self.flags[effect_ID].initial_cause].stone_ID] = self.flags[effect_ID].stone_ID
 
             # We track removed stones
-            for setup_stone_ID, setup_stone_activity in consistent_scenario.setup_activity_map.items():
-                if setup_stone_activity == False:
-                    self.removed_setup_stones[setup_stone_ID] = self.setup_stones[setup_stone_ID]
+            for setup_flag_ID, setup_flag_activity in consistent_scenario.setup_activity_map.items():
+                if setup_flag_activity == False:
+                    self.removed_setup_stones[self.flags[setup_flag_ID].stone_ID] = self.setup_stones[self.flags[setup_flag_ID].stone_ID]
 
         if self.ruleset["paradox_action"] == "game_end":
             # We only vary effect activity
@@ -1190,10 +1190,10 @@ class Gamemaster():
         reference_effect_ID_list = []
         for round_number in range(for_which_round - 1): # We ignore the buffer round
             reference_effect_ID_list += self.effects_by_round[round_number]
-        ordered_effect_ID_list = reference_effect_ID_list # already ordered by recency
+        ordered_effect_ID_list = reference_effect_ID_list.copy() # already ordered by recency
 
         if self.ruleset["scenario_priority"] == "conserve_setup":
-            ordered_setup_ID_list = reference_setup_ID_list #TODO order by interaction recency
+            ordered_setup_ID_list = reference_setup_ID_list.copy() #TODO order by interaction recency
             setup_iterator = Activity_map_iterator(len(ordered_setup_ID_list), "conservation")
             effect_iterator = Activity_map_iterator(len(ordered_effect_ID_list), "recency")
             while(setup_iterator.current_state is not None):
@@ -1217,15 +1217,15 @@ class Gamemaster():
             return(Message("exception", "Unable to find a causally consistent scenario."))
         elif self.ruleset["scenario_priority"] == "activity_interaction_recency":
             # We need to re-partition into progenitors and actions
-            reference_progenitors_ID_list = reference_setup_ID_list
+            reference_progenitors_ID_list = reference_setup_ID_list.copy()
             reference_actions_ID_list = []
             for effect_ID in reference_effect_ID_list:
                 if self.flags[effect_ID].flag_type in Flag.stone_generating_flag_types:
                     reference_progenitors_ID_list.append(effect_ID)
                 else:
                     reference_actions_ID_list.append(effect_ID)
-            ordered_progenitors_ID_list = reference_progenitors_ID_list #TODO order by interaction recency
-            ordered_actions_ID_list = reference_actions_ID_list # already ordered by recency
+            ordered_progenitors_ID_list = reference_progenitors_ID_list.copy() #TODO order by interaction recency
+            ordered_actions_ID_list = reference_actions_ID_list.copy() # already ordered by recency
             progenitors_iterator = Activity_map_iterator(len(ordered_progenitors_ID_list), "recency")
             actions_iterator = Activity_map_iterator(len(ordered_actions_ID_list), "recency")
             while(progenitors_iterator.current_state is not None):
@@ -1253,7 +1253,7 @@ class Gamemaster():
         elif self.ruleset["scenario_priority"] == "conserve_effects_stones_hc":
             # This one is not possible to be done via simple iteration, sadly
             # First, we order setup stones by headcount
-            ordered_setup_ID_list = reference_setup_ID_list #TODO order by headcount (flag ID recency)
+            ordered_setup_ID_list = reference_setup_ID_list.copy() #TODO order by headcount (flag ID recency)
             reference_progenitor_effect_ID_list = []
             reference_action_ID_list = []
             for effect_ID in ordered_effect_ID_list:
@@ -1261,8 +1261,8 @@ class Gamemaster():
                     reference_progenitor_effect_ID_list.append(effect_ID)
                 else:
                     reference_action_ID_list.append(effect_ID)
-            ordered_progenitor_effect_ID_list = reference_progenitor_effect_ID_list #TODO order by interaction recency
-            ordered_action_ID_list = reference_action_ID_list # already ordered by recency
+            ordered_progenitor_effect_ID_list = reference_progenitor_effect_ID_list.copy() #TODO order by interaction recency
+            ordered_action_ID_list = reference_action_ID_list.copy() # already ordered by recency
             ssetup = len(ordered_setup_ID_list)
             sprogen = len(ordered_progenitor_effect_ID_list)
             saction = len(ordered_action_ID_list)

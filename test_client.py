@@ -25,7 +25,7 @@ def load_full_data_from_file():
 ruleset_rep = {
         "paradox_action" : "permanent_removal",
         "end_without_win" : "draw",
-        "scenario_priority" : "conserve_setup"
+        "scenario_priority" : "conserve_effects_stones_hc"
     }
 
 lol = Gamemaster(display_logs = True)
