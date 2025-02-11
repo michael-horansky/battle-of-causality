@@ -12,3 +12,6 @@ class Scenario():
         self.effect_cause_map = effect_cause_map
         self.stone_inheritance = stone_inheritance
 
+
+        self.removed_setup_stones = {}
+

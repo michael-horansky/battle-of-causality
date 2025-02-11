@@ -22,15 +22,26 @@ def load_full_data_from_file():
     savefile.close()
     return(all_data["static_data"], all_data["dynamic_data"])
 
+ruleset_rep = {
+        "paradox_action" : "permanent_removal",
+        "end_without_win" : "draw",
+        "scenario_priority" : "conserve_setup"
+    }
+
 lol = Gamemaster(display_logs = True)
 
 
 if cur_client_player == "ng":
-    lol.load_board(2)
+    if len(sys.argv) >= 3:
+        ng_board_number = int(sys.argv[2])
+    else:
+        ng_board_number = 2
+    lol.load_board(ng_board_number)
+    lol.ruleset = ruleset_rep # TODO make this load well
     lol.standard_game_loop()
 elif cur_client_player in ["A", "B"]:
     full_static, full_dynamic = load_full_data_from_file()
-    lol.load_from_database(full_static, full_dynamic)
+    lol.load_from_database(full_static, full_dynamic, ruleset_rep)
     lol.open_game(cur_client_player)
 else:
     print("Client argument not recognized. Aborting...")

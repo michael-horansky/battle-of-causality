@@ -8,6 +8,7 @@ from functions import *
 from class_STPos import STPos
 from class_Message import Message
 from class_Scenario import Scenario
+from class_Activity_map_iterator import Activity_map_iterator
 
 # Import the stone types
 from class_Stone import Stone
@@ -128,6 +129,10 @@ class Gamemaster():
         # (during save routine, the elements of this array are inserted into MOVES)
         # For old moves, the elements are empty dictionaries
         self.new_dynamic_representation = [] #[move_index]["faction"] = "flag representations"
+
+        # And finally, the loaded Ruleset, which is static (determined when the
+        # game is created), as a dict {"rule group" : "rule"}
+        self.ruleset = {}
 
 
     # -------------------------------------------------------------------------
@@ -943,7 +948,7 @@ class Gamemaster():
 
     # --------------------- Temporal conflict resolution
 
-    def resolve_causal_consistency(self, for_which_round = None):
+    def OLD_resolve_causal_consistency(self, for_which_round = None):
         # The wrapper for causal consistency methods
         # for_which_round: This method returns a Scenario instance
 
@@ -965,11 +970,6 @@ class Gamemaster():
             for setup_flag_ID in self.setup_stones.values():
                 result_scenario.setup_activity_map[setup_flag_ID] = True
             return(result_scenario)
-
-        # If we are looking into the past (by passing for_which_round not equal
-        # to current round), we just load the correct activity map for setup
-        # flags AND effects and use it "blindly".
-        # This requires a preparation
 
         # NOTE: This means once we call this method for round n, we cannot call it for an earlier round later!
         active_setup_stones = []#list(self.setup_stones.keys())
@@ -1032,6 +1032,329 @@ class Gamemaster():
         # This should theoretically never occur, as deactivating all add_stone flags
         # AND all TJIs should result in a completely empty board, which is always causally consistent.
         return(Message("exception", "Unable to find a causally consistent scenario."))
+
+    def resolve_causal_consistency(self, for_which_round = None):
+        # The wrapper for causal consistency methods
+        # for_which_round: This method returns a Scenario instance
+
+        # Returns a Scenario()
+        result_activity_map = {"setup_AM" : {}, "effect_AM" : {}}
+        result_causality_trackers = {
+                "effect_cause_map" : {},
+                "stone_inheritance" : {}
+            }
+        result_scenario = Scenario({}, {}, {}, {})
+
+        if for_which_round is None:
+            # Default: for the next round
+            current_round, _ = self.round_from_turn(self.current_turn_index)
+            for_which_round = current_round + 1
+
+        if for_which_round == 0:
+            # Return the all-setup map
+            for setup_flag_ID in self.setup_stones.values():
+                result_scenario.setup_activity_map[setup_flag_ID] = True
+            return(result_scenario)
+
+        # Ruleset:
+        # A scenario is uniquely determined by its position in the total ordering by
+        #     b) Activation recency (which can be defined in non-equivalent ways), or
+        #     a) Number of activations (and then activation recency)
+        # The general approach is as follows:
+        #     1. We partition all events subject to activity maps into a desired
+        #        number of subsets (e.g. setup and effects, or progenitors and actions)
+        #     2. We select a priority order among these subsets
+        #     3. For each subset, we select a total ordering (a) or b)).
+        #     4. From the full-set total order, we select the lowest-index
+        #        self-consistent scenario
+
+        # Choices for the definition of activation recency:
+        #     a) For any set of events, we can defined recency by flag index
+        #        (i.e. recency of placement). If this is selected for setup
+        #        events, we give each player the opportunity to define their
+        #        recency (this operation is called a "headcount").
+        #     b) For progenitor events, we can define recency by turn index
+        #        of commanding the corresponding stone when causally-free
+        #        (i.e. recency of interaction). This requires the UI to allow
+        #        the player to command their stones in an arbitrary order.
+
+        # On implementation: Number of activations is easy to order by. As for
+        # activation recency, we first order the events from lowest priority
+        # to highest priority by whatever criterion we chose, and then iterate
+        # through a bitmap (so the N-th checked activation map is the binary
+        # representation of N with False = 1, True = 0).
+
+        """def interpret_scenario_priority_rule(rule_name):
+            # This local function takes a rule_name, a primary key in BOC_RULES
+            # and outputs a dictionary specifying the event partition, and
+            # recency definition and ordering for every event subset
+            scenario_priority = {}
+            if rule_name == "conserve_setup":
+                scenario_priority["event_partitioning"] = "setup"
+                scenario_priority["subset_order"] = {"setup" : 0, "events" : 1}
+                scenario_priority["subsets"] = {
+                        "setup"
+                    }"""
+
+
+        # Selecting a priority
+        # for the four orderings (two kinds for setup and effects, respectively)
+        # determines the total ordering. Then, w select the lowest-index element
+        # in this list which is self-consistent as the resulting scenario.
+
+        # NOTE: This means once we call this method for round n, we cannot call it for an earlier round later!
+
+        def commit_trackers_and_buffer(consistent_scenario, corresponding_trackers):
+            consistent_scenario.effect_cause_map = corresponding_trackers["effect_cause_map"]
+            consistent_scenario.stone_inheritance = corresponding_trackers["stone_inheritance"]
+
+            # We add all the causes added in the last round, with their causes being the initial causes
+            for effect_ID in self.effects_by_round[for_which_round - 1]:
+                consistent_scenario.effect_activity_map[effect_ID] = True
+                consistent_scenario.effect_cause_map[effect_ID] = self.flags[effect_ID].initial_cause
+                if self.flags[self.flags[effect_ID].initial_cause].flag_type == "time_jump_out":
+                    consistent_scenario.stone_inheritance[self.flags[self.flags[effect_ID].initial_cause].stone_ID] = self.flags[effect_ID].stone_ID
+
+            # We track removed stones
+            for setup_stone_ID, setup_stone_activity in consistent_scenario.setup_activity_map.items():
+                if setup_stone_activity == False:
+                    self.removed_setup_stones[setup_stone_ID] = self.setup_stones[setup_stone_ID]
+
+        if self.ruleset["paradox_action"] == "game_end":
+            # We only vary effect activity
+            for setup_flag_ID in self.setup_stones.values():
+                result_scenario.setup_activity_map[setup_flag_ID] = True
+            reference_effect_ID_list = []
+            for round_number in range(for_which_round - 1): # We ignore the buffer round
+                reference_effect_ID_list += self.effects_by_round[round_number]
+            ordered_effect_ID_list = reference_effect_ID_list # already ordered by recency
+            if self.ruleset["scenario_priority"] == "all_setup_activity_recency":
+                effect_iterator_priority = "recency"
+            elif self.ruleset["scenario_priority"] == "all_setup_conserve_effects":
+                effect_iterator_priority = "conservation"
+            else:
+                print("Ill formed ruleset!!")
+                quit()
+            effect_iterator = Activity_map_iterator(len(ordered_effect_ID_list), effect_iterator_priority)
+            while(effect_iterator.current_state is not None):
+                current_effect_activity_map = effect_iterator.read_current_state()
+                for i in range(len(ordered_effect_ID_list)):
+                    result_scenario.effect_activity_map[ordered_effect_ID_list[i]] = current_effect_activity_map[i]
+                self.realise_scenario(result_scenario)
+                current_trackers = self.check_if_causally_consistent(max_included_round = for_which_round - 1)
+                if current_trackers is not None:
+                    # Causally consistent
+                    commit_trackers_and_buffer(result_scenario, current_trackers)
+                    return(result_scenario)
+                effect_iterator.next_state()
+            print("Paradox reached! Ending the game...")
+            quit() # TODO count points if doing that
+        elif self.ruleset["paradox_action"] == "permanent_removal":
+            reference_setup_ID_list = []
+            for setup_stone_ID, setup_flag_ID in self.setup_stones.items():
+                has_been_removed_before = False
+                for round_n in range(for_which_round):
+                    if self.scenarios_by_round[round_n].setup_activity_map[setup_flag_ID] == False:
+                        # Stone has been removed before
+                        has_been_removed_before = True
+                if has_been_removed_before:
+                    result_scenario.setup_activity_map[setup_flag_ID] = False
+                else:
+                    reference_setup_ID_list.append(setup_flag_ID)
+        elif self.ruleset["paradox_action"] == "temporary_removal":
+            reference_setup_ID_list = []
+            for setup_stone_ID, setup_flag_ID in self.setup_stones.items():
+                reference_setup_ID_list.append(setup_flag_ID)
+
+
+
+
+        """active_setup_stones = []#list(self.setup_stones.keys())
+        for setup_stone_ID, setup_flag_ID in self.setup_stones.items():
+            if self.flags[setup_flag_ID].is_active:
+                active_setup_stones.append(setup_stone_ID)
+            else:
+                result_scenario.setup_activity_map[setup_flag_ID] = False"""
+
+        # Order setup stones by a deterministic criterion from least prioritised to most prioritised
+
+        # The ordering cannot be added on the TUI but this is how it's gonna work:
+        # Every time a player selects a setup stone and adds a flag to it, it floats down to
+        # the end of the ordered list. Hence, after a turn, the stones are ordered from
+        # first-commanded (least priority to keep) to last-commanded (biggest priority to keep).
+        # The philosophy is: "The more recently you've touched a stone, the bigger the chance
+        # it will survive a paradox."
+        # Naturally, stones which become causally locked are not touched and become low priority,
+        # and hence will be removed first.
+
+        reference_effect_ID_list = []
+        for round_number in range(for_which_round - 1): # We ignore the buffer round
+            reference_effect_ID_list += self.effects_by_round[round_number]
+        ordered_effect_ID_list = reference_effect_ID_list # already ordered by recency
+
+        if self.ruleset["scenario_priority"] == "conserve_setup":
+            ordered_setup_ID_list = reference_setup_ID_list #TODO order by interaction recency
+            setup_iterator = Activity_map_iterator(len(ordered_setup_ID_list), "conservation")
+            effect_iterator = Activity_map_iterator(len(ordered_effect_ID_list), "recency")
+            while(setup_iterator.current_state is not None):
+                effect_iterator.reset_current_state()
+                while(effect_iterator.current_state is not None):
+                    current_setup_activity_map = setup_iterator.read_current_state()
+                    current_effect_activity_map = effect_iterator.read_current_state()
+                    for i in range(len(ordered_setup_ID_list)):
+                        result_scenario.setup_activity_map[ordered_setup_ID_list[i]] = current_setup_activity_map[i]
+                    for i in range(len(ordered_effect_ID_list)):
+                        result_scenario.effect_activity_map[ordered_effect_ID_list[i]] = current_effect_activity_map[i]
+                    self.realise_scenario(result_scenario)
+                    current_trackers = self.check_if_causally_consistent(max_included_round = for_which_round - 1)
+                    if current_trackers is not None:
+                        # Causally consistent
+                        commit_trackers_and_buffer(result_scenario, current_trackers)
+                        return(result_scenario)
+                    effect_iterator.next_state()
+                setup_iterator.next_state()
+            # Unresolvable paradox
+            return(Message("exception", "Unable to find a causally consistent scenario."))
+        elif self.ruleset["scenario_priority"] == "activity_interaction_recency":
+            # We need to re-partition into progenitors and actions
+            reference_progenitors_ID_list = reference_setup_ID_list
+            reference_actions_ID_list = []
+            for effect_ID in reference_effect_ID_list:
+                if self.flags[effect_ID].flag_type in Flag.stone_generating_flag_types:
+                    reference_progenitors_ID_list.append(effect_ID)
+                else:
+                    reference_actions_ID_list.append(effect_ID)
+            ordered_progenitors_ID_list = reference_progenitors_ID_list #TODO order by interaction recency
+            ordered_actions_ID_list = reference_actions_ID_list # already ordered by recency
+            progenitors_iterator = Activity_map_iterator(len(ordered_progenitors_ID_list), "recency")
+            actions_iterator = Activity_map_iterator(len(ordered_actions_ID_list), "recency")
+            while(progenitors_iterator.current_state is not None):
+                actions_iterator.reset_current_state()
+                while(actions_iterator.current_state is not None):
+                    current_progenitors_activity_map = progenitors_iterator.read_current_state()
+                    current_actions_activity_map = actions_iterator.read_current_state()
+                    for i in range(len(ordered_progenitors_ID_list)):
+                        if ordered_progenitors_ID_list[i] in reference_setup_ID_list:
+                            result_scenario.setup_activity_map[ordered_progenitors_ID_list[i]] = current_progenitors_activity_map[i]
+                        else:
+                            result_scenario.effect_activity_map[ordered_progenitors_ID_list[i]] = current_progenitors_activity_map[i]
+                    for i in range(len(ordered_actions_ID_list)):
+                        result_scenario.effect_activity_map[ordered_actions_ID_list[i]] = current_actions_activity_map[i]
+                    self.realise_scenario(result_scenario)
+                    current_trackers = self.check_if_causally_consistent(max_included_round = for_which_round - 1)
+                    if current_trackers is not None:
+                        # Causally consistent
+                        commit_trackers_and_buffer(result_scenario, current_trackers)
+                        return(result_scenario)
+                    actions_iterator.next_state()
+                progenitors_iterator.next_state()
+            # Unresolvable paradox
+            return(Message("exception", "Unable to find a causally consistent scenario."))
+        elif self.ruleset["scenario_priority"] == "conserve_effects_stones_hc":
+            # This one is not possible to be done via simple iteration, sadly
+            # First, we order setup stones by headcount
+            ordered_setup_ID_list = reference_setup_ID_list #TODO order by headcount (flag ID recency)
+            reference_progenitor_effect_ID_list = []
+            reference_action_ID_list = []
+            for effect_ID in ordered_effect_ID_list:
+                if self.flags[effect_ID].flag_type in Flag.stone_generating_flag_types:
+                    reference_progenitor_effect_ID_list.append(effect_ID)
+                else:
+                    reference_action_ID_list.append(effect_ID)
+            ordered_progenitor_effect_ID_list = reference_progenitor_effect_ID_list #TODO order by interaction recency
+            ordered_action_ID_list = reference_action_ID_list # already ordered by recency
+            ssetup = len(ordered_setup_ID_list)
+            sprogen = len(ordered_progenitor_effect_ID_list)
+            saction = len(ordered_action_ID_list)
+            for number_of_effect_deactivations in range(sprogen+saction+1):
+                for number_of_stone_deactivations in range(ssetup + min(sprogen, number_of_effect_deactivations) + 1):
+                    # We use the fact that all setup stones have a lower recency than effect-progenitor stones
+                    for number_of_progenitor_effect_deactivations in range(max(max(0, number_of_stone_deactivations - ssetup), number_of_effect_deactivations - saction), min(min(sprogen, number_of_stone_deactivations), number_of_effect_deactivations) + 1):
+
+                        """
+                        # We sadly need to mesh the actions and progenitors together using sorted
+                        action_span = action_iterator.get_span()
+                        progenitor_effect_span = progenitor_effect_iterator.get_span()
+
+                        # We now create the cartesian mesh which allows us to blend two states together into a state with ascending recency
+                        cartesian_mesh = {"action_span" : [], "progenitor_span" : []}
+                        for i in range(len(ordered_effect_ID_list)):
+                            if ordered_effect_ID_list[i] in ordered_action_ID_list:
+                                cartesian_mesh["action_span"].append(i)
+                            elif ordered_effect_ID_list[i] in ordered_progenitor_effect_ID_list:
+                                cartesian_mesh["progenitor_span"].append(i)
+                        cartesian_span = []
+                        for a_i in range(len(action_span)):
+                            for p_i in range(len(progenitor_effect_span)):
+                                new_cartesian_element = [None] * (saction + sprogen)
+                                for scan_a_i in range(saction):
+                                    new_cartesian_element[cartesian_mesh["action_span"][scan_a_i]] = action_span[a_i][scan_a_i]
+                                for scan_p_i in range(sprogen):
+                                    new_cartesian_element[cartesian_mesh["progenitor_span"][scan_p_i]] = progenitor_effect_span[p_i][scan_p_i]
+                                cartesian_span.append(new_cartesian_element)
+                        sorted(popspan, key = cmp_to_key(Activity_map_iterator.compare_states_by_recency))"""
+
+                        # We don't actually need to do that! Since setup stones are always lower recency than progenitor effect stones, we can first order
+                        # by progenitor effect stones, then by setup stones, and finally by effects
+                        progenitor_effect_iterator = Activity_map_iterator(sprogen, number_of_progenitor_effect_deactivations)
+                        setup_iterator = Activity_map_iterator(ssetup, number_of_stone_deactivations - number_of_progenitor_effect_deactivations)
+                        action_iterator = Activity_map_iterator(saction, number_of_effect_deactivations - number_of_progenitor_effect_deactivations)
+                        while(progenitor_effect_iterator.current_state is not None):
+                            setup_iterator.reset_current_state()
+                            while(setup_iterator.current_state is not None):
+                                action_iterator.reset_current_state()
+                                while(action_iterator.current_state is not None):
+                                    current_progenitor_effect_activity_map = progenitor_effect_iterator.read_current_state()
+                                    current_setup_activity_map = setup_iterator.read_current_state()
+                                    current_action_activity_map = action_iterator.read_current_state()
+                                    for i in range(sprogen):
+                                        result_scenario.effect_activity_map[ordered_progenitor_effect_ID_list[i]] = current_progenitor_effect_activity_map[i]
+                                    for i in range(ssetup):
+                                        result_scenario.setup_activity_map[ordered_setup_ID_list[i]] = current_setup_activity_map[i]
+                                    for i in range(saction):
+                                        result_scenario.effect_activity_map[ordered_action_ID_list[i]] = current_action_activity_map[i]
+                                    self.realise_scenario(result_scenario)
+                                    current_trackers = self.check_if_causally_consistent(max_included_round = for_which_round - 1)
+                                    if current_trackers is not None:
+                                        # Causally consistent
+                                        commit_trackers_and_buffer(result_scenario, current_trackers)
+                                        return(result_scenario)
+
+
+                                    action_iterator.next_state()
+                                setup_iterator.next_state()
+                            progenitor_effect_iterator.next_state()
+            # Unresolvable paradox
+            return(Message("exception", "Unable to find a causally consistent scenario."))
+
+        return(Message("exception", "Ill-formed ruleset for rulegroup 'scenario_priority'"))
+
+    def check_if_causally_consistent(self, max_included_round):
+        # Runs flags up to max_included_round, omitting buffered effects.
+        # Returns Trackers if realised activity map is causally consistent,
+        # returns None if paradoxical.
+
+        # max_included_round is including the buffer round, whose effects we ignore but whose flags we execute
+
+        if max_included_round < 0:
+            # No included rounds means trivial activity map
+            empty_causality_trackers = {
+                    "effect_load" : {},
+                    "effect_cause_map" : {},
+                    "stone_inheritance" : {}
+                }
+            return(empty_causality_trackers)
+        reference_effect_ID_list = []
+        for round_number in range(max_included_round): # We ignore the buffer round
+            reference_effect_ID_list += self.effects_by_round[round_number]
+        # include the buffer round, but ignore the buffer effects
+        current_causality_trackers = self.execute_moves(read_causality_trackers = True, max_turn_index = self.t_dim * (max_included_round + 1), ignore_buffer_effects = True)
+        for effect_ID in reference_effect_ID_list:
+            if self.flags[effect_ID].is_active and current_causality_trackers["effect_load"][effect_ID] != 1:
+                return(None)
+            if (not self.flags[effect_ID].is_active) and current_causality_trackers["effect_load"][effect_ID] != 0:
+                return(None)
+        return(current_causality_trackers)
 
     def find_causally_consistent_scenarios(self, max_included_round = None):
         # takes the internal causality surjection and returns the top priority
@@ -1832,7 +2155,6 @@ class Gamemaster():
         self.effects_by_round = []
 
         for turn_id in range(len(dynamic_data_representation)):
-            #historic_round_number = dynamic_data_representation[turn_id]["round_number"]#int(np.floor((turn_id - 1) / self.t_dim))
             historic_round_number, historic_timeslice = self.round_from_turn(turn_id)
 
             self.flags_by_turn.append({})
@@ -1891,15 +2213,20 @@ class Gamemaster():
 
 
 
-    def load_from_database(self, static_data_representation, dynamic_data_representation):
+    def load_from_database(self, static_data_representation, dynamic_data_representation, ruleset_representation):
         # This is the big gun. Initializes the Gamemaster instance from a list of rows.
         # static_data_representation is a dictionary with static data.
         # dynamic_data_representation is a list of dictionaries, where the i-th element
         # is a dictionary of moves made in the i-th turn (0 reserved for setup moves).
+        # ruleset_representation is a dictionary {rulegroup : rule}
 
         self.static_representation = static_data_representation
         self.dynamic_representation = dynamic_data_representation
         self.new_dynamic_representation = []
+
+        # We need to load the ruleset first, as it will be used in load_flags_from_rep-
+        # resentation's construction of scenarios_by_round.
+        self.ruleset = ruleset_representation
 
         try:
             t_dim = int(static_data_representation[0]) #TODO i don't think we need to convert anything here

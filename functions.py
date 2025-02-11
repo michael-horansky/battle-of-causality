@@ -197,6 +197,24 @@ def ordered_switch_flips(N, S):
             res += subres
         return(res)
 
+def another_N_S(N,S):
+    if N == 0 and S == 0:
+        return([[]])
+    result = [[True] * S + [False] * (N - S)]
+    while(True):
+        number_of_passed_offs = 0
+        pointer_index = 0
+        while(result[-1][pointer_index] == False):
+            number_of_passed_offs += 1
+            pointer_index += 1
+            if pointer_index == N or number_of_passed_offs == (N - S):
+                return(result)
+        while(result[-1][pointer_index] == True):
+            pointer_index += 1
+            if pointer_index == N:
+                return(result)
+        result.append([True] * (pointer_index - 1 - number_of_passed_offs) + [False] * (number_of_passed_offs + 1) + [True] + result[-1][pointer_index + 1:])
+
 
 
 
