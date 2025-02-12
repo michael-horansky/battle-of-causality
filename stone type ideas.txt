@@ -32,7 +32,7 @@
 -Tagscreen explodes one turn later, tagging stones on the 4 adjanced squares
 -Tagged stones cannot time-jump anymore, and become causally locked in the final time-slice
 -Friendly fire off, but the Tagger itself cannot be affected by tagscreens (not even by other Taggers) (NOTE: maybe not? so that there's a pressure for him to escape)
--Can only time jump after reaching the end of the round
+-Can only time jump like a horsey
 
 
 # WILDCARD

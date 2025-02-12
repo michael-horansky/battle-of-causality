@@ -17,3 +17,8 @@ The first option is always the default one.
    If we select 'Know your paradoxes!' for Q1, the options for 3 change to
      a) [all_setup_activity_recency] 'Out with the Old': Keeping effects added more recently active is prioritized.
      b) [all_setup_conserve_effects] 'Conservative': 1. Bigger number of active effects is prioritized; 2. Keeping effects added more recently active is prioritized.
+
+4. [viewing_scope] At a given turn, can the players view what the succeeding time-slices look like, including the placed causally free stones?
+     a) [view_entire_board] 'Omniscience': The players can view the entire board
+     b) [hide_future] 'Fog of War': The players can only view time-slices up to and including the active one. This means they cannot see the time-jumps-in placed by the opponent in the previous round, and they will get surprised by them as they activate.
+     Note: we cannot do the hybrid where a player can see the time evolution of their stones across the entire board, but cannot yet see non-active causally free stones, since due to the rule of dogma, buffered time-jumps-in were already canonised, and they could destroy the player's stone on placement, giving away the progenition.

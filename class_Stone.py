@@ -26,7 +26,8 @@ class Stone():
                 "undo" : [None, None, "Revert back to commanding the previous stone, erasing the previously placed flag."],
                 "list_stones/ls": [None, None, "List stones belonging to each player."],
                 "list_portals/lp" : ["t", "x, y", "Lists time-jumps-in on the specified square. Position defaults to stone position."],
-                "track" : ["ID/t, x, y", None, "Tracks the stone with the specified ID. Alternatively, tracks the stone placed at a specific position."]
+                "track" : ["ID/t, x, y", None, "Tracks the stone with the specified ID. Alternatively, tracks the stone placed at a specific position."],
+                "worldline/wl" : ["ID/t, x, y", None, "Shows the worldline to which the stone with the specified ID, or at the specified position, belongs."]
             }
 
         # The following is the help-log for type specific commands. Change this when inheriting Stone

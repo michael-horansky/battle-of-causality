@@ -1789,7 +1789,8 @@ class Gamemaster():
                 self.execute_moves()
 
                 # Second, we display the board state
-                self.print_heading_message(f"Time = {self.current_time}", 1)
+                #self.print_heading_message(f"Time = {self.current_time}", 1)
+                self.print_heading_message(f"Turn {self.current_turn_index}", 1)
                 self.print_board_horizontally(active_turn = self.current_turn_index, highlight_active_timeslice = True)
 
                 # Third, for every causally free stone, we ask its owner to place a flag
