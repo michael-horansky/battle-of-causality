@@ -1,6 +1,7 @@
 
 
 import math
+import json
 
 import constants
 
@@ -546,6 +547,7 @@ class Gamemaster():
         # TODO: not true! In the final timeslice, we can pass on stones and
         # leave them causally free for the next round, yet our turn ends.
         # paradigm for now: after touching every stone, your turn ends!
+        #if player in self.flags_by_turn[turn_index].keys():
         if player in self.flags_by_turn[turn_index].keys():
             return(True)
 
@@ -594,7 +596,7 @@ class Gamemaster():
     # ---------------------------- Flag management ----------------------------
 
     # ----------------------------- Flag addition
-    # Methods which add new Flags always return the Flag ID
+    # Methods which add new Flags always return a list of newly added flag IDs
 
     def add_stone_on_setup(self, faction, stone_type, x, y, a0):
         # This function allows Gamemaster to describe the initial state of the board, which is reverted to for every retrace of causal events
@@ -608,9 +610,9 @@ class Gamemaster():
         # Trackers
         self.faction_armies[faction].append(new_flag.stone_ID)
         self.setup_stones[new_flag.stone_ID] = new_flag.flag_ID
-        self.scenarios_by_round[0].setup_activity_map[new_flag.flag_ID] = True
+        #self.scenarios_by_round[0].setup_activity_map[new_flag.flag_ID] = True
 
-        return(new_flag.flag_ID)
+        return([new_flag.flag_ID])
 
     def add_base(self, initial_faction, x, y):
         # This function spawns a flag initially belonging to the specified faction, or neutral if "neutral"
@@ -618,27 +620,27 @@ class Gamemaster():
         self.setup_squares[x][y].add_flag(new_flag.flag_ID, None)
         self.flags[new_flag.flag_ID] = new_flag
 
-        return(new_flag.flag_ID)
+        return([new_flag.flag_ID])
 
     def add_flag_spatial_move(self, stone_ID, t, old_x, old_y, new_x, new_y, new_a):
         new_flag = Flag(STPos(t, old_x, old_y), "spatial_move", self.stones[stone_ID].player_faction, [new_x, new_y, new_a], stone_ID)
         self.board_dynamic[t][old_x][old_y].add_flag(new_flag.flag_ID, stone_ID)
         self.flags[new_flag.flag_ID] = new_flag
-        return(new_flag.flag_ID)
+        return([new_flag.flag_ID])
 
     def add_flag_attack(self, stone_ID, t, x, y, attack_arguments = []):
         new_flag = Flag(STPos(t, x, y), "attack", self.stones[stone_ID].player_faction, attack_arguments, stone_ID)
         self.board_dynamic[t][x][y].add_flag(new_flag.flag_ID, stone_ID)
         self.flags[new_flag.flag_ID] = new_flag
-        return(new_flag.flag_ID)
+        return([new_flag.flag_ID])
 
-    def add_flag_timejump(self, stone_ID, old_t, old_x, old_y, new_stone_type, new_t, new_x, new_y, new_a, adopted_stone_ID = -1):
+    def add_flag_timejump(self, stone_ID, old_t, old_x, old_y, new_t, new_x, new_y, new_a, adopted_stone_ID = None):
 
         round_number, active_timeslice = self.round_from_turn(self.current_turn_index)
         # If adopted_stone_ID specified, instead of creating a new TJI, we adopt an existing one.
-        if adopted_stone_ID == -1:
+        if adopted_stone_ID == None:
             # The TJI is placed inactive, and may be activated during causal consistency resolution
-            tji_flag = Flag(STPos(new_t - 1, new_x, new_y), "time_jump_in", self.stones[stone_ID].player_faction, [new_stone_type, new_a])
+            tji_flag = Flag(STPos(new_t - 1, new_x, new_y), "time_jump_in", self.stones[stone_ID].player_faction, [self.stones[stone_ID].stone_type, new_a])
             tjo_flag = Flag(STPos(old_t, old_x, old_y), "time_jump_out", self.stones[stone_ID].player_faction, [STPos(new_t - 1, new_x, new_y)], stone_ID, effect = tji_flag.flag_ID)
             tji_flag.initial_cause = tjo_flag.flag_ID
 
@@ -657,39 +659,20 @@ class Gamemaster():
             self.set_flag_activity(tji_flag.flag_ID, False)
 
             # Trackers
+            self.effects_by_round = add_tail_to_list(self.effects_by_round, round_number + 1, [])
             self.effects_by_round[round_number].append(tji_flag.flag_ID)
 
             # We add the new stone into the army
-            self.stones[tji_flag.stone_ID] = self.create_stone(tji_flag.stone_ID, new_stone_type, tji_flag.flag_ID, self.stones[stone_ID].player_faction)
+            self.stones[tji_flag.stone_ID] = self.create_stone(tji_flag.stone_ID, self.stones[stone_ID].stone_type, tji_flag.flag_ID, self.stones[stone_ID].player_faction)
             self.faction_armies[self.stones[stone_ID].player_faction].append(tji_flag.stone_ID)
-            return(Message("flags added", [tji_flag.flag_ID, tjo_flag.flag_ID]))
+            return([tji_flag.flag_ID, tjo_flag.flag_ID])
         else:
             # First, we find the TJI which summons the stone
-            for round_n in range(len(self.effects_by_round)):
-                for TJI_ID in self.effects_by_round[round_n]:
-                    if self.flags[TJI_ID].stone_ID == adopted_stone_ID and self.flags[TJI_ID].flag_type == "time_jump_in":
-                        # We now check if it is allowed to link us up
-                        if not (self.flags[TJI_ID].pos.t == new_t - 1 and self.flags[TJI_ID].pos.x == new_x and self.flags[TJI_ID].pos.y == new_y):
-                            return(Message("exception", "Specified stone doesn't time-jump-in at the specified square"))
-                        if self.stones[stone_ID].player_faction != self.stones[adopted_stone_ID].player_faction:
-                            return(Message("exception", "Specified stone belongs to a different faction"))
-                        if self.stones[stone_ID].stone_type not in [self.stones[adopted_stone_ID].stone_type, "wildcard"]:
-                            return(Message("exception", "Specified stone is of incompatible type"))
-                        if self.stones[stone_ID].stone_type not in ["wildcard", self.stones[adopted_stone_ID].stone_type]:
-                            return(Message("exception", "Specified stone is of a different type"))
-                        if self.flags[TJI_ID].flag_args[1] != new_a:
-                            return(Message("exception", "Specified stone jumps in at a different azimuth than proposed"))
-                        if round_n == round_number:
-                            return(Message("exception", "Specified time-jump-in has been added only this round, and thus hasn't been realised yet."))
-                        # This last one is important, since TJIs added this round are always active, but aren't subject to trackers,
-                        # and thus their linkage couldn't be resolved!
-                        # We can link up!
-                        tjo_flag = Flag(STPos(old_t, old_x, old_y), "time_jump_out", self.stones[stone_ID].player_faction, [STPos(new_t - 1, new_x, new_y), TJI_ID], stone_ID, effect = TJI_ID)
-                        self.board_dynamic[old_t][old_x][old_y].add_flag(tjo_flag.flag_ID, stone_ID)
-                        self.flags[tjo_flag.flag_ID] = tjo_flag
-                        return(Message("flags added", [tjo_flag.flag_ID]))
-
-            return(Message("exception", "Specified stone not associated with a time-jump-in"))
+            TJI_ID = self.stones[adopted_stone_ID].progenitor_flag_ID
+            tjo_flag = Flag(STPos(old_t, old_x, old_y), "time_jump_out", self.stones[stone_ID].player_faction, [STPos(new_t - 1, new_x, new_y), TJI_ID], stone_ID, effect = TJI_ID)
+            self.board_dynamic[old_t][old_x][old_y].add_flag(tjo_flag.flag_ID, stone_ID)
+            self.flags[tjo_flag.flag_ID] = tjo_flag
+            return([tjo_flag.flag_ID])
 
     def add_bomb_flag(self, stone_ID, old_t, old_x, old_y, new_t, new_x, new_y):
         round_number, active_timeslice = self.round_from_turn(self.current_turn_index)
@@ -711,71 +694,70 @@ class Gamemaster():
         self.set_flag_activity(spawn_bomb_flag.flag_ID, False)
 
         # Trackers
+        self.effects_by_round = add_tail_to_list(self.effects_by_round, round_number + 1, [])
         self.effects_by_round[round_number].append(spawn_bomb_flag.flag_ID)
 
-        return(Message("flags added", [spawn_bomb_flag.flag_ID, attack_flag.flag_ID]))
+        return([spawn_bomb_flag.flag_ID, attack_flag.flag_ID])
 
-    def add_canonized_flag(self, new_flag, is_setup = False):
-        # This is a function used in loading, which can add any flag type, with
-        # the assumption that the flag is well-inputted.
+    def execute_command(self, command, commander):
+        # returns list of flag IDs
+        flags_added = []
+        if command["type"] == "add_stone":
+            flags_added = self.add_stone_on_setup(command["faction"], command["stone_type"], command["x"], command["y"], command["a"])
+        elif command["type"] == "add_base":
+            flags_added = self.add_base(command["faction"], command["x"], command["y"])
+        elif command["type"] == "spatial_move":
+            # stone_ID, t, old_x, old_y, new_x, new_y, new_a
+            flags_added = self.add_flag_spatial_move(command["stone_ID"], command["t"], command["x"], command["y"], command["new_x"], command["new_y"], command["new_a"])
+        elif command["type"] == "attack":
+            # Here we resolve the various ways in which the different stone types attack!
+            if self.stones[command["stone_ID"]].stone_type == "bombardier":
+                flags_added = self.add_bomb_flag(command["stone_ID"], command["t"], command["x"], command["y"], command["target_t"], command["x"], command["y"])
+            else:
+                flags_added = self.add_flag_attack(command["stone_ID"], command["t"], command["x"], command["y"])
+        elif command["type"] == "timejump":
+            # stone_ID, old_t, old_x, old_y, new_t, new_x, new_y, new_a, adopted_stone_ID
+            if "adopted_stone_ID" not in command.keys():
+                flags_added = self.add_flag_timejump(command["stone_ID"], command["t"], command["x"], command["y"], command["new_t"], command["new_x"], command["new_y"], command["new_a"], None)
+            else:
+                flags_added = self.add_flag_timejump(command["stone_ID"], command["t"], command["x"], command["y"], command["new_t"], command["new_x"], command["new_y"], command["new_a"], command["adopted_stone_ID"])
 
-        # is_setup is used for stone-adding flags on the zeroth move only,
-        # and is useful for the self.setup_stones tracker
+        # We record the flags into the time rep
+        self.flags_by_turn[self.current_turn_index][commander] += flags_added
 
-        self.flags[new_flag.flag_ID] = new_flag
-        if new_flag.flag_type in Flag.stone_generating_flag_types:
-            required_actor = None
-        else:
-            required_actor = new_flag.stone_ID
-        if new_flag.pos.t == -1:
-            self.setup_squares[new_flag.pos.x][new_flag.pos.y].add_flag(new_flag.flag_ID, required_actor)
-        else:
-            self.board_dynamic[new_flag.pos.t][new_flag.pos.x][new_flag.pos.y].add_flag(new_flag.flag_ID, required_actor)
-
-        # If this flag creates a stone, that stone is tracked
-        if new_flag.flag_type in Flag.stone_generating_flag_types:
-            self.stones[new_flag.stone_ID] = self.create_stone(new_flag.stone_ID, new_flag.flag_args[0], new_flag.flag_ID, new_flag.player_faction)
-            self.faction_armies[new_flag.player_faction].append(new_flag.stone_ID)
-            if is_setup:
-                self.setup_stones[new_flag.stone_ID] = new_flag.flag_ID
-
-        return(new_flag.flag_ID)
-
-    def commit_flags(self, flag_ID_list, turn_index, move_author):
-        # This updates
-        #     -self.flags_by_turn for move execution purposes
-        #     -self.new_dynamic_representation for data saving purposes
-        # It is a method representing the change of the dynamic state of the game
-
-        # NOTE: move_author is not necessarily equal to the flag.player_faction
-        # value - e.g. setup moves are always authored by "GM".
+    def commit_commands(self, list_of_commands, turn_index, commander):
+        # list_of_commands is a list of dictionaries
         if len(self.flags_by_turn) <= turn_index:
-            print(f"ERROR: Attempted to canonize flags {flag_ID_list} on turn {turn_index}, but the highest available turn index in self.flags_by_turn is {len(self.flags_by_turn) - 1}.")
+            print(f"ERROR: Attempted to canonize flags {list_of_commands} on turn {turn_index}, but the highest available turn index in self.flags_by_turn is {len(self.flags_by_turn) - 1}.")
             return(-1)
-        if move_author not in self.flags_by_turn[turn_index]:
-            # First batch of flags canonized for this author for this turn.
-            self.flags_by_turn[turn_index][move_author] = []
-        self.flags_by_turn[turn_index][move_author] += flag_ID_list
 
-        # We fill self.new_dynamic_representation with empty dictionaries until
-        # the correct index exists!
+        # We create the flags which execute our commands
+        self.flags_by_turn[self.current_turn_index][commander] = []
+        for command in list_of_commands:
+            self.execute_command(command, commander)
+
         while(len(self.new_dynamic_representation) <= turn_index):
             self.new_dynamic_representation.append({})
-        if move_author not in self.new_dynamic_representation[turn_index]:
+        if commander not in self.new_dynamic_representation[turn_index]:
             # First batch of flags canonized for this author for this turn.
-            self.new_dynamic_representation[turn_index][move_author] = self.encode_move_representation(flag_ID_list)
+            self.new_dynamic_representation[turn_index][commander] = self.encode_commands(list_of_commands)
         else:
-            self.new_dynamic_representation[turn_index][move_author] += (constants.Gamemaster_delim) + self.encode_move_representation(flag_ID_list)
+            old_commands = self.decode_commands(self.new_dynamic_representation[turn_index][commander])
+            self.new_dynamic_representation[turn_index][commander] = self.encode_commands(old_commands + list_of_commands)
 
         # We also record everything into self.dynamic_representation, for full
         # copy and legacy purposes
         while(len(self.dynamic_representation) <= turn_index):
             self.dynamic_representation.append({})
-        if move_author not in self.dynamic_representation[turn_index]:
+        if commander not in self.dynamic_representation[turn_index]:
             # First batch of flags canonized for this author for this turn.
-            self.dynamic_representation[turn_index][move_author] = self.encode_move_representation(flag_ID_list)
+            self.dynamic_representation[turn_index][commander] = self.encode_commands(list_of_commands)
         else:
-            self.dynamic_representation[turn_index][move_author] += (constants.Gamemaster_delim) + self.encode_move_representation(flag_ID_list)
+            old_commands = self.decode_commands(self.dynamic_representation[turn_index][commander])
+            self.dynamic_representation[turn_index][commander] = self.encode_commands(old_commands + list_of_commands)
+
+
+
 
 
 
@@ -1721,16 +1703,17 @@ class Gamemaster():
             self.print_heading_message("No causally free stones to command.", 3)
             return(Message("pass"))
         stone_index = 0
-        flags_added_this_turn = repeated_list(len(currently_causally_free_stones), None)
+        command_buffer = {} # [stone_ID] = command message
+        stones_touch_order = [] # earliest to most recent
         while(stone_index < len(currently_causally_free_stones)):
             cur_stone = currently_causally_free_stones[stone_index]
             cur_pos = self.stones[cur_stone].history[cur_time]
             x, y, a = cur_pos
             self.print_heading_message(f"Command your stone at ({x},{y}).", 3)
             if cur_time < self.t_dim - 1:
-                move_msg = self.stones[cur_stone].parse_move_cmd(self, cur_time)
+                move_msg = self.stones[cur_stone].parse_move_cmd(self)
             else:
-                move_msg = self.stones[cur_stone].parse_final_move_cmd(self, cur_time)
+                move_msg = self.stones[cur_stone].parse_final_move_cmd(self)
 
             if move_msg.header == "option":
                 # The user is interacting with gamemaster options
@@ -1742,30 +1725,31 @@ class Gamemaster():
                     # We revert back to the previous stone
                     stone_index = max(stone_index-1, 0)
                     # We delete the Flag we added to this stone if any
-                    if flags_added_this_turn[stone_index] != None:
-                        #prev_x, prev_y, prev_a = self.stones[currently_causally_free_stones[player][stone_index]].history[cur_time]
-                        for added_flag_ID in flags_added_this_turn[stone_index]:
-                            self.remove_flag_from_game(added_flag_ID)
-                        flags_added_this_turn[stone_index] = None
+                    if cur_stone in command_buffer.keys():
+                        del command_buffer[cur_stone]
+                    if cur_stone in stones_touch_order:
+                        stones_touch_order.remove(cur_stone)
                     continue
 
-            if move_msg.header == "flags added":
-                # A new Flag was added
-                flags_added_this_turn[stone_index] = move_msg.msg
+            if move_msg.header == "command":
+                # A new command was added
+                command_buffer[cur_stone] = move_msg.msg
+                command_buffer[cur_stone]["stone_ID"] = cur_stone
+                command_buffer[cur_stone]["t"] = cur_time
+                command_buffer[cur_stone]["x"] = x
+                command_buffer[cur_stone]["y"] = y
+                if cur_stone in stones_touch_order:
+                    stones_touch_order.remove(cur_stone)
+                stones_touch_order.append(cur_stone)
 
             stone_index += 1
 
         # Now we flatten the buffer
-        # TODO execute flag addition as you flatten
-        flat_flags_added_this_turn = []
-        for stone_index in range(len(currently_causally_free_stones)):
-            if flags_added_this_turn[stone_index] is None:
-                continue
-            for flag_index in range(len(flags_added_this_turn[stone_index])):
-                flat_flags_added_this_turn.append(flags_added_this_turn[stone_index][flag_index])
-        #added_dynamic_representation = self.encode_move_representation(flat_flags_added_this_turn)
-        #print(added_dynamic_representation) # TODO this should be returned instead
-        return(Message("flags added", flat_flags_added_this_turn))
+        commands_added_this_turn = []
+        for stone_ID in stones_touch_order:
+            if stone_ID in command_buffer.keys():
+                commands_added_this_turn.append(command_buffer[stone_ID])
+        return(Message("commands added", commands_added_this_turn))
 
     def standard_game_loop(self):
 
@@ -1797,11 +1781,11 @@ class Gamemaster():
                 for player in self.factions:
                     output_message = self.prompt_player_input(self.current_time, player)
                     #flags_added_by_player = self.prompt_player_input(self.current_time, player)
-                    if output_message.header == "flags added":
-                        self.commit_flags(output_message.msg, self.current_turn_index, player)
+                    if output_message.header == "commands added":
+                        self.commit_commands(output_message.msg, self.current_turn_index, player)
                     elif output_message.header == "pass":
                         # We need to commit an empty datapoint, otherwise game status will think the player still needs to make his turn
-                        self.commit_flags([], self.current_turn_index, player)
+                        self.commit_commands([], self.current_turn_index, player)
                     elif output_message.header == "option":
                         if output_message.msg == "quit":
                             return(0)
@@ -1846,15 +1830,15 @@ class Gamemaster():
             # This player has already submitted his moves
             self.print_heading_message(f"Player {player} has already finished his turn, and is waiting for his opponent.", 2)
             # In case key does not exist, we go ahead and populate with empty string
-            self.commit_flags([], self.current_turn_index, player)
+            self.commit_commands([], self.current_turn_index, player)
         else:
             output_message = self.prompt_player_input(active_timeslice, player)
             #flags_added_by_player = self.prompt_player_input(self.current_time, player)
-            if output_message.header == "flags added":
-                self.commit_flags(output_message.msg, self.current_turn_index, player)
+            if output_message.header == "commands added":
+                self.commit_commands(output_message.msg, self.current_turn_index, player)
             elif output_message.header == "pass":
                 # We need to commit an empty datapoint, otherwise game status will think the player still needs to make his turn
-                self.commit_flags([], self.current_turn_index, player)
+                self.commit_commands([], self.current_turn_index, player)
             elif output_message.header == "option":
                 if output_message.msg == "quit":
                     return(0)
@@ -1865,7 +1849,7 @@ class Gamemaster():
             if not self.did_player_finish_turn(faction, self.current_turn_index):
                 currently_causally_free_stones = self.causally_free_stones_at_time_by_player(active_timeslice, faction)
                 if len(currently_causally_free_stones) == 0:
-                    self.commit_flags([], self.current_turn_index, faction)
+                    self.commit_commands([], self.current_turn_index, faction)
 
 
         if self.did_everyone_finish_turn(self.current_turn_index):
@@ -1938,14 +1922,10 @@ class Gamemaster():
                 board_representation += cur_char
         return([self.t_dim, self.x_dim, self.y_dim, board_representation])
 
-    def encode_move_representation(self, list_of_flag_IDs):
-        # Since the order of flag addition matters, we order the list in an ascending order by the first element of each element
-        sorted_list_of_flag_IDs = sorted(list_of_flag_IDs)
+    def encode_commands(self, list_of_commands):
+        # list of dicts -> string
+        return(json.dumps(list_of_commands))
 
-        flag_representation_list = []
-        for cur_flag_ID in sorted_list_of_flag_IDs:
-            flag_representation_list.append(self.flags[cur_flag_ID].get_flag_representation())
-        return((constants.Gamemaster_delim).join(flag_representation_list))
 
     def trim_empty_turns(self, dynamic_data, tail_element = {}):
         # dynamic_data is a list of dictionaries
@@ -1966,13 +1946,7 @@ class Gamemaster():
         # This method dumps all of the data, and as such should not be used
         # when saving just the changes to an existing game's state.
         static_data_representation = self.encode_static_data_representation()
-        dynamic_data_representation = []
-
-        for turn_i in range(len(self.flags_by_turn)):
-            dynamic_data_representation.append({})
-            for move_author, move_flag_IDs in self.flags_by_turn[turn_i].items():
-                dynamic_data_representation[turn_i][move_author] = self.encode_move_representation(move_flag_IDs)
-        return(static_data_representation, self.trim_empty_turns(dynamic_data_representation))
+        return(static_data_representation, self.trim_empty_turns(self.dynamic_representation))
 
     def dump_changes(self):
         return(self.trim_empty_turns(self.new_dynamic_representation))
@@ -1981,19 +1955,9 @@ class Gamemaster():
 
     # -------------------------------- Loading --------------------------------
 
-    def decode_move_representation(self, move_representation):
-        # This is a representation of a move of a specific player, i.e. a value
-        # in the turn-indexed dict of moves by player. It is a list of flags.
-        # The output is a list of realised Flag objects
-
-        if move_representation == "":
-            return([]) # E.g. player had no causally free stones
-
-        result = []
-        flag_representation_list = move_representation.split(";")
-        for flag_representation in flag_representation_list:
-            result.append(Flag.from_str(flag_representation))
-        return(result)
+    def decode_commands(self, commands_representation):
+        # string -> list of dicts
+        return(json.loads(commands_representation))
 
     # This is a legacy feature
     def load_board(self, board_number):
@@ -2020,8 +1984,9 @@ class Gamemaster():
 
         # Initialize the board initializing flags
         self.flags = {}
-        self.new_dynamic_representation = [] # A fresh start
-        self.flags_by_turn = [{"GM" : []}]
+        self.dynamic_representation = []
+        self.new_dynamic_representation = []
+        self.flags_by_turn = [{}]
         self.setup_squares = []
         for x in range(self.x_dim):
             self.setup_squares.append([])
@@ -2037,6 +2002,7 @@ class Gamemaster():
         self.removed_setup_stones = {}
         self.effects_by_round = [[]]
         self.scenarios_by_round = [Scenario({}, {}, {}, {})]
+        self.current_turn_index = 0
 
         for faction in self.factions:
             self.faction_armies[faction] = []
@@ -2044,19 +2010,19 @@ class Gamemaster():
         faction_orientations = {'A': 1, 'B' : 3} #TODO load this from the board dynamically
 
         # Read the board setup
+        setup_commands = []
         for y in range(self.y_dim):
             for x in range(self.x_dim):
                 cur_char = board_lines[y+1][x]
                 if cur_char in constants.stone_type_representations.keys():
                     stone_to_load = constants.stone_type_representations[cur_char]
-                    setup_flag_ID = self.add_stone_on_setup(stone_to_load[0], stone_to_load[1], x, y, faction_orientations[stone_to_load[0]])
-                    self.flags_by_turn[0]["GM"].append(setup_flag_ID)
+                    setup_commands.append({"type" : "add_stone", "faction" : stone_to_load[0], "stone_type" : stone_to_load[1], "x" : x, "y" : y, "a" : faction_orientations[stone_to_load[0]]})
+
                     # NOTE: setup flags are never added to
                     # self.new_dynamic_representation, since they are copied
                     # there automatically for every new game on creation.
                 elif cur_char in constants.base_representations.keys():
-                    base_flag_ID = self.add_base(constants.base_representations[cur_char], x, y)
-                    self.flags_by_turn[0]["GM"].append(base_flag_ID)
+                    setup_commands.append({"type" : "add_base", "faction" : constants.base_representations[cur_char], "x" : y, "y" : y})
                 else:
                     self.board_static[x][y] = cur_char
 
@@ -2074,6 +2040,8 @@ class Gamemaster():
                     self.board_dynamic[t][x].append(Board_square(STPos(t, x, y)))
                     self.board_actions[t][x].append({})
 
+        # We commit the setup commands!
+        self.commit_commands(setup_commands, 0, "GM")
         self.conflicting_squares = repeated_list(self.t_dim, [])
 
         # Calculate TUI parameters for printing
@@ -2118,7 +2086,6 @@ class Gamemaster():
             for x in range(self.x_dim):
                 cur_char = board_representation[y * self.x_dim + x]
                 self.board_static[x][y] = cur_char
-                # TODO here, we also load bases :))
 
         # Setup dynamic board squares and board actions
         self.print_log("Setting up dynamic board representation...", 1)
@@ -2155,28 +2122,25 @@ class Gamemaster():
         # executed so far (i.e. the number of canonized rounds).
         self.effects_by_round = []
 
-        for turn_id in range(len(dynamic_data_representation)):
-            historic_round_number, historic_timeslice = self.round_from_turn(turn_id)
+        self.current_turn_index = None
+        for historic_turn_index in range(len(dynamic_data_representation)):
+            historic_round_number, historic_timeslice = self.round_from_turn(historic_turn_index)
+
+            # We prepare the historic turn for being able to add flags
+            self.current_turn_index = historic_turn_index
 
             self.flags_by_turn.append({})
-            for faction in dynamic_data_representation[turn_id].keys():
-                move_representation = dynamic_data_representation[turn_id][faction]
-                self.flags_by_turn[turn_id][faction] = []
-                move_flags = self.decode_move_representation(move_representation)
+            for commander in dynamic_data_representation[self.current_turn_index].keys():
+                commands_representation = dynamic_data_representation[self.current_turn_index][commander]
+                self.flags_by_turn[self.current_turn_index][commander] = []
+                commands = self.decode_commands(commands_representation)
 
                 effects_added_this_turn = []
-                for move_flag in move_flags:
-                    self.add_canonized_flag(move_flag, turn_id == 0)
-                    self.flags_by_turn[turn_id][faction].append(move_flag.flag_ID)
+                for command in commands:
+                    self.execute_command(command, commander)
 
-                    if move_flag.initial_cause is not None:
-                        # This is an effect
-                        effects_added_this_turn.append(move_flag.flag_ID)
-                self.effects_by_round = add_tail_to_list(self.effects_by_round, historic_round_number + 1)
-                self.effects_by_round[historic_round_number] += effects_added_this_turn
 
         # If all of the loaded turns are finished, we prepare the next turn.
-        self.current_turn_index = None
         if len(dynamic_data_representation) == 1:
             # only setup occured so far
             self.current_turn_index = 1

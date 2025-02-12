@@ -7,38 +7,147 @@
     ],
     "dynamic_data": [
         {
-            "GM": "0:add_stone:A:0:(-1,1,3):None:None:tank:1;1:add_stone:A:1:(-1,2,3):None:None:tank:1;2:add_stone:B:2:(-1,4,3):None:None:tank:3;3:add_stone:B:3:(-1,5,3):None:None:tank:3"
+            "GM": "[{\"type\": \"add_stone\", \"faction\": \"A\", \"stone_type\": \"tank\", \"x\": 1, \"y\": 3, \"a\": 1}, {\"type\": \"add_stone\", \"faction\": \"A\", \"stone_type\": \"tank\", \"x\": 2, \"y\": 3, \"a\": 1}, {\"type\": \"add_stone\", \"faction\": \"B\", \"stone_type\": \"tank\", \"x\": 4, \"y\": 3, \"a\": 3}, {\"type\": \"add_stone\", \"faction\": \"B\", \"stone_type\": \"tank\", \"x\": 5, \"y\": 3, \"a\": 3}]"
         },
         {
-            "A": "4:spatial_move:A:0:(0,1,3):None:None:1:3:0;5:spatial_move:A:1:(0,2,3):None:None:2:3:2",
-            "B": "6:spatial_move:B:2:(0,4,3):None:None:4:3:0;7:spatial_move:B:3:(0,5,3):None:None:5:3:0"
+            "A": "[{\"type\": \"spatial_move\", \"new_x\": 1, \"new_y\": 3, \"new_a\": 0, \"stone_ID\": 0, \"t\": 0, \"x\": 1, \"y\": 3}, {\"type\": \"spatial_move\", \"new_x\": 2, \"new_y\": 3, \"new_a\": 1, \"stone_ID\": 1, \"t\": 0, \"x\": 2, \"y\": 3}]",
+            "B": "[{\"type\": \"spatial_move\", \"new_x\": 4, \"new_y\": 3, \"new_a\": 3, \"stone_ID\": 2, \"t\": 0, \"x\": 4, \"y\": 3}, {\"type\": \"spatial_move\", \"new_x\": 5, \"new_y\": 3, \"new_a\": 0, \"stone_ID\": 3, \"t\": 0, \"x\": 5, \"y\": 3}]"
         },
         {
-            "A": "8:spatial_move:A:0:(1,1,3):None:None:1:2:1;9:spatial_move:A:1:(1,2,3):None:None:2:4:1",
-            "B": "10:spatial_move:B:2:(1,4,3):None:None:4:2:0;11:spatial_move:B:3:(1,5,3):None:None:5:2:3"
+            "A": "[{\"type\": \"spatial_move\", \"new_x\": 1, \"new_y\": 2, \"new_a\": 0, \"stone_ID\": 0, \"t\": 1, \"x\": 1, \"y\": 3}, {\"type\": \"spatial_move\", \"new_x\": 2, \"new_y\": 3, \"new_a\": 1, \"stone_ID\": 1, \"t\": 1, \"x\": 2, \"y\": 3}]",
+            "B": "[{\"type\": \"spatial_move\", \"new_x\": 4, \"new_y\": 3, \"new_a\": 3, \"stone_ID\": 2, \"t\": 1, \"x\": 4, \"y\": 3}, {\"type\": \"spatial_move\", \"new_x\": 5, \"new_y\": 3, \"new_a\": 0, \"stone_ID\": 3, \"t\": 1, \"x\": 5, \"y\": 3}]"
         },
         {
-            "A": "12:spatial_move:A:0:(2,1,2):None:None:1:2:1;13:spatial_move:A:1:(2,2,4):None:None:2:4:1",
-            "B": "14:spatial_move:B:2:(2,4,2):None:None:4:2:0;15:spatial_move:B:3:(2,5,2):None:None:4:2:3"
+            "A": "[{\"type\": \"spatial_move\", \"new_x\": 1, \"new_y\": 2, \"new_a\": 0, \"stone_ID\": 0, \"t\": 2, \"x\": 1, \"y\": 2}, {\"type\": \"spatial_move\", \"new_x\": 2, \"new_y\": 3, \"new_a\": 1, \"stone_ID\": 1, \"t\": 2, \"x\": 2, \"y\": 3}]",
+            "B": "[{\"type\": \"spatial_move\", \"new_x\": 4, \"new_y\": 3, \"new_a\": 3, \"stone_ID\": 2, \"t\": 2, \"x\": 4, \"y\": 3}, {\"type\": \"spatial_move\", \"new_x\": 5, \"new_y\": 3, \"new_a\": 0, \"stone_ID\": 3, \"t\": 2, \"x\": 5, \"y\": 3}]"
         },
         {
-            "A": "16:attack:A:0:(3,1,2):None:None:;17:spatial_move:A:1:(3,2,4):None:None:3:4:0",
-            "B": "18:spatial_move:B:2:(3,3,2):None:None:3:1:3;19:spatial_move:B:3:(3,4,2):None:None:3:2:3"
+            "A": "[{\"type\": \"spatial_move\", \"new_x\": 1, \"new_y\": 2, \"new_a\": 0, \"stone_ID\": 0, \"t\": 3, \"x\": 1, \"y\": 2}, {\"type\": \"spatial_move\", \"new_x\": 2, \"new_y\": 3, \"new_a\": 1, \"stone_ID\": 1, \"t\": 3, \"x\": 2, \"y\": 3}]",
+            "B": "[{\"type\": \"spatial_move\", \"new_x\": 4, \"new_y\": 3, \"new_a\": 3, \"stone_ID\": 2, \"t\": 3, \"x\": 4, \"y\": 3}, {\"type\": \"spatial_move\", \"new_x\": 5, \"new_y\": 3, \"new_a\": 0, \"stone_ID\": 3, \"t\": 3, \"x\": 5, \"y\": 3}]"
         },
         {
-            "A": "20:spatial_move:A:0:(4,1,2):None:None:1:2:1;21:spatial_move:A:1:(4,3,4):None:None:3:5:3",
-            "B": "22:spatial_move:B:2:(4,3,1):None:None:2:1:3"
+            "A": "[{\"type\": \"spatial_move\", \"new_x\": 1, \"new_y\": 2, \"new_a\": 0, \"stone_ID\": 0, \"t\": 4, \"x\": 1, \"y\": 2}, {\"type\": \"spatial_move\", \"new_x\": 2, \"new_y\": 3, \"new_a\": 1, \"stone_ID\": 1, \"t\": 4, \"x\": 2, \"y\": 3}]",
+            "B": "[{\"type\": \"spatial_move\", \"new_x\": 4, \"new_y\": 3, \"new_a\": 3, \"stone_ID\": 2, \"t\": 4, \"x\": 4, \"y\": 3}, {\"type\": \"spatial_move\", \"new_x\": 5, \"new_y\": 2, \"new_a\": 0, \"stone_ID\": 3, \"t\": 4, \"x\": 5, \"y\": 3}]"
         },
         {
-            "A": "23:time_jump_in:A:4:(-1,3,5):None:24:tank:3;24:time_jump_out:A:1:(5,3,5):23:None:(-1,3,5)",
-            "B": "25:time_jump_in:B:5:(2,2,1):None:26:tank:3;26:time_jump_out:B:2:(5,2,1):25:None:(2,2,1)"
+            "B": "[{\"type\": \"timejump\", \"new_t\": 3, \"new_x\": 5, \"new_y\": 2, \"new_a\": 0, \"stone_ID\": 3, \"t\": 5, \"x\": 5, \"y\": 2}]",
+            "A": "[{\"type\": \"timejump\", \"new_t\": 0, \"new_x\": 1, \"new_y\": 2, \"new_a\": 0, \"stone_ID\": 0, \"t\": 5, \"x\": 1, \"y\": 2}]"
         },
         {
-            "A": "27:spatial_move:A:4:(0,3,5):None:None:2:5:0",
-            "B": ""
+            "A": "[{\"type\": \"spatial_move\", \"new_x\": 1, \"new_y\": 3, \"new_a\": 0, \"stone_ID\": 5, \"t\": 0, \"x\": 1, \"y\": 2}]",
+            "B": "[]"
         },
         {
-            "B": ""
+            "A": "[{\"type\": \"spatial_move\", \"new_x\": 1, \"new_y\": 5, \"new_a\": 1, \"stone_ID\": 0, \"t\": 1, \"x\": 1, \"y\": 4}, {\"type\": \"spatial_move\", \"new_x\": 1, \"new_y\": 2, \"new_a\": 0, \"stone_ID\": 5, \"t\": 1, \"x\": 1, \"y\": 3}]",
+            "B": "[]"
+        },
+        {
+            "A": "[{\"type\": \"spatial_move\", \"new_x\": 2, \"new_y\": 5, \"new_a\": 1, \"stone_ID\": 0, \"t\": 2, \"x\": 1, \"y\": 5}, {\"type\": \"spatial_move\", \"new_x\": 1, \"new_y\": 2, \"new_a\": 0, \"stone_ID\": 5, \"t\": 2, \"x\": 1, \"y\": 2}]",
+            "B": "[]"
+        },
+        {
+            "A": "[{\"type\": \"spatial_move\", \"new_x\": 3, \"new_y\": 5, \"new_a\": 1, \"stone_ID\": 0, \"t\": 3, \"x\": 2, \"y\": 5}, {\"type\": \"spatial_move\", \"new_x\": 1, \"new_y\": 2, \"new_a\": 0, \"stone_ID\": 5, \"t\": 3, \"x\": 1, \"y\": 2}]",
+            "B": "[{\"type\": \"spatial_move\", \"new_x\": 5, \"new_y\": 2, \"new_a\": 3, \"stone_ID\": 4, \"t\": 3, \"x\": 5, \"y\": 2}]"
+        },
+        {
+            "B": "[{\"type\": \"spatial_move\", \"new_x\": 4, \"new_y\": 2, \"new_a\": 3, \"stone_ID\": 4, \"t\": 4, \"x\": 5, \"y\": 2}]",
+            "A": "[{\"type\": \"spatial_move\", \"new_x\": 4, \"new_y\": 5, \"new_a\": 0, \"stone_ID\": 0, \"t\": 4, \"x\": 3, \"y\": 5}, {\"type\": \"attack\", \"stone_ID\": 5, \"t\": 4, \"x\": 1, \"y\": 2}]"
+        },
+        {
+            "A": "[{\"type\": \"timejump\", \"new_t\": 1, \"new_x\": 4, \"new_y\": 5, \"new_a\": 0, \"stone_ID\": 0, \"t\": 5, \"x\": 4, \"y\": 5}, {\"type\": \"timejump\", \"new_t\": 0, \"new_x\": 1, \"new_y\": 2, \"new_a\": 0, \"adopted_stone_ID\": 5, \"stone_ID\": 5, \"t\": 5, \"x\": 1, \"y\": 2}]",
+            "B": "[{\"type\": \"timejump\", \"new_t\": 1, \"new_x\": 4, \"new_y\": 3, \"new_a\": 3, \"stone_ID\": 2, \"t\": 5, \"x\": 4, \"y\": 3}]"
+        },
+        {
+            "B": "[]",
+            "A": "[]"
+        },
+        {
+            "B": "[]",
+            "A": "[{\"type\": \"spatial_move\", \"new_x\": 4, \"new_y\": 5, \"new_a\": 0, \"stone_ID\": 6, \"t\": 1, \"x\": 4, \"y\": 5}]"
+        },
+        {
+            "A": "[{\"type\": \"attack\", \"stone_ID\": 6, \"t\": 2, \"x\": 4, \"y\": 5}]",
+            "B": "[]"
+        },
+        {
+            "A": "[{\"type\": \"spatial_move\", \"new_x\": 4, \"new_y\": 5, \"new_a\": 1, \"stone_ID\": 6, \"t\": 3, \"x\": 4, \"y\": 5}]",
+            "B": "[]"
+        },
+        {
+            "A": "[{\"type\": \"spatial_move\", \"new_x\": 5, \"new_y\": 5, \"new_a\": 0, \"stone_ID\": 6, \"t\": 4, \"x\": 4, \"y\": 5}]",
+            "B": "[]"
+        },
+        {
+            "A": "[]",
+            "B": "[]"
+        },
+        {
+            "B": "[]",
+            "A": "[]"
+        },
+        {
+            "B": "[]",
+            "A": "[]"
+        },
+        {
+            "B": "[]",
+            "A": "[]"
+        },
+        {
+            "B": "[]",
+            "A": "[]"
+        },
+        {
+            "B": "[]",
+            "A": "[]"
+        },
+        {
+            "B": "[{\"type\": \"timejump\", \"new_t\": 1, \"new_x\": 4, \"new_y\": 2, \"new_a\": 3, \"stone_ID\": 4, \"t\": 5, \"x\": 4, \"y\": 2}]",
+            "A": "[{\"type\": \"timejump\", \"new_t\": 3, \"new_x\": 5, \"new_y\": 5, \"new_a\": 0, \"stone_ID\": 6, \"t\": 5, \"x\": 5, \"y\": 5}]"
+        },
+        {
+            "A": "[]",
+            "B": "[]"
+        },
+        {
+            "A": "[]",
+            "B": "[{\"type\": \"attack\", \"stone_ID\": 8, \"t\": 1, \"x\": 4, \"y\": 2}]"
+        },
+        {
+            "B": "[{\"type\": \"spatial_move\", \"new_x\": 3, \"new_y\": 2, \"new_a\": 3, \"stone_ID\": 8, \"t\": 2, \"x\": 4, \"y\": 2}]",
+            "A": "[]"
+        },
+        {
+            "B": "[{\"type\": \"spatial_move\", \"new_x\": 3, \"new_y\": 2, \"new_a\": 3, \"stone_ID\": 8, \"t\": 3, \"x\": 3, \"y\": 2}]",
+            "A": "[{\"type\": \"spatial_move\", \"new_x\": 5, \"new_y\": 4, \"new_a\": 0, \"stone_ID\": 9, \"t\": 3, \"x\": 5, \"y\": 5}]"
+        },
+        {
+            "A": "[{\"type\": \"attack\", \"stone_ID\": 9, \"t\": 4, \"x\": 5, \"y\": 4}]",
+            "B": "[{\"type\": \"spatial_move\", \"new_x\": 3, \"new_y\": 2, \"new_a\": 3, \"stone_ID\": 8, \"t\": 4, \"x\": 3, \"y\": 2}]"
+        },
+        {
+            "B": "[]",
+            "A": "[]"
+        },
+        {
+            "A": "[]",
+            "B": "[]"
+        },
+        {
+            "A": "[]",
+            "B": "[]"
+        },
+        {
+            "A": "[]",
+            "B": "[]"
+        },
+        {
+            "A": "[]",
+            "B": "[]"
+        },
+        {
+            "A": "[]",
+            "B": "[]"
         }
     ]
 }
