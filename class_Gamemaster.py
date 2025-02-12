@@ -930,91 +930,6 @@ class Gamemaster():
 
     # --------------------- Temporal conflict resolution
 
-    def OLD_resolve_causal_consistency(self, for_which_round = None):
-        # The wrapper for causal consistency methods
-        # for_which_round: This method returns a Scenario instance
-
-        # Returns a dict = {"setup_AM" : {setup activity map}, "effect_AM" : {effect activity map}}
-        result_activity_map = {"setup_AM" : {}, "effect_AM" : {}}
-        result_causality_trackers = {
-                "effect_cause_map" : {},
-                "stone_inheritance" : {}
-            }
-        result_scenario = Scenario({}, {}, {}, {})
-
-        if for_which_round is None:
-            # Default: for the next round
-            current_round, _ = self.round_from_turn(self.current_turn_index)
-            for_which_round = current_round + 1
-
-        if for_which_round == 0:
-            # Return the all-setup map
-            for setup_flag_ID in self.setup_stones.values():
-                result_scenario.setup_activity_map[setup_flag_ID] = True
-            return(result_scenario)
-
-        # NOTE: This means once we call this method for round n, we cannot call it for an earlier round later!
-        active_setup_stones = []#list(self.setup_stones.keys())
-        for setup_stone_ID, setup_flag_ID in self.setup_stones.items():
-            if self.flags[setup_flag_ID].is_active:
-                active_setup_stones.append(setup_stone_ID)
-            else:
-                result_scenario.setup_activity_map[setup_flag_ID] = False
-        # NOTE populating this list depends on the Ruleset
-
-        # Order setup stones by a deterministic criterion from least prioritised to most prioritised
-
-        # The ordering cannot be added on the TUI but this is how it's gonna work:
-        # Every time a player selects a setup stone and adds a flag to it, it floats down to
-        # the end of the ordered list. Hence, after a turn, the stones are ordered from
-        # first-commanded (least priority to keep) to last-commanded (biggest priority to keep).
-        # The philosophy is: "The more recently you've touched a stone, the bigger the chance
-        # it will survive a paradox."
-        # Naturally, stones which become causally locked are not touched and become low priority,
-        # and hence will be removed first.
-        ordered_setup_stones = active_setup_stones #TODO
-
-        for number_of_deactivations in range(len(active_setup_stones) + 1):
-            activity_maps = ordered_switch_flips(len(active_setup_stones), number_of_deactivations) # True means deactivate
-            for activity_map in activity_maps:
-                # We set active add_stone flags according to current activity map
-                for i in range(len(active_setup_stones)):
-                    #self.flags[self.setup_stones[ordered_setup_stones[i]]].is_active = not activity_map[i]
-                    self.set_flag_activity(self.setup_stones[ordered_setup_stones[i]], not activity_map[i])
-
-                # We find all causally consistent scenarios for this activity map
-                # For round x, we ignore flags added in round x - 1, and thus max_included_round = x - 2
-                causally_consistent_scenario = self.find_causally_consistent_scenarios(max_included_round = for_which_round - 2)
-                if causally_consistent_scenario is None:
-                    continue # Paradox
-                else:
-                    # We commit to the canonical scenario
-                    effect_activity_map, causality_trackers = causally_consistent_scenario
-                    result_scenario.effect_activity_map = effect_activity_map
-                    result_scenario.effect_cause_map = causality_trackers["effect_cause_map"]
-                    result_scenario.stone_inheritance = causality_trackers["stone_inheritance"]
-
-                    # We add all the causes added in the last round, with their causes being the initial causes
-                    for effect_ID in self.effects_by_round[for_which_round - 1]:
-                        result_scenario.effect_activity_map[effect_ID] = True
-                        result_scenario.effect_cause_map[effect_ID] = self.flags[effect_ID].initial_cause
-                        if self.flags[self.flags[effect_ID].initial_cause].flag_type == "time_jump_out":
-                            result_scenario.stone_inheritance[self.flags[self.flags[effect_ID].initial_cause].stone_ID] = self.flags[effect_ID].stone_ID
-
-                    for i in range(len(activity_map)):
-                        if activity_map[i]:
-                            self.removed_setup_stones[ordered_setup_stones[i]] = self.setup_stones[ordered_setup_stones[i]]
-                        result_scenario.setup_activity_map[self.setup_stones[ordered_setup_stones[i]]] = not activity_map[i]
-
-                    return(result_scenario)
-
-        # If we get to this point, something has gone terribly wrong, as not even
-        # the removal of all stones yielded a causally consistent scenario
-
-        # This should theoretically never occur, as deactivating all add_stone flags
-        # AND all TJIs should result in a completely empty board, which is always causally consistent.
-        return(Message("exception", "Unable to find a causally consistent scenario."))
-
     def resolve_causal_consistency(self, for_which_round = None):
         # The wrapper for causal consistency methods
         # for_which_round: This method returns a Scenario instance
@@ -1337,85 +1252,6 @@ class Gamemaster():
             if (not self.flags[effect_ID].is_active) and current_causality_trackers["effect_load"][effect_ID] != 0:
                 return(None)
         return(current_causality_trackers)
-
-    def find_causally_consistent_scenarios(self, max_included_round = None):
-        # takes the internal causality surjection and returns the top priority
-        # activity map {effect ID : is active?} which is causally consistent.
-        # Returns None if pdx, (effect activity map, trackers) otherwise
-
-        # A causally consistent scenario is one such that
-        #   -For every in-active effect, no stone reaches any corresponding cause
-        #   -For every active effect, exactly one stone reaches a corresponding cause
-
-        reference_effect_ID_list = []
-        if max_included_round is None:
-            # Default: all but the last round
-            current_round, _ = self.round_from_turn(self.current_turn_index)
-            max_included_round = current_round - 1
-
-        empty_causality_trackers = {
-                    "effect_load" : {},
-                    "effect_cause_map" : {},
-                    "stone_inheritance" : {}
-                }
-        if max_included_round < 0:
-            # No included rounds means trivial activity map
-            return({}, empty_causality_trackers)
-
-        """for t_i in range(1, self.t_dim * (for_which_round - 1) + 1):
-            for move_flag_IDs in self.flags_by_turn[t_i].values():
-                for move_flag_ID in move_flag_IDs:
-                    if self.flags[move_flag_ID].flag_type == "time_jump_in":
-                        reference_TJI_ID_list.append(move_flag_ID)"""
-        for round_number in range(max_included_round + 1):
-            reference_effect_ID_list += self.effects_by_round[round_number]
-
-
-        # We now do an ordering according to the Ruleset. First element = lowest priority.
-        ordered_effect_flags = reference_effect_ID_list
-
-        number_of_effects = len(ordered_effect_flags)
-        if number_of_effects == 0:
-            return({}, empty_causality_trackers) # The only possible scenario is also, by design, causally consistent
-
-        activity_map = [True] * number_of_effects
-
-        # TODO: make the ordering algorithm depend on Ruleset :)
-
-        for n in range(int(np.power(2, number_of_effects))):
-            # first, prepare the moves
-            how_many_causes_required = {}
-            for i in range(number_of_effects):
-                # We set the is_active argument according to the activity map
-                self.set_flag_activity(ordered_effect_flags[i], activity_map[i])
-                if activity_map[i] == True:
-                    how_many_causes_required[ordered_effect_flags[i]] = 1
-                if activity_map[i] == False:
-                    how_many_causes_required[ordered_effect_flags[i]] = 0
-            # execute them
-            # include the buffer round, but ignore the buffer effects
-            current_causality_trackers = self.execute_moves(read_causality_trackers = True, max_turn_index = self.t_dim * (max_included_round + 2), ignore_buffer_effects = True)
-            # Now we just compare self.effect_load to how_many_causes_required
-            is_scenario_causally_consistent = True
-            for effect_ID in ordered_effect_flags:
-                if how_many_causes_required[effect_ID] != current_causality_trackers["effect_load"][effect_ID]:
-                    is_scenario_causally_consistent = False
-                    break
-            if is_scenario_causally_consistent:
-                causally_consistent_scenario = {}
-                for i in range(number_of_effects):
-                    causally_consistent_scenario[ordered_effect_flags[i]] = activity_map[i]
-                return(causally_consistent_scenario, current_causality_trackers)
-
-            # find the next activity map
-            for i in range(number_of_effects):
-                if activity_map[i] == True:
-                    activity_map[i] = False
-                    break
-                else:
-                    activity_map[i] = True
-        # A paradox has been reached
-        return(None)
 
     # ---------------------------- Flag execution -----------------------------
     # This function cleans the board and realises its evolution across t_dim
@@ -2022,7 +1858,7 @@ class Gamemaster():
                     # self.new_dynamic_representation, since they are copied
                     # there automatically for every new game on creation.
                 elif cur_char in constants.base_representations.keys():
-                    setup_commands.append({"type" : "add_base", "faction" : constants.base_representations[cur_char], "x" : y, "y" : y})
+                    setup_commands.append({"type" : "add_base", "faction" : constants.base_representations[cur_char], "x" : x, "y" : y})
                 else:
                     self.board_static[x][y] = cur_char
 
@@ -2047,6 +1883,10 @@ class Gamemaster():
         # Calculate TUI parameters for printing
         self.single_board_width = self.x_dim * 2 + len(str(self.y_dim - 1))
         self.header_width = self.single_board_width * self.t_dim + len(self.board_delim) * (self.t_dim - 1)
+
+        # We save the setup scenario
+        round_canon_scenario = self.resolve_causal_consistency(for_which_round = 0)
+        self.scenarios_by_round = [round_canon_scenario]
 
         # First turn next
         self.current_turn_index = 1
