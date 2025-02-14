@@ -1,6 +1,7 @@
-2
-XXXXXX
-X  L X
-X T  X
-X    X
-XXXXXX
+5
+XXXXXXX
+X     X
+X YL  X
+X     X
+X     X
+XXXXXXX

@@ -117,7 +117,7 @@ Notice the order of these rules. We see that sokoban pushes only happen to stone
 
 Note that, unlike the 'Sokoban push' rule, the second rule 'impasse' does chain. Thus, if multiple moving stones form a 'promenade', each moving onto the previous stone's square of origin, a single 'impasse' event at the front blocks all of this movement, halting the promenade.
 
-The third rule specifically addresses situations which arise from placing stones into a time-slice, specifically through time-jumps-in. If a stone at time t-1 chooses to wait and is present on the same square at time t, and another stone time-jumps-in onto the same square at time t, both of these stones are removed. This is treated as two deaths (presumably via an unsightly explosion). This means that time-jumps-in may override Sokoban pushes by creating an additional impasse (see example in Fig. 2)
+The fourth rule specifically addresses situations which arise from placing stones into a time-slice, specifically through time-jumps-in. If a stone at time t-1 chooses to wait and is present on the same square at time t, and another stone time-jumps-in onto the same square at time t, both of these stones are removed. This is treated as two deaths (presumably via an unsightly explosion). This means that time-jumps-in may override Sokoban pushes by creating an additional impasse (see example in Fig. 2)
 
             Round 1                         Round 2
     -----------------------         -----------------------

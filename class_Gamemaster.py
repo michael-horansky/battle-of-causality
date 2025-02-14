@@ -543,6 +543,8 @@ class Gamemaster():
     def did_player_finish_turn(self, player, turn_index):
         # If there are causally free stones in the active timeslice for which no flags exist,
         # the player still hasn't finished their turn.
+        # The exception is the final time-slice, where stones may be left causally free.
+        # See the "comb rule" in the Rulebook.
 
         # TODO: not true! In the final timeslice, we can pass on stones and
         # leave them causally free for the next round, yet our turn ends.

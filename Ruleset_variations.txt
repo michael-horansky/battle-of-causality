@@ -2,7 +2,7 @@ The first option is always the default one.
 
 1. [paradox_action] Reaching a paradox results in:
      a) [permanent_removal] 'Auditors of Reality': Variations of deactivating stones on setup are tried in a specific order (prioritizing an arbitrary ordering, see below) until a causally-consistent scenario is possible. Setup stones deactivated this way stay deactivated for the rest of the game, even if, in future canonizations, their reoccurence would be causally consistent.
-     b) [temporary_removal] 'Vacation in Time': Same as 'Auditors of reality', except the stones are not removed permanently and their re-activation is considered in every canonization.
+     b) [temporary_removal] 'Hulot's Holiday': Same as 'Auditors of reality', except the stones are not removed permanently and their re-activation is considered in every canonization.
      c) [game_end] 'Know your paradoxes!': A paradox immediately ends the game!
 
 2. [end_without_win] If the game ends with no players satisfying the primary win condition,
@@ -18,7 +18,7 @@ The first option is always the default one.
      a) [all_setup_activity_recency] 'Out with the Old': Keeping effects added more recently active is prioritized.
      b) [all_setup_conserve_effects] 'Conservative': 1. Bigger number of active effects is prioritized; 2. Keeping effects added more recently active is prioritized.
 
-4. [viewing_scope] At a given turn, can the players view what the succeeding time-slices look like, including the placed causally free stones?
+4. [viewing_scope] On a given turn, can the players view what the succeeding time-slices look like, including the placed causally free stones?
      a) [view_entire_board] 'Omniscience': The players can view the entire board
      b) [hide_future] 'Fog of War': The players can only view time-slices up to and including the active one. This means they cannot see the time-jumps-in placed by the opponent in the previous round, and they will get surprised by them as they activate.
      Note: we cannot do the hybrid where a player can see the time evolution of their stones across the entire board, but cannot yet see non-active causally free stones, since due to the rule of dogma, buffered time-jumps-in were already canonised, and they could destroy the player's stone on placement, giving away the progenition.

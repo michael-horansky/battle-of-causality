@@ -13,7 +13,7 @@ precede | Occur in a time-slice with time smaller than
 ante-effect | An effect that precedes its cause on the time-axis. | retro-cause
 retro-cause | A cause that occurs after its effect on the time-axis. We say that a retro-cause is \textit{activated} if it is executed by its corresponding stone at its position in some specific scenario. | ante-effect
 time-jump | The act of jumping back in time. For every stone, there will be opportunity to make a time-jump and re-join the game in the next round, when the earlier time-slices become available to place flags in once again.
-interference | The act of obstructing the trajectory of a stone established in previous rounds. This makes the stone causally free again, but can also prevent it from activating its associated retro-cases.
+interference | The act of obstructing the trajectory of a stone established in previous rounds. This makes the stone causally free again, but can also prevent it from activating its associated retro-causes.
 swap | To swap an ante-effect means to add a new retro-cause to it, which can prevent its deactivation during subsequent canonisations, but can also result in a paradox if the number of retro-causes becomes too big. | paradox
 
 progenitor | A progenitor is a flag which, when active, places a new stone onto its associated position. Progenitors are unique in the way that they are associated with a specific stone, but do not require the presence of that stone at their position to be activated--rather, when activated, they place the stone themselves.
@@ -21,14 +21,16 @@ setup | A set of progenitors which place stones on the board in the first time-s
 
 turn | Every round is divided into a number of turns equal to the time cap. Each turn corresponds to one time-slice (the \textbf{active} time-slice), and in each turn every player places down flags for their causally free stones in that time-slice. | round, active
 round | The progress of the game occurs in rounds. In each round, players command their stones for every time-slice with increasing time, and after reaching the end, the round is canonised. | turn, canonisation
+comb rule | The comb rule states that for each turn there may be no causally free stones in time-slices preceding the active time-slice. Therefore, for all but the final time-slice each player must command all of their causally free stones.
 
 causally consistent | Not resulting in a paradox. | scenario, paradox
 paradox | A scenario such that if we evolve the board along the time axis, there will either be active ante-effects which have zero or multiple activated retro-causes, or activated retro-causes which correspond to an inactive ante-effect.
 scenario | A scenario for a given round specifies which ante-effects placed in all the previous round are active and which are passive in that round, and which setup placements are omitted. | activity, setup
 priority | Every scenario has a priority. If two or more scenarios are causally consistent for a round, the one with highest priority is canonised. | scenario, canonisation
 canonisation | At the end of each round, the highest-priority causally consistent scenario is selected for the next round based on the flags placed so far, omitting ante-effects placed in the round which just ended. | causally consistent
+recency | A property of ante-effects and stones, determined depending on the specific ruleset (see Sec. \ref{sec:ruleset variations}). Stones and ante-effects with higher recency are more likely to be preserved during canonisation if two or more causally consistent scenarios are possible.
 
-conflicting | Not adhering to the rules which specify what the board can and cannot look like. Typically, the movement of stones in each turn sends them into conflicting positions, which are subsequently resolved by the game to find the canon state of the next time-slice. | canon
+conflicting | Not adhering to the rules which specify what the board can and cannot look like. Typically, the movement of stones in each turn sends them into conflicting positions, which are subsequently resolved by the game to find the canonical state of the next time-slice. | canon
 canon | The canon of the board is its evolution throughout the turns of the game. Even though time may go back, turns always progress forward, and once the state of the board for a specific turn has been determined, it cannot change again--we say it is canonical. A canonical state cannot be conflicting. | conflicting
 dogma | A flag is said to be dogmatic in a specific round if it is set as active in the round's scenario due to a special rule (the \hyperref[sec:rule of dogma]{rule of dogma}), not because it was set as active due to the selection of a high-priority causally consistent scenario. | rule of dogma
 rule of dogma | All ante-effects placed in this round are dogmatic in the next round. | dogma
@@ -43,5 +45,5 @@ unopposable | If a stone is unopposable, then it essentially jumps over other st
 azimuth | The orientation of an orientable stone, which can be up (negative $y$ direction), right (positive $x$ direction), down (positive $y$ direction), or left (negative $x$ direction). | orientable
 
 stone | A stone is a unit which belongs to a player and is commanded by them, or is neutral (for example a box or a mine). The term \textbf{stone} implies continuity across time-slices but not across time-jumps. In other words, if a stone is placed on the board in the first time-slice and then makes a series of spatial moves, which propagate it into the final time-slice, we say it is still the same stone; however, if that stone then jumps back in time into the first time-slice, we say that the stone placed in the first time-slice is another, new stone. | worldline
-worldline | A worldline is a collection of trajectories belonging to a sequence of stones where each stone ends their trajectory by a time-jump which creates the next stone. Unlike the total number of stones on the board, the total number of worldlines is limited for the entire game by the number of stones placed on setup. A worldline can change its structure as the game progresses, by interference and swapping. | trajectory, swap
+worldline | A worldline is a collection of trajectories belonging to a sequence of stones where each stone ends their trajectory by a time-jump which creates the next stone. A worldline can change its structure as the game progresses, by interference and swapping. | trajectory, swap
 trajectory | The set of positions along the time axis of a stone from the time when it was placed on the board until the time it was removed from the board, or became causally free.

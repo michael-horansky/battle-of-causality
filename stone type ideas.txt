@@ -34,6 +34,10 @@
 -Friendly fire off, but the Tagger itself cannot be affected by tagscreens (not even by other Taggers) (NOTE: maybe not? so that there's a pressure for him to escape)
 -Can only time jump like a horsey
 
+NOTE: Ideas for other effects of the tagscreen in case timejump blocking is not fun:
+    a) Teleports all stones forward
+    b) Support function: the tagscreen serves as a "free interference", setting the flag_ID_max for tagged stones to current round, so they become causally free again.
+
 
 # WILDCARD
 -Moves in 8 directions by 1 horizontally, vertically, or diagonally
