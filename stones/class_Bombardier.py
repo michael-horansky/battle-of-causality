@@ -186,7 +186,7 @@ class Bombardier(Stone):
     # These methods only read the state of gm, and always return
     # Message("board action", STPos)
 
-    def attack(self, gm, t, attack_args):
+    def attack(self, gm, attack_flag_ID, t):
         # This stone doesn't have an attack action; instead, the 'attack' cmd
         # places a bomb effect flag, as resolved in self.parse_move_cdm()
         # The attack flag is placed as a cause tracker.

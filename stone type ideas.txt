@@ -38,6 +38,8 @@ NOTE: Ideas for other effects of the tagscreen in case timejump blocking is not 
     a) Teleports all stones forward
     b) Support function: the tagscreen serves as a "free interference", setting the flag_ID_max for tagged stones to current round, so they become causally free again.
 
+NOTE: idea for movement: to make interference easier, how about the tagger has a "wait"-like movement option which makes it unpushable? or maybe some other stone?
+
 
 # WILDCARD
 -Moves in 8 directions by 1 horizontally, vertically, or diagonally

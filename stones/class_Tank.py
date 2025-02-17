@@ -210,7 +210,7 @@ class Tank(Stone):
     # These methods only read the state of gm, and always return
     # Message("board action", STPos)
 
-    def attack(self, gm, t, attack_args):
+    def attack(self, gm, attack_flag_ID, t):
         cur_x, cur_y, cur_a = self.history[t]
 
         los_pos = STPos(t, cur_x, cur_y)

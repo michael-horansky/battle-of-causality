@@ -1,56 +1,21 @@
 {
     "static_data": [
-        9,
-        9,
-        11,
-        "XXXXXXXXXX       XX       XXXX   XXXX X   X XX       XX X   X XXXX   XXXX       XX       XXXXXXXXXX"
+        5,
+        8,
+        8,
+        "XXXXXXXXX      XX      XX      XX      XX      XX      XXXXXXXXX"
     ],
     "dynamic_data": [
         {
-            "GM": "[{\"type\": \"add_base\", \"faction\": \"neutral\", \"x\": 7, \"y\": 1}, {\"type\": \"add_stone\", \"faction\": \"A\", \"stone_type\": \"tank\", \"x\": 1, \"y\": 2, \"a\": 1}, {\"type\": \"add_stone\", \"faction\": \"A\", \"stone_type\": \"tank\", \"x\": 2, \"y\": 2, \"a\": 1}, {\"type\": \"add_stone\", \"faction\": \"A\", \"stone_type\": \"bombardier\", \"x\": 2, \"y\": 5, \"a\": 1}, {\"type\": \"add_stone\", \"faction\": \"B\", \"stone_type\": \"bombardier\", \"x\": 6, \"y\": 5, \"a\": 3}, {\"type\": \"add_stone\", \"faction\": \"B\", \"stone_type\": \"tank\", \"x\": 6, \"y\": 8, \"a\": 3}, {\"type\": \"add_stone\", \"faction\": \"B\", \"stone_type\": \"tank\", \"x\": 7, \"y\": 8, \"a\": 3}, {\"type\": \"add_base\", \"faction\": \"neutral\", \"x\": 1, \"y\": 9}]"
+            "GM": "[{\"type\": \"add_stone\", \"faction\": \"A\", \"stone_type\": \"tagger\", \"x\": 2, \"y\": 3, \"a\": 1}, {\"type\": \"add_stone\", \"faction\": \"A\", \"stone_type\": \"tank\", \"x\": 2, \"y\": 4, \"a\": 1}, {\"type\": \"add_stone\", \"faction\": \"B\", \"stone_type\": \"tank\", \"x\": 5, \"y\": 4, \"a\": 3}]"
         },
         {
-            "A": "[{\"type\": \"spatial_move\", \"new_x\": 2, \"new_y\": 2, \"new_a\": 1, \"stone_ID\": 0, \"t\": 0, \"x\": 1, \"y\": 2}, {\"type\": \"spatial_move\", \"new_x\": 2, \"new_y\": 2, \"new_a\": 1, \"stone_ID\": 1, \"t\": 0, \"x\": 2, \"y\": 2}, {\"type\": \"spatial_move\", \"new_x\": 2, \"new_y\": 5, \"new_a\": 1, \"stone_ID\": 2, \"t\": 0, \"x\": 2, \"y\": 5}]",
-            "B": "[{\"type\": \"spatial_move\", \"new_x\": 6, \"new_y\": 5, \"new_a\": 3, \"stone_ID\": 3, \"t\": 0, \"x\": 6, \"y\": 5}, {\"type\": \"spatial_move\", \"new_x\": 6, \"new_y\": 8, \"new_a\": 3, \"stone_ID\": 4, \"t\": 0, \"x\": 6, \"y\": 8}, {\"type\": \"spatial_move\", \"new_x\": 7, \"new_y\": 8, \"new_a\": 3, \"stone_ID\": 5, \"t\": 0, \"x\": 7, \"y\": 8}]"
-        },
-        {
-            "A": "[{\"type\": \"spatial_move\", \"new_x\": 2, \"new_y\": 2, \"new_a\": 1, \"stone_ID\": 0, \"t\": 1, \"x\": 2, \"y\": 2}, {\"type\": \"spatial_move\", \"new_x\": 3, \"new_y\": 2, \"new_a\": 1, \"stone_ID\": 1, \"t\": 1, \"x\": 3, \"y\": 2}, {\"type\": \"spatial_move\", \"new_x\": 2, \"new_y\": 5, \"new_a\": 1, \"stone_ID\": 2, \"t\": 1, \"x\": 2, \"y\": 5}]",
-            "B": "[{\"type\": \"spatial_move\", \"new_x\": 6, \"new_y\": 5, \"new_a\": 3, \"stone_ID\": 3, \"t\": 1, \"x\": 6, \"y\": 5}, {\"type\": \"spatial_move\", \"new_x\": 6, \"new_y\": 8, \"new_a\": 3, \"stone_ID\": 4, \"t\": 1, \"x\": 6, \"y\": 8}, {\"type\": \"spatial_move\", \"new_x\": 7, \"new_y\": 8, \"new_a\": 3, \"stone_ID\": 5, \"t\": 1, \"x\": 7, \"y\": 8}]"
-        },
-        {
-            "A": "[{\"type\": \"spatial_move\", \"new_x\": 2, \"new_y\": 2, \"new_a\": 1, \"stone_ID\": 0, \"t\": 2, \"x\": 2, \"y\": 2}, {\"type\": \"spatial_move\", \"new_x\": 3, \"new_y\": 2, \"new_a\": 1, \"stone_ID\": 1, \"t\": 2, \"x\": 3, \"y\": 2}, {\"type\": \"spatial_move\", \"new_x\": 2, \"new_y\": 5, \"new_a\": 1, \"stone_ID\": 2, \"t\": 2, \"x\": 2, \"y\": 5}]",
-            "B": "[{\"type\": \"spatial_move\", \"new_x\": 6, \"new_y\": 5, \"new_a\": 3, \"stone_ID\": 3, \"t\": 2, \"x\": 6, \"y\": 5}, {\"type\": \"spatial_move\", \"new_x\": 6, \"new_y\": 8, \"new_a\": 3, \"stone_ID\": 4, \"t\": 2, \"x\": 6, \"y\": 8}, {\"type\": \"spatial_move\", \"new_x\": 7, \"new_y\": 8, \"new_a\": 3, \"stone_ID\": 5, \"t\": 2, \"x\": 7, \"y\": 8}]"
-        },
-        {
-            "A": "[{\"type\": \"spatial_move\", \"new_x\": 2, \"new_y\": 2, \"new_a\": 1, \"stone_ID\": 0, \"t\": 3, \"x\": 2, \"y\": 2}, {\"type\": \"spatial_move\", \"new_x\": 3, \"new_y\": 2, \"new_a\": 1, \"stone_ID\": 1, \"t\": 3, \"x\": 3, \"y\": 2}, {\"type\": \"spatial_move\", \"new_x\": 2, \"new_y\": 5, \"new_a\": 1, \"stone_ID\": 2, \"t\": 3, \"x\": 2, \"y\": 5}]",
-            "B": "[{\"type\": \"spatial_move\", \"new_x\": 6, \"new_y\": 5, \"new_a\": 3, \"stone_ID\": 3, \"t\": 3, \"x\": 6, \"y\": 5}, {\"type\": \"spatial_move\", \"new_x\": 6, \"new_y\": 8, \"new_a\": 3, \"stone_ID\": 4, \"t\": 3, \"x\": 6, \"y\": 8}, {\"type\": \"spatial_move\", \"new_x\": 7, \"new_y\": 8, \"new_a\": 3, \"stone_ID\": 5, \"t\": 3, \"x\": 7, \"y\": 8}]"
-        },
-        {
-            "A": "[{\"type\": \"spatial_move\", \"new_x\": 2, \"new_y\": 2, \"new_a\": 1, \"stone_ID\": 0, \"t\": 4, \"x\": 2, \"y\": 2}, {\"type\": \"spatial_move\", \"new_x\": 3, \"new_y\": 2, \"new_a\": 1, \"stone_ID\": 1, \"t\": 4, \"x\": 3, \"y\": 2}, {\"type\": \"spatial_move\", \"new_x\": 2, \"new_y\": 5, \"new_a\": 1, \"stone_ID\": 2, \"t\": 4, \"x\": 2, \"y\": 5}]",
-            "B": "[{\"type\": \"spatial_move\", \"new_x\": 6, \"new_y\": 5, \"new_a\": 3, \"stone_ID\": 3, \"t\": 4, \"x\": 6, \"y\": 5}, {\"type\": \"spatial_move\", \"new_x\": 6, \"new_y\": 8, \"new_a\": 3, \"stone_ID\": 4, \"t\": 4, \"x\": 6, \"y\": 8}, {\"type\": \"spatial_move\", \"new_x\": 7, \"new_y\": 8, \"new_a\": 3, \"stone_ID\": 5, \"t\": 4, \"x\": 7, \"y\": 8}]"
-        },
-        {
-            "A": "[{\"type\": \"spatial_move\", \"new_x\": 2, \"new_y\": 2, \"new_a\": 1, \"stone_ID\": 0, \"t\": 5, \"x\": 2, \"y\": 2}, {\"type\": \"spatial_move\", \"new_x\": 3, \"new_y\": 2, \"new_a\": 1, \"stone_ID\": 1, \"t\": 5, \"x\": 3, \"y\": 2}, {\"type\": \"spatial_move\", \"new_x\": 2, \"new_y\": 5, \"new_a\": 1, \"stone_ID\": 2, \"t\": 5, \"x\": 2, \"y\": 5}]",
-            "B": "[{\"type\": \"spatial_move\", \"new_x\": 6, \"new_y\": 5, \"new_a\": 3, \"stone_ID\": 3, \"t\": 5, \"x\": 6, \"y\": 5}, {\"type\": \"spatial_move\", \"new_x\": 6, \"new_y\": 8, \"new_a\": 3, \"stone_ID\": 4, \"t\": 5, \"x\": 6, \"y\": 8}, {\"type\": \"spatial_move\", \"new_x\": 7, \"new_y\": 8, \"new_a\": 3, \"stone_ID\": 5, \"t\": 5, \"x\": 7, \"y\": 8}]"
-        },
-        {
-            "A": "[{\"type\": \"spatial_move\", \"new_x\": 2, \"new_y\": 2, \"new_a\": 1, \"stone_ID\": 0, \"t\": 6, \"x\": 2, \"y\": 2}, {\"type\": \"spatial_move\", \"new_x\": 3, \"new_y\": 2, \"new_a\": 1, \"stone_ID\": 1, \"t\": 6, \"x\": 3, \"y\": 2}, {\"type\": \"spatial_move\", \"new_x\": 2, \"new_y\": 5, \"new_a\": 1, \"stone_ID\": 2, \"t\": 6, \"x\": 2, \"y\": 5}]",
-            "B": "[{\"type\": \"spatial_move\", \"new_x\": 6, \"new_y\": 5, \"new_a\": 3, \"stone_ID\": 3, \"t\": 6, \"x\": 6, \"y\": 5}, {\"type\": \"spatial_move\", \"new_x\": 6, \"new_y\": 8, \"new_a\": 3, \"stone_ID\": 4, \"t\": 6, \"x\": 6, \"y\": 8}, {\"type\": \"spatial_move\", \"new_x\": 7, \"new_y\": 8, \"new_a\": 3, \"stone_ID\": 5, \"t\": 6, \"x\": 7, \"y\": 8}]"
-        },
-        {
-            "A": "[{\"type\": \"spatial_move\", \"new_x\": 2, \"new_y\": 2, \"new_a\": 1, \"stone_ID\": 0, \"t\": 7, \"x\": 2, \"y\": 2}, {\"type\": \"spatial_move\", \"new_x\": 3, \"new_y\": 2, \"new_a\": 1, \"stone_ID\": 1, \"t\": 7, \"x\": 3, \"y\": 2}, {\"type\": \"spatial_move\", \"new_x\": 2, \"new_y\": 5, \"new_a\": 1, \"stone_ID\": 2, \"t\": 7, \"x\": 2, \"y\": 5}]",
-            "B": "[{\"type\": \"spatial_move\", \"new_x\": 6, \"new_y\": 5, \"new_a\": 3, \"stone_ID\": 3, \"t\": 7, \"x\": 6, \"y\": 5}, {\"type\": \"spatial_move\", \"new_x\": 6, \"new_y\": 8, \"new_a\": 3, \"stone_ID\": 4, \"t\": 7, \"x\": 6, \"y\": 8}, {\"type\": \"spatial_move\", \"new_x\": 7, \"new_y\": 8, \"new_a\": 3, \"stone_ID\": 5, \"t\": 7, \"x\": 7, \"y\": 8}]"
-        },
-        {
-            "A": "[{\"type\": \"timejump\", \"new_t\": 1, \"new_x\": 2, \"new_y\": 2, \"new_a\": 1, \"stone_ID\": 0, \"t\": 8, \"x\": 2, \"y\": 2}]",
-            "B": "[]"
+            "A": "[{\"type\": \"attack\", \"attack_arguments\": [\"hide\"], \"stone_ID\": 0, \"t\": 0, \"x\": 2, \"y\": 3}, {\"type\": \"spatial_move\", \"new_x\": 2, \"new_y\": 4, \"new_a\": 1, \"stone_ID\": 1, \"t\": 0, \"x\": 2, \"y\": 4}]",
+            "B": "[{\"type\": \"spatial_move\", \"new_x\": 5, \"new_y\": 4, \"new_a\": 3, \"stone_ID\": 2, \"t\": 0, \"x\": 5, \"y\": 4}]"
         },
         {
             "A": "[]",
-            "B": "[]"
-        },
-        {
-            "B": "[]"
+            "B": "[{\"type\": \"attack\", \"stone_ID\": 2, \"t\": 1, \"x\": 5, \"y\": 4}]"
         }
     ]
 }

@@ -178,7 +178,7 @@ The fourth rule specifically addresses situations which arise from placing stone
 	Naturally, the players cannot \textit{affect} the state of the board in the previous turns or round, only \textit{effect} the state of the board in the next turn, which may happen to correspond to an earlier time. This is why the game is divided into rounds: a \textbf{round} is an interval of assumed consistency, where the game allows players to time-travel as they please, and at the end of each round, \textbf{canonisation} occurs, which ensures the state of the board at the beginning of the next round is "sensible", i.e. causally consistent (see Sec. \ref{sec:canonisation}).
 	
 	\subsubsection{Canonisation}\label{sec:canonisation}
-	Canonisation occurs between every two consecutive rounds. During canonisation, all ante-effects are subject to being "turned off" or "on", setting a property of theirs called \textbf{activity}. For each round, a configuration which determines for each ante-effect placed in all \textbf{previous} rounds whether it is active or passive is called a \textbf{scenario}. Canonisation is then, in short, the process of selecting a specific scenario.
+	Canonisation occurs between every two consecutive rounds. During canonisation, all ante-effects are subject to being "turned off" or "turned on", corresponding to different values of a property of theirs called \textbf{activity}. For each round, the configuration which determines for each ante-effect placed in all \textbf{previous} rounds whether it is active or passive is called a \textbf{scenario}. Canonisation is then, in short, the process of selecting a specific scenario.
 	
 	For a scenario to be selected, it has to be \textbf{causally consistent}. This means that for every active effect there exists a cause, and every cause has an active effect. Note that for a cause to count, the corresponding flag must not only be placed on the board, but also reached and performed by its stone.
 	
@@ -200,7 +200,7 @@ The fourth rule specifically addresses situations which arise from placing stone
 \end{center}
 \end{figure}
 
-Note that swapping is not mandatory, and a stone which wishes to create a retro-cause linking to an ante-effect on a square which already has an existing ante-effect can choose to create a new ante-effect, for example if the old on will become deactivated anyway. In this sense, swapping is only useful for preserving progenitor ante-effects (namely time-jumps), so that their deactivation doesn't destroy the continuation of a long worldline which passes through them.
+Note that swapping is not mandatory, and a stone which wishes to create a retro-cause linking to an ante-effect on a square which already has an existing ante-effect can choose to create a new ante-effect, for example if the old one will become deactivated anyway. In this sense, swapping is only useful for preserving progenitor ante-effects (namely time-jumps), so that their deactivation doesn't destroy the continuation of a long worldline which passes through them.
 
 	Typically, time-jumps can always be swapped as long as the swapping stone satisfies the conditions of matching stone type, azimuth etc (see Sec. \ref{sec:timejumps}), with the only exception being given by the rule of dogma.
 	

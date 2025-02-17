@@ -16,6 +16,7 @@ from game_logic.class_Activity_map_iterator import Activity_map_iterator
 from stones.class_Stone import Stone
 from stones.class_Tank import Tank
 from stones.class_Bombardier import Bombardier
+from stones.class_Tagger import Tagger
 
 # Import game logic components
 from game_logic.class_Flag import Flag
@@ -48,11 +49,13 @@ class Gamemaster():
 
         # Actions. These are queued by waiting flags and flushed in execute_moves.
         self.stone_actions = [] # [t][stone_ID] = flag_ID which initiated action
-        self.board_actions = [] # [t][x][y]["board action"] = True or False
+        self.board_actions = [] # [t][x][y]["board action"] = [originator IDs], defaults to empty []. This is to track interference and prevent amnesia
         self.available_board_actions = [ # This is just a reference list, and should not be changed
-                "destruction",  # destroys stone at position if exists
-                "explosion",    # destroys stones at position and adjanced positions if exist
-                "tagscreen"     # tags stones at position and adjanced positions as unable to travel back in time
+                "destruction",      # destroys stone at position if exists
+                "explosion",        # destroys stones at position and adjanced positions if exist
+                "tagscreen_lock",   # tags stones at position and adjanced positions as unable to travel back in time (doesn't update max flag ID)
+                "tagscreen_unlock", # tags stones at position and adjanced positions as able to travel back in time, or updates their max_flag_ID to originator ID
+                "tagscreen_hide"    # removes stones at position and adjanced positions and places them onto the board in the next time-slice (also updated their max flag ID)
             ]
 
         # the board
@@ -490,6 +493,8 @@ class Gamemaster():
             return(Tank(new_stone_ID, progenitor_flag_ID, player_faction, self.t_dim))
         elif stone_type == "bombardier":
             return(Bombardier(new_stone_ID, progenitor_flag_ID, player_faction, self.t_dim))
+        elif stone_type == "tagger":
+            return(Tagger(new_stone_ID, progenitor_flag_ID, player_faction, self.t_dim))
         else:
             self.print_log(f"ERROR: Unrecognizable stone type {stone_type} on setup.", 0)
             quit()
@@ -511,6 +516,16 @@ class Gamemaster():
             return(-1)
         self.board_dynamic[t][new_x][new_y].add_stone(stone_ID, self.board_dynamic[t][old_x][old_y].stone_properties[stone_ID])
         self.board_dynamic[t][old_x][old_y].remove_stone(stone_ID)
+
+    def move_stone_forward_in_time(self, stone_ID, x, y, old_t, new_t):
+        if not stone_ID in self.board_dynamic[old_t][x][y].stones:
+            print(f"Error: Gamemaster.move_stone_forward_in_time attempted to move stone {stone_ID} from ({old_t},{x},{y}), where it currently isn't.")
+            return(-1)
+        # If the square is already occupied or unavailable, we track the square in a list of conflicting squares
+        if self.board_dynamic[new_t][x][y].occupied or (not self.is_square_available(x, y)):
+            self.conflicting_squares[new_t].append((x,y))
+        self.board_dynamic[new_t][x][y].add_stone(stone_ID, self.board_dynamic[old_t][x][y].stone_properties[stone_ID])
+        self.board_dynamic[old_t][x][y].remove_stone(stone_ID)
 
     def record_stones_at_time(self, t):
         # Overwrites stones.history
@@ -718,7 +733,10 @@ class Gamemaster():
             if self.stones[command["stone_ID"]].stone_type == "bombardier":
                 flags_added = self.add_bomb_flag(command["stone_ID"], command["t"], command["x"], command["y"], command["target_t"], command["x"], command["y"])
             else:
-                flags_added = self.add_flag_attack(command["stone_ID"], command["t"], command["x"], command["y"])
+                if "attack_arguments" in command.keys():
+                    flags_added = self.add_flag_attack(command["stone_ID"], command["t"], command["x"], command["y"], command["attack_arguments"])
+                else:
+                    flags_added = self.add_flag_attack(command["stone_ID"], command["t"], command["x"], command["y"])
         elif command["type"] == "timejump":
             # stone_ID, old_t, old_x, old_y, new_t, new_x, new_y, new_a, adopted_stone_ID
             if "adopted_stone_ID" not in command.keys():
@@ -1275,9 +1293,9 @@ class Gamemaster():
         for stone_ID in self.stone_actions[t].keys():
             for action_flag_ID in self.stone_actions[t][stone_ID]:
                 if self.flags[action_flag_ID].flag_type == "attack":
-                    stone_action_msg = self.stones[stone_ID].attack(self, t, self.flags[action_flag_ID].flag_args)
+                    stone_action_msg = self.stones[stone_ID].attack(self, action_flag_ID, t) # Stone translates flag into board action of appropriate type at appropriate position
                     if stone_action_msg.header in self.available_board_actions:
-                        self.board_actions[stone_action_msg.msg.t][stone_action_msg.msg.x][stone_action_msg.msg.y][stone_action_msg.header] = True
+                        self.board_actions[stone_action_msg.msg.t][stone_action_msg.msg.x][stone_action_msg.msg.y][stone_action_msg.header].append(action_flag_ID)
 
 
 
@@ -1344,7 +1362,12 @@ class Gamemaster():
                 for y in range(self.y_dim):
                     self.board_actions[t][x][y] = {}
                     for available_board_action in self.available_board_actions:
-                        self.board_actions[t][x][y][available_board_action] = False
+                        self.board_actions[t][x][y][available_board_action] = []
+
+        # Stone trackers
+        # We reset trackers owned by stones
+        for stone_ID in self.stones.keys():
+            self.stones[stone_ID].reset_temporary_trackers()
 
 
         # Then we prepare a flat list of all flag IDs to execute
@@ -1376,7 +1399,7 @@ class Gamemaster():
                             self.place_stone_on_board(STPos(0, x, y), cur_flag.stone_ID, [cur_flag.flag_args[1]])
                             self.stone_causal_freedom[cur_flag.stone_ID] = 0
                         if cur_flag.flag_type == "spawn_bomb":
-                            self.board_actions[0][x][y]["explosion"] = True
+                            self.board_actions[0][x][y]["explosion"].append(cur_flag_ID)
 
         # Then, we execute flags for each time slice sequentially
         for t in range(self.t_dim):
@@ -1394,18 +1417,71 @@ class Gamemaster():
 
             # Stone actions resolution
             self.resolve_stone_actions(t)
+            # Reset stone temporary time-specific trackers
+            for stone_ID in self.stones.keys():
+                self.stones[stone_ID].reset_temporary_time_specific_trackers()
             # Board actions resolution
+            # The order is as follows: other tagscreens -> hide tagscreens -> resolve hide tagscreens -> destructive actions
             for x in range(self.x_dim):
                 for y in range(self.y_dim):
-                    if self.board_actions[t][x][y]["destruction"]:
+                    if len(self.board_actions[t][x][y]["destruction"]) != 0:
                         self.board_dynamic[t][x][y].remove_stones()
-                    if self.board_actions[t][x][y]["explosion"]:
+                    if len(self.board_actions[t][x][y]["explosion"]) != 0:
                         affected_positions = self.get_adjanced_positions(x, y, number_of_steps = 1)
                         for affected_position in affected_positions:
                             aff_x, aff_y = affected_position
                             self.board_dynamic[t][aff_x][aff_y].remove_stones()
-                    if self.board_actions[t][x][y]["tagscreen"]:
-                        print(f"A tagscreen was deployed at ({t},{x},{y})!")
+                    if len(self.board_actions[t][x][y]["tagscreen_lock"]) != 0:
+                        print(f"A lock tagscreen was deployed at ({t},{x},{y})!")
+                        # Lock tagscreens are silent, and so they don't interfere with the stones
+                        affected_positions = self.get_adjanced_positions(x, y, number_of_steps = 1)
+                        for affected_position in affected_positions:
+                            aff_x, aff_y = affected_position
+                            if self.board_dynamic[t][aff_x][aff_y].occupied:
+                                self.stones[self.board_dynamic[t][aff_x][aff_y].stones[0]].has_been_tag_locked = True
+                    if len(self.board_actions[t][x][y]["tagscreen_unlock"]) != 0:
+                        print(f"An unlock tagscreen was deployed at ({t},{x},{y})!")
+                        max_originator = max(self.board_actions[t][x][y]["tagscreen_unlock"])
+
+                        affected_positions = self.get_adjanced_positions(x, y, number_of_steps = 1)
+                        for affected_position in affected_positions:
+                            aff_x, aff_y = affected_position
+                            if self.board_dynamic[t][aff_x][aff_y].occupied:
+                                affected_stone_ID = self.board_dynamic[t][aff_x][aff_y].stones[0]
+                                if self.stones[affected_stone_ID].has_been_tag_unlocked_this_turn:
+                                    # Each stone can only be tag unlocked once in each time-slice.
+                                    if self.stones[affected_stone_ID].unlock_tag_max_flag_ID_this_turn is not None:
+                                        # For overlapping unlock tagscreens, the highest flag ID applies
+                                        self.stones[affected_stone_ID].unlock_tag_max_flag_ID_this_turn = max(self.stones[affected_stone_ID].unlock_tag_max_flag_ID_this_turn, max_originator)
+                                        stone_latest_flag_ID[affected_stone_ID] = max(stone_latest_flag_ID[affected_stone_ID], self.stones[affected_stone_ID].unlock_tag_max_flag_ID_this_turn)
+                                    continue
+                                if self.stones[affected_stone_ID].has_been_tag_locked:
+                                    # We dispel the previous lock tag
+                                    self.stones[affected_stone_ID].has_been_tag_locked = False
+                                else:
+                                    # We interfere with the stone, making it causally free in this turn
+                                    stone_latest_flag_ID[affected_stone_ID] = max(stone_latest_flag_ID[affected_stone_ID], max_originator)
+                                    self.stones[affected_stone_ID].unlock_tag_max_flag_ID_this_turn = stone_latest_flag_ID[affected_stone_ID]
+                                self.stones[affected_stone_ID].has_been_tag_unlocked_this_turn = True
+                    if len(self.board_actions[t][x][y]["tagscreen_hide"]) != 0:
+                        print(f"A hide tagscreen was deployed at ({t},{x},{y})!")
+                        max_originator = max(self.board_actions[t][x][y]["tagscreen_hide"])
+
+                        affected_positions = self.get_adjanced_positions(x, y, number_of_steps = 1)
+                        for affected_position in affected_positions:
+                            aff_x, aff_y = affected_position
+                            if self.board_dynamic[t][aff_x][aff_y].occupied:
+                                affected_stone_ID = self.board_dynamic[t][aff_x][aff_y].stones[0]
+                                self.stones[affected_stone_ID].has_been_tag_hidden_this_turn = True
+                                stone_latest_flag_ID[affected_stone_ID] = max(stone_latest_flag_ID[affected_stone_ID], max_originator)
+            for x in range(self.x_dim):
+                for y in range(self.y_dim):
+                    if self.board_dynamic[t][x][y].occupied:
+                        stone_ID = self.board_dynamic[t][x][y].stones[0]
+                        if self.stones[stone_ID].has_been_tag_hidden_this_turn:
+                            # We place the stone into the next time-slice
+                            self.move_stone_forward_in_time(stone_ID, x, y, t, t + 1)
+
 
 
             # At this moment, the time-slice t is in its canonical state, and stone history may be recorded

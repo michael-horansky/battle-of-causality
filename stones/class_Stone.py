@@ -20,6 +20,12 @@ class Stone():
 
         self.history = [None] * t_dim # This allows the stone to remember its positions in time, shortening tracking time. [t] = (x,y,a)
 
+        # Trackers for tagscreen interactions
+        self.has_been_tag_locked = False
+        self.has_been_tag_unlocked_this_turn = False
+        self.unlock_tag_max_flag_ID_this_turn = None
+        self.has_been_tag_hidden_this_turn = False
+
         # Generic help-log
         self.generic_commands = {
                 "help" : [None, None, "Display the help-log."],
@@ -39,6 +45,17 @@ class Stone():
 
         self.opposable = True
         self.orientable = False
+
+    def reset_temporary_trackers(self):
+        self.has_been_tag_locked = False
+        self.has_been_tag_unlocked_this_turn = False
+        self.unlock_tag_max_flag_ID_this_turn = None
+        self.has_been_tag_hidden_this_turn = False
+
+    def reset_temporary_time_specific_trackers(self):
+        self.has_been_tag_unlocked_this_turn = False
+        self.unlock_tag_max_flag_ID_this_turn = None
+        self.has_been_tag_hidden_this_turn = False
 
     def __str__(self):
         return("Stone " + constants.color.DARKCYAN + self.stone_type.upper() + constants.color.END + " (ID " + constants.color.CYAN + str(self.ID) + constants.color.END + ")")
@@ -206,7 +223,7 @@ class Stone():
     # These methods only read the state of gm, and always return
     # Message("board action", STPos)
 
-    def attack(self, gm, t, attack_args):
-        pass
+    def attack(self, gm, attack_flag_ID, t):
+        return(Message("pass"))
 
 
