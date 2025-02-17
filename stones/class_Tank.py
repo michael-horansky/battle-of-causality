@@ -1,9 +1,9 @@
 
-from functions import *
-from class_STPos import STPos
-from class_Message import Message
+import utils.functions as functions
+from game_logic.class_STPos import STPos
+from game_logic.class_Message import Message
 
-from class_Stone import Stone
+from stones.class_Stone import Stone
 
 # -----------------------------------------------------------------------------
 # -------------------------------- class Tank ---------------------------------
@@ -80,12 +80,12 @@ class Tank(Stone):
                         new_a = cur_a
                     else:
                         if input_cmd_list[1] in ['clockwise', 'clock', 'cw', 'c']:
-                            new_a = azimuth_addition(cur_a, 1)
+                            new_a = functions.azimuth_addition(cur_a, 1)
                         elif input_cmd_list[1] in ['anticlockwise', 'anti', 'acw', 'a']:
-                            new_a = azimuth_addition(cur_a, 3)
+                            new_a = functions.azimuth_addition(cur_a, 3)
                         else:
                             raise Exception("Your input couldn't be parsed")
-                    new_x, new_y = pos_step((cur_x, cur_y), cur_a)
+                    new_x, new_y = functions.pos_step((cur_x, cur_y), cur_a)
                     if not gm.is_square_available(new_x, new_y):
                         # The stone is attempting to move into a wall
                         raise Exception("Invalid move")
@@ -95,12 +95,12 @@ class Tank(Stone):
                         new_a = cur_a
                     else:
                         if input_cmd_list[1] in ['clockwise', 'clock', 'cw', 'c']:
-                            new_a = azimuth_addition(cur_a, 1)
+                            new_a = functions.azimuth_addition(cur_a, 1)
                         elif input_cmd_list[1] in ['anticlockwise', 'anti', 'acw', 'a']:
-                            new_a = azimuth_addition(cur_a, 3)
+                            new_a = functions.azimuth_addition(cur_a, 3)
                         else:
                             new_a = cur_a
-                    new_x, new_y = pos_step((cur_x, cur_y), azimuth_addition(cur_a, 2))
+                    new_x, new_y = functions.pos_step((cur_x, cur_y), functions.azimuth_addition(cur_a, 2))
                     if not gm.is_square_available(new_x, new_y):
                         # The stone is attempting to move into a wall
                         raise Exception("Invalid move")
@@ -108,7 +108,7 @@ class Tank(Stone):
                 if input_cmd_list[0] in ['t', 'turn']:
                     if len(input_cmd_list) == 1:
                         raise Exception("Required argument missing")
-                    new_a = encode_azimuth(input_cmd_list[1])
+                    new_a = functions.encode_azimuth(input_cmd_list[1])
                     if new_a == None:
                         raise Exception("Your input couldn't be parsed")
                     return(Message("command", {"type" : "spatial_move", "new_x" : cur_x, "new_y" : cur_y, "new_a" : new_a}))

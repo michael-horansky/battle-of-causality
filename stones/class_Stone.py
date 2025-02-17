@@ -1,7 +1,8 @@
 
-from functions import *
-from class_STPos import STPos
-from class_Message import Message
+import utils.functions as functions
+import utils.constants as constants
+from game_logic.class_STPos import STPos
+from game_logic.class_Message import Message
 
 # -----------------------------------------------------------------------------
 # -------------------------------- class Stone --------------------------------
@@ -40,13 +41,13 @@ class Stone():
         self.orientable = False
 
     def __str__(self):
-        return("Stone " + color.DARKCYAN + self.stone_type.upper() + color.END + " (ID " + color.CYAN + str(self.ID) + color.END + ")")
+        return("Stone " + constants.color.DARKCYAN + self.stone_type.upper() + constants.color.END + " (ID " + constants.color.CYAN + str(self.ID) + constants.color.END + ")")
 
     def display_commands_in_helplog(self, commands):
         for cmd, options in commands.items():
             log_str = "  -'"
             cmd_aliases = cmd.split("/")
-            cmd_readable = color.GREEN + (color.END + "/" + color.GREEN).join(cmd_aliases) + color.END
+            cmd_readable = constants.color.GREEN + (constants.color.END + "/" + constants.color.GREEN).join(cmd_aliases) + constants.color.END
             log_str += cmd_readable
             arg_str = ""
             if not (options[0] == None and options[1] == None):
@@ -56,13 +57,13 @@ class Stone():
                     req_arg_alias_list = options[0].split("/")
                     for i in range(len(req_arg_alias_list)):
                         req_arg_list = req_arg_alias_list[i].split(", ")
-                        req_arg_alias_list[i] = color.BLUE + (color.END + ", " + color.BLUE).join(req_arg_list) + color.END
+                        req_arg_alias_list[i] = constants.color.BLUE + (constants.color.END + ", " + constants.color.BLUE).join(req_arg_list) + constants.color.END
                     arg_str += "/".join(req_arg_alias_list)
                 if options[1] != None:
                     if options[0] != None:
                         arg_str += '; '
                     opt_arg_list = options[1].split(", ")
-                    opt_args_readable = color.CYAN + (color.END + ", " + color.CYAN).join(opt_arg_list) + color.END
+                    opt_args_readable = constants.color.CYAN + (constants.color.END + ", " + constants.color.CYAN).join(opt_arg_list) + constants.color.END
                     arg_str += opt_args_readable
                 arg_str += "]"
             log_str += arg_str + ": " + options[2]
@@ -70,7 +71,7 @@ class Stone():
 
     def print_help_message(self, is_final_command = False):
         print("You are now placing a command flag for your stone. Select one from the following options.")
-        print("(The format is \"" + color.GREEN + "command name" + color.END + " [" + color.BLUE + "arguments" + color.END + "; " + color.CYAN + "optional arguments" + color.END + "]\". Forward slash denotes alias.)")
+        print("(The format is \"" + constants.color.GREEN + "command name" + constants.color.END + " [" + constants.color.BLUE + "arguments" + constants.color.END + "; " + constants.color.CYAN + "optional arguments" + constants.color.END + "]\". Forward slash denotes alias.)")
         self.display_commands_in_helplog(self.generic_commands)
         if is_final_command:
             available_commands = self.type_specific_final_commands

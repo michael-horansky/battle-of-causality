@@ -1,6 +1,6 @@
 from functools import cmp_to_key
 
-from class_Message import Message
+from game_logic.class_Message import Message
 
 # -----------------------------------------------------------------------------
 # ------------------------ class Activity_map_iterator ------------------------

@@ -3,21 +3,23 @@
 import math
 import json
 
-import constants
+import utils.constants as constants
+import utils.functions as functions
 
-from functions import *
-from class_STPos import STPos
-from class_Message import Message
-from class_Scenario import Scenario
-from class_Activity_map_iterator import Activity_map_iterator
+# Import game logic fundamentals
+from game_logic.class_STPos import STPos
+from game_logic.class_Message import Message
+from game_logic.class_Scenario import Scenario
+from game_logic.class_Activity_map_iterator import Activity_map_iterator
 
 # Import the stone types
-from class_Stone import Stone
-from class_Tank import Tank
-from class_Bombardier import Bombardier
+from stones.class_Stone import Stone
+from stones.class_Tank import Tank
+from stones.class_Bombardier import Bombardier
 
-from class_Flag import Flag
-from class_Board_square import Board_square
+# Import game logic components
+from game_logic.class_Flag import Flag
+from game_logic.class_Board_square import Board_square
 
 # -----------------------------------------------------------------------------
 # ----------------------------- class Gamemaster ------------------------------
@@ -144,15 +146,15 @@ class Gamemaster():
         # smaller the level, bigger the header
         header_size = self.header_width#(self.x_dim * 2 - 1) * self.t_dim + 3 * (self.t_dim - 1)
         if level == 0:
-            print(color.BOLD + '-' * header_size + color.LIGHT)
-            print(color.BOLD + st(' ' + msg + ' ', header_size, '-') + color.LIGHT)
-            print(color.BOLD + '-' * header_size + color.LIGHT)
+            print(constants.color.BOLD + '-' * header_size + constants.color.LIGHT)
+            print(constants.color.BOLD + functions.st(' ' + msg + ' ', header_size, '-') + constants.color.LIGHT)
+            print(constants.color.BOLD + '-' * header_size + constants.color.LIGHT)
         if level == 1:
-            print(color.BOLD + st(' ' + msg + ' ', header_size, '-') + color.LIGHT)
+            print(constants.color.BOLD + functions.st(' ' + msg + ' ', header_size, '-') + constants.color.LIGHT)
         if level == 2:
-            print('-' * int(header_size / 4) + ' ' + color.BOLD + msg + color.LIGHT)
+            print('-' * int(header_size / 4) + ' ' + constants.color.BOLD + msg + constants.color.LIGHT)
         if level >= 3:
-            print("# " + color.BOLD + msg + color.LIGHT)
+            print("# " + constants.color.BOLD + msg + constants.color.LIGHT)
 
     def print_log(self, msg, lvl = 0):
         if self.display_logs:
@@ -171,14 +173,14 @@ class Gamemaster():
             stone_formatting_pre = ''
             stone_formatting_suf = ''
             if is_causally_free:
-                stone_formatting_pre += color.BOLD
-                stone_formatting_suf += color.LIGHT
+                stone_formatting_pre += constants.color.BOLD
+                stone_formatting_suf += constants.color.LIGHT
             if is_tracked:
-                stone_formatting_pre += color.CYAN
+                stone_formatting_pre += constants.color.CYAN
                 if is_active:
-                    stone_formatting_suf += color.GREEN
+                    stone_formatting_suf += constants.color.GREEN
                 else:
-                    stone_formatting_suf += color.END
+                    stone_formatting_suf += constants.color.END
 
             board_lines[cur_y][cur_x] = stone_formatting_pre + stone_symbol + stone_formatting_suf
             if is_orientable:
@@ -208,7 +210,7 @@ class Gamemaster():
                         board_lines[cur_y][cur_x] = '<'
 
         # board lines: list of rows
-        board_lines = repeated_list(self.y_dim * 2 - 1, repeated_list(self.x_dim * 2 - 1, ' '))
+        board_lines = functions.repeated_list(self.y_dim * 2 - 1, functions.repeated_list(self.x_dim * 2 - 1, ' '))
         for y in range(self.y_dim):
             for x in range(self.x_dim):
                 # Static board properties
@@ -266,13 +268,13 @@ class Gamemaster():
                             # Inactive TJO
                             has_inactive_TJO = True
                 if has_conflict:
-                    board_lines[2 * y][2 * x] = color.bg.RED + board_lines[2 * y][2 * x] + color.bg.DEFAULT
+                    board_lines[2 * y][2 * x] = constants.color.bg.RED + board_lines[2 * y][2 * x] + constants.color.bg.DEFAULT
                 elif has_active_TJI:
-                    board_lines[2 * y][2 * x] = color.bg.ORANGE + board_lines[2 * y][2 * x] + color.bg.DEFAULT
+                    board_lines[2 * y][2 * x] = constants.color.bg.ORANGE + board_lines[2 * y][2 * x] + constants.color.bg.DEFAULT
                 elif has_active_TJO:
-                    board_lines[2 * y][2 * x] = color.bg.PURPLE + board_lines[2 * y][2 * x] + color.bg.DEFAULT
+                    board_lines[2 * y][2 * x] = constants.color.bg.PURPLE + board_lines[2 * y][2 * x] + constants.color.bg.DEFAULT
                 elif has_inactive_TJO or has_inactive_TJI:
-                    board_lines[2 * y][2 * x] = color.bg.BLACK + board_lines[2 * y][2 * x] + color.bg.DEFAULT
+                    board_lines[2 * y][2 * x] = constants.color.bg.BLACK + board_lines[2 * y][2 * x] + constants.color.bg.DEFAULT
 
         for i in range(len(board_lines)):
             board_lines[i] = ''.join(board_lines[i])
@@ -281,7 +283,7 @@ class Gamemaster():
 
         if is_active:
             for i in range(len(board_lines)):
-                board_lines[i] = color.GREEN + board_lines[i] + color.END
+                board_lines[i] = constants.color.GREEN + board_lines[i] + constants.color.END
 
         # If header line included, we inscribe t on top and x,y labels on the left and bottom.
 
@@ -291,7 +293,7 @@ class Gamemaster():
             for i in range(len(board_lines)):
                 board_lines[i] = " " * (max_y_width + 1) + board_lines[i]
             for y in range(self.y_dim):
-                board_lines[2 * y] = color.RED + uniform_str(str(y), max_y_width, ' ') + color.END + board_lines[2 * y][max_y_width:]
+                board_lines[2 * y] = constants.color.RED + functions.uniform_str(str(y), max_y_width, ' ') + constants.color.END + board_lines[2 * y][max_y_width:]
 
             # Then, the x labels
             max_x_width = len(str(self.x_dim - 1))
@@ -300,22 +302,22 @@ class Gamemaster():
                 x_label_string = " " * (max_y_width + 1)
                 for x in range(self.x_dim):
                     x_label_string += str(x) + " "
-                board_lines.append(color.RED + x_label_string[:-1] + color.END)
+                board_lines.append(constants.color.RED + x_label_string[:-1] + constants.color.END)
             if max_x_width == 2:
                 x_label_str = [" " * (max_y_width)]*2
                 for x in range(self.x_dim):
                     x_label_str[ x      % 2] += " " * 2
-                    x_label_str[(x + 1) % 2] += uniform_str(str(x), 2, " ")
-                board_lines.append(color.RED + x_label_str[0] + color.END)
-                board_lines.append(color.RED + x_label_str[1] + color.END)
+                    x_label_str[(x + 1) % 2] += functions.uniform_str(str(x), 2, " ")
+                board_lines.append(constants.color.RED + x_label_str[0] + constants.color.END)
+                board_lines.append(constants.color.RED + x_label_str[1] + constants.color.END)
 
 
 
             header_info = f't = {t}'
             if is_active:
-                board_lines.insert(0, color.GREEN + st(header_info, self.single_board_width) + color.END)
+                board_lines.insert(0, constants.color.GREEN + functions.st(header_info, self.single_board_width) + constants.color.END)
             else:
-                board_lines.insert(0, st(header_info, self.single_board_width))
+                board_lines.insert(0, functions.st(header_info, self.single_board_width))
 
         board_string = '\n'.join(board_lines)
 
@@ -661,7 +663,7 @@ class Gamemaster():
             self.set_flag_activity(tji_flag.flag_ID, False)
 
             # Trackers
-            self.effects_by_round = add_tail_to_list(self.effects_by_round, round_number + 1, [])
+            self.effects_by_round = functions.add_tail_to_list(self.effects_by_round, round_number + 1, [])
             self.effects_by_round[round_number].append(tji_flag.flag_ID)
 
             # We add the new stone into the army
@@ -696,7 +698,7 @@ class Gamemaster():
         self.set_flag_activity(spawn_bomb_flag.flag_ID, False)
 
         # Trackers
-        self.effects_by_round = add_tail_to_list(self.effects_by_round, round_number + 1, [])
+        self.effects_by_round = functions.add_tail_to_list(self.effects_by_round, round_number + 1, [])
         self.effects_by_round[round_number].append(spawn_bomb_flag.flag_ID)
 
         return([spawn_bomb_flag.flag_ID, attack_flag.flag_ID])
@@ -832,10 +834,10 @@ class Gamemaster():
                 # Sokoban push only occurs if the moving stone moved by distance 1 in one of the four cardinal directions
                 if prev_x_a == x and prev_y_a == y:
                     # First stone was waiting
-                    b_delta = get_azimuth_from_delta_pos((prev_x_b, prev_y_b), (x, y))
+                    b_delta = functions.get_azimuth_from_delta_pos((prev_x_b, prev_y_b), (x, y))
                     if b_delta != -1:
                         # Sokoban push can occur!
-                        new_pos_x, new_pos_y = pos_step((x, y), b_delta)
+                        new_pos_x, new_pos_y = functions.pos_step((x, y), b_delta)
                         if self.is_square_available(new_pos_x, new_pos_y) and not self.board_dynamic[t][new_pos_x][new_pos_y].occupied:
                             #self.board_dynamic[t][new_pos_x][new_pos_y].add_stone(stone_a, self.board_dynamic[t][x][y].stone_properties[stone_a])
                             #self.board_dynamic[t][x][y].remove_stone(stone_a)
@@ -844,10 +846,10 @@ class Gamemaster():
                             self.conflicting_squares[t].remove((x, y))
                 if prev_x_b == x and prev_y_b == y:
                     # Second stone was waiting
-                    a_delta = get_azimuth_from_delta_pos((prev_x_a, prev_y_a), (x, y))
+                    a_delta = functions.get_azimuth_from_delta_pos((prev_x_a, prev_y_a), (x, y))
                     if a_delta != -1:
                         # Sokoban push can occur!
-                        new_pos_x, new_pos_y = pos_step((x, y), a_delta)
+                        new_pos_x, new_pos_y = functions.pos_step((x, y), a_delta)
                         if self.is_square_available(new_pos_x, new_pos_y) and not self.board_dynamic[t][new_pos_x][new_pos_y].occupied:
                             #self.board_dynamic[t][new_pos_x][new_pos_y].add_stone(stone_b, self.board_dynamic[t][x][y].stone_properties[stone_b])
                             #self.board_dynamic[t][x][y].remove_stone(stone_b)
@@ -1335,7 +1337,7 @@ class Gamemaster():
 
         # Stone actions
         # We reset the stone actions tracker
-        self.stone_actions = repeated_list(self.t_dim, {})
+        self.stone_actions = functions.repeated_list(self.t_dim, {})
         # We reset the board actions tracker
         for t in range(self.t_dim):
             for x in range(self.x_dim):
@@ -1504,7 +1506,7 @@ class Gamemaster():
         #            == t_dim + 1, ... 2.t_dim -> round 1 etc
         if turn_index == 0:
             return((0, -1))
-        current_round_number = int(np.floor((turn_index - 1) / self.t_dim))
+        current_round_number = math.floor((turn_index - 1) / self.t_dim)
         current_timeslice    = (turn_index - 1) % self.t_dim
         return(current_round_number, current_timeslice)
 
@@ -1803,7 +1805,7 @@ class Gamemaster():
         self.print_log(f"Loading board {board_number}...", 0)
 
         self.print_log("Reading board source file...", 1)
-        board_file = open("resources/boards/board_" + uniform_str(board_number, 3) + ".txt", 'r')
+        board_file = open("resources/boards/board_" + functions.uniform_str(board_number, 3) + ".txt", 'r')
         board_lines = board_file.readlines()
         board_file.close()
 
@@ -1880,7 +1882,7 @@ class Gamemaster():
 
         # We commit the setup commands!
         self.commit_commands(setup_commands, 0, "GM")
-        self.conflicting_squares = repeated_list(self.t_dim, [])
+        self.conflicting_squares = functions.repeated_list(self.t_dim, [])
 
         # Calculate TUI parameters for printing
         self.single_board_width = self.x_dim * 2 + len(str(self.y_dim - 1))
@@ -1943,7 +1945,7 @@ class Gamemaster():
                     self.board_dynamic[t][x].append(Board_square(STPos(t, x, y)))
                     self.board_actions[t][x].append({})
 
-        self.conflicting_squares = repeated_list(self.t_dim, [])
+        self.conflicting_squares = functions.repeated_list(self.t_dim, [])
 
         # Calculate TUI parameters for printing
         self.single_board_width = self.x_dim * 2 + len(str(self.y_dim - 1))
@@ -2002,7 +2004,7 @@ class Gamemaster():
 
         # We find Scenarios for each started round
         current_round_number, active_timeslice = self.round_from_turn(self.current_turn_index)
-        self.effects_by_round = add_tail_to_list(self.effects_by_round, current_round_number + 1, [])
+        self.effects_by_round = functions.add_tail_to_list(self.effects_by_round, current_round_number + 1, [])
 
         self.scenarios_by_round = []
 

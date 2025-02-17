@@ -1,7 +1,7 @@
 
-import constants
-from functions import *
-from class_STPos import STPos
+import utils.constants as constants
+import utils.functions as functions
+from game_logic.class_STPos import STPos
 
 # -----------------------------------------------------------------------------
 # -------------------------------- class Flag ---------------------------------
@@ -43,17 +43,17 @@ class Flag():
     # ------------------ class methods -------------------
     # ----------------------------------------------------
 
-    @classmethod
+    """@classmethod
     def from_str(cls, flag_representation):
         try:
             flag_elements = flag_representation.split(constants.Flag_delim)
             cur_flag_ID             =                int(flag_elements[0])
             cur_flag_type           =                    flag_elements[1]
             cur_flag_player_faction =                    flag_elements[2]
-            cur_flag_stone_ID       = str_to_int_or_none(flag_elements[3])
+            cur_flag_stone_ID       = functions.str_to_int_or_none(flag_elements[3])
             cur_flag_pos            =     STPos.from_str(flag_elements[4])
-            cur_flag_effect         = str_to_int_or_none(flag_elements[5])
-            cur_flag_initial_cause  = str_to_int_or_none(flag_elements[6])
+            cur_flag_effect         = functions.str_to_int_or_none(flag_elements[5])
+            cur_flag_initial_cause  = functions.str_to_int_or_none(flag_elements[6])
             cur_flag_args_list      =                    flag_elements[7:]
             if cur_flag_type == "add_stone":
                 cur_flag_args = [cur_flag_args_list[0], int(cur_flag_args_list[1])]
@@ -72,7 +72,7 @@ class Flag():
             return(cls(pos = cur_flag_pos, flag_type = cur_flag_type, player_faction = cur_flag_player_faction, flag_args = cur_flag_args, stone_ID = cur_flag_stone_ID, flag_ID = cur_flag_ID, effect = cur_flag_effect, initial_cause = cur_flag_initial_cause))
 
         except:
-            print(f"Flag(repr) attempted initialization from a badly formatted string representation: {flag_representation}")
+            print(f"Flag(repr) attempted initialization from a badly formatted string representation: {flag_representation}")"""
 
     # ----------------------------------------------------
     # ------ constructors, destructors, descriptors ------
@@ -106,7 +106,7 @@ class Flag():
         str_rep = 'UNDEFINED_MOVE'
         if self.flag_type == 'add_stone':
             # args: [stone_type, azimuth]
-            str_rep = f"Add stone {self.flag_args[0].upper()} unconditionally (P. '{self.player_faction}', ID {self.stone_ID}): [{human_readable_azimuth(self.flag_args[1])}]"
+            str_rep = f"Add stone {self.flag_args[0].upper()} unconditionally (P. '{self.player_faction}', ID {self.stone_ID}): [{functions.human_readable_azimuth(self.flag_args[1])}]"
             if self.is_active == False:
                 str_rep += " (DEACTIVATED)"
         if self.flag_type == 'add_base':
@@ -120,12 +120,12 @@ class Flag():
             str_rep = f"Time jump OUT (P. '{self.player_faction}', ID {self.stone_ID}): jump into {self.flag_args[0]}"
         if self.flag_type == 'time_jump_in':
             # args: [stone_type, azimuth]
-            str_rep = f"Stone {self.flag_args[0].upper()} time-jumps-IN (P. '{self.player_faction}', ID {self.stone_ID}): [{human_readable_azimuth(self.flag_args[1])}]"
+            str_rep = f"Stone {self.flag_args[0].upper()} time-jumps-IN (P. '{self.player_faction}', ID {self.stone_ID}): [{functions.human_readable_azimuth(self.flag_args[1])}]"
             if self.is_active == False:
                 str_rep += " (DEACTIVATED)"
         if self.flag_type == 'spatial_move':
             # args: [new_x, new_y, new_azimuth]
-            str_rep = f"Spatial move (P. '{self.player_faction}', ID {self.stone_ID}): move to ({self.flag_args[0]},{self.flag_args[1]}) [{human_readable_azimuth(self.flag_args[2])}]"
+            str_rep = f"Spatial move (P. '{self.player_faction}', ID {self.stone_ID}): move to ({self.flag_args[0]},{self.flag_args[1]}) [{functions.human_readable_azimuth(self.flag_args[2])}]"
         if self.flag_type == 'attack':
             # args: []
             str_rep = f"Attack (P. '{self.player_faction}', ID {self.stone_ID})"

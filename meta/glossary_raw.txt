@@ -25,7 +25,7 @@ comb rule | The comb rule states that for each turn there may be no causally fre
 
 causally consistent | Not resulting in a paradox. | scenario, paradox
 paradox | A scenario such that if we evolve the board along the time axis, there will either be active ante-effects which have zero or multiple activated retro-causes, or activated retro-causes which correspond to an inactive ante-effect.
-scenario | A scenario for a given round specifies which ante-effects placed in all the previous round are active and which are passive in that round, and which setup placements are omitted. | activity, setup
+scenario | A scenario for a given round specifies which ante-effects placed in all the previous rounds are active and which are passive in that round, and which setup placements are omitted. | activity, setup
 priority | Every scenario has a priority. If two or more scenarios are causally consistent for a round, the one with highest priority is canonised. | scenario, canonisation
 canonisation | At the end of each round, the highest-priority causally consistent scenario is selected for the next round based on the flags placed so far, omitting ante-effects placed in the round which just ended. | causally consistent
 recency | A property of ante-effects and stones, determined depending on the specific ruleset (see Sec. \ref{sec:ruleset variations}). Stones and ante-effects with higher recency are more likely to be preserved during canonisation if two or more causally consistent scenarios are possible.

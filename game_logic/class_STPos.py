@@ -1,5 +1,5 @@
 
-import constants
+import utils.constants as constants
 
 # ---------------------------------------------
 # ---------------- class STPos ----------------

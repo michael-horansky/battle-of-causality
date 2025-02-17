@@ -18,6 +18,8 @@
     pdftitle={Overleaf Example},
     pdfpagemode=FullScreen,
     }
+    
+\usepackage{svg}
 
 \newcolumntype{R}[1]{>{\raggedleft\arraybackslash}p{#1}}
 \newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
@@ -27,10 +29,14 @@
 \newcommand{\rowlabel}[1]{\refstepcounter{mycounter} \label{#1}}
 
 \begin{document}
-
-	\title{\Huge Rulebook\\\large Battle of Causality}
+	
+	\title{\hfill\\\hfill\\\Huge Rulebook}
 	\author{Michal Horanský}
 	\maketitle
+	
+	\begin{center}
+	\vspace*{-10.5cm}\hspace*{1.1cm}\includegraphics[scale=0.5]{images/BoC_logo}\vspace*{-4.5cm}
+	\end{center}
 	
 	\tableofcontents
 	
