@@ -653,6 +653,12 @@ class Gamemaster():
         self.flags[new_flag.flag_ID] = new_flag
         return([new_flag.flag_ID])
 
+    def add_flag_tag(self, stone_ID, t, x, y, tag_type):
+        new_flag = Flag(STPos(t, x, y), "tag", self.stones[stone_ID].player_faction, [tag_type], stone_ID)
+        self.board_dynamic[t][x][y].add_flag(new_flag.flag_ID, stone_ID)
+        self.flags[new_flag.flag_ID] = new_flag
+        return([new_flag.flag_ID])
+
     def add_flag_timejump(self, stone_ID, old_t, old_x, old_y, new_t, new_x, new_y, new_a, adopted_stone_ID = None):
 
         round_number, active_timeslice = self.round_from_turn(self.current_turn_index)
@@ -737,6 +743,8 @@ class Gamemaster():
                     flags_added = self.add_flag_attack(command["stone_ID"], command["t"], command["x"], command["y"], command["attack_arguments"])
                 else:
                     flags_added = self.add_flag_attack(command["stone_ID"], command["t"], command["x"], command["y"])
+        elif command["type"] == "tag":
+            flags_added = self.add_flag_tag(command["stone_ID"], command["t"], command["x"], command["y"], command["tag_type"])
         elif command["type"] == "timejump":
             # stone_ID, old_t, old_x, old_y, new_t, new_x, new_y, new_a, adopted_stone_ID
             if "adopted_stone_ID" not in command.keys():
@@ -1415,22 +1423,20 @@ class Gamemaster():
             # We preliminarily record stone positions for the actions to be resolvable
             self.record_stones_at_time(t)
 
-            # Stone actions resolution
-            self.resolve_stone_actions(t)
             # Reset stone temporary time-specific trackers
             for stone_ID in self.stones.keys():
                 self.stones[stone_ID].reset_temporary_time_specific_trackers()
             # Board actions resolution
-            # The order is as follows: other tagscreens -> hide tagscreens -> resolve hide tagscreens -> destructive actions
+            # The order is as follows: other tagscreens -> hide tagscreens -> resolve hide tagscreens -> stone actions -> destructive actions
             for x in range(self.x_dim):
                 for y in range(self.y_dim):
-                    if len(self.board_actions[t][x][y]["destruction"]) != 0:
+                    """if len(self.board_actions[t][x][y]["destruction"]) != 0:
                         self.board_dynamic[t][x][y].remove_stones()
                     if len(self.board_actions[t][x][y]["explosion"]) != 0:
                         affected_positions = self.get_adjanced_positions(x, y, number_of_steps = 1)
                         for affected_position in affected_positions:
                             aff_x, aff_y = affected_position
-                            self.board_dynamic[t][aff_x][aff_y].remove_stones()
+                            self.board_dynamic[t][aff_x][aff_y].remove_stones()"""
                     if len(self.board_actions[t][x][y]["tagscreen_lock"]) != 0:
                         print(f"A lock tagscreen was deployed at ({t},{x},{y})!")
                         # Lock tagscreens are silent, and so they don't interfere with the stones
@@ -1481,6 +1487,17 @@ class Gamemaster():
                         if self.stones[stone_ID].has_been_tag_hidden_this_turn:
                             # We place the stone into the next time-slice
                             self.move_stone_forward_in_time(stone_ID, x, y, t, t + 1)
+            # Stone actions resolution
+            self.resolve_stone_actions(t)
+            for x in range(self.x_dim):
+                for y in range(self.y_dim):
+                    if len(self.board_actions[t][x][y]["destruction"]) != 0:
+                        self.board_dynamic[t][x][y].remove_stones()
+                    if len(self.board_actions[t][x][y]["explosion"]) != 0:
+                        affected_positions = self.get_adjanced_positions(x, y, number_of_steps = 1)
+                        for affected_position in affected_positions:
+                            aff_x, aff_y = affected_position
+                            self.board_dynamic[t][aff_x][aff_y].remove_stones()
 
 
 
@@ -1547,8 +1564,12 @@ class Gamemaster():
                                 self.place_stone_on_board(STPos(t+1, x, y), cur_flag.stone_ID, self.board_dynamic[t][x][y].stone_properties[cur_flag.stone_ID])
                                 self.stone_causal_freedom[cur_flag.stone_ID] = t+1
                                 self.add_stone_action(t+1, cur_flag.stone_ID, cur_flag.flag_ID)
+                            if cur_flag.flag_type == "tag":
+                                self.place_stone_on_board(STPos(t+1, x, y), cur_flag.stone_ID, self.board_dynamic[t][x][y].stone_properties[cur_flag.stone_ID])
+                                self.stone_causal_freedom[cur_flag.stone_ID] = t+1
+                                self.board_actions[t+1][x][y][f"tagscreen_{cur_flag.flag_args[0]}"].append(cur_flag_ID)
                             if cur_flag.flag_type == "spawn_bomb":
-                                self.board_actions[t+1][x][y]["explosion"] = True
+                                self.board_actions[t+1][x][y]["explosion"].append(cur_flag_ID)
                         # The following flags remove the stone from the board, and as such are the only flags which can be placed at t = t_dim - 1
                         if cur_flag.flag_type == "time_jump_out":
                             # Newly added TJOs which link previous TJIs should be subject to tracker,

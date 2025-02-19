@@ -129,6 +129,9 @@ class Flag():
         if self.flag_type == 'attack':
             # args: []
             str_rep = f"Attack (P. '{self.player_faction}', ID {self.stone_ID})"
+        if self.flag_type == 'tag':
+            # args: [tag_type]
+            str_rep = f"Deploy '{self.flag_args[0]}' tagscreen (P. '{self.player_faction}', ID {self.stone_ID})"
         if self.flag_type == 'spawn_bomb':
             # args: []
             str_rep = f"Spawn bomb (P. '{self.player_faction}')"

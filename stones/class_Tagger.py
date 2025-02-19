@@ -19,14 +19,14 @@ class Tagger(Stone):
 
         self.type_specific_commands = {
                 "wait" : [None, None, "The stone will wait in its place. This is also selected on an empty submission!"],
-                "jump/j" : ["x, y", "t", "Jumps onto the specified square of distance 2 along one axis and distance 1 along another axis (including time, with delta_t = 0 if the next time-slice is targeted). The target time is determined automatically if not given!"],
+                "jump/j" : ["x, y", "t, stone ID", "Jumps onto the specified square of distance 2 along one axis and distance 1 along another axis (including time, with delta_t = 0 if the next time-slice is targeted). The target time is determined automatically if not given! If stone ID specified, will adopt a time-jump-in which generates said stone."],
                 "tag/t" : ["type", None, "Deploys a tagscreen which affects this and all four adjanced squares. Type = \"lock\": affected stones become causally locked at the end of round. Type = \"unlock\": dispels effect of \"lock\" tagscreens applied to affected stones, or makes them causally free. Type = \"hide\": affected stones are forcefully teleported one time-slice forward (cannot be selected in the second-to-last timeslice)."]
                 # NOTE: the unlock tagscreen doesn't actually force stones to become causallu free always, it just sets their max_flag_ID to this one's ID, overriding all flags placed in previous turns
             }
 
         self.type_specific_final_commands = {
                 "pass" : [None, None, "No plag is placed, and this stone remains causally free. This is also selected on an empty submission!"],
-                "jump/j" : ["x, y", "t", "Jumps onto the specified square of distance 2 along one axis and distance 1 along another axis (including time). The target time is determined automatically if not given!"]
+                "jump/j" : ["x, y", "t", "Jumps onto the specified square of distance 2 along one axis and distance 1 along another axis (including time). The target time is determined automatically if not given! If stone ID specified, will adopt a time-jump-in which generates said stone."]
             }
 
         self.opposable = False
@@ -72,7 +72,7 @@ class Tagger(Stone):
                 input_cmd_list = input_cmd_raw.split(' ')
 
                 if input_cmd_list[0] in ['j', 'jump']:
-                    if len(input_cmd_list) not in [3, 4]:
+                    if len(input_cmd_list) not in [3, 4, 5]:
                         raise Exception("Required arguments missing")
                     new_x = int(input_cmd_list[1])
                     new_y = int(input_cmd_list[2])
@@ -100,9 +100,36 @@ class Tagger(Stone):
                         raise Exception("Target spatial position not available")
 
                     if new_t == t + 1:
+                        # We cannot swap a forward move! Just follow the old version bruv
                         return(Message("command", {"type" : "spatial_move", "new_x" : new_x, "new_y" : new_y, "new_a" : 0}))
                     else:
-                        return(Message("command", {"type" : "timejump", "new_t" : new_t, "new_x" : new_x, "new_y" : new_y, "new_a" : 0}))
+                        # Check if swapping
+                        if len(input_cmd_list) == 5:
+                            adopted_stone_ID = int(input_cmd_list[4])
+                            # Is stone correct?
+                            if adopted_stone_ID not in gm.stones:
+                                raise Exception("Stone ID invalid")
+                            adopted_stone_progenitor = gm.stones[adopted_stone_ID].progenitor_flag_ID
+                            if gm.flags[adopted_stone_progenitor].flag_type != "time_jump_in":
+                                raise Exception("Specified stone is not placed onto the board via a time-jump-in")
+                            if not (gm.flags[adopted_stone_progenitor].pos.t == new_t - 1 and gm.flags[adopted_stone_progenitor].pos.x == new_x and gm.flags[adopted_stone_progenitor].pos.y == new_y):
+                                raise Exception("Specified stone doesn't time-jump-in at the specified square")
+                            if self.player_faction != gm.stones[adopted_stone_ID].player_faction:
+                                raise Exception("Specified stone belongs to a different faction")
+                            if self.stone_type not in [gm.stones[adopted_stone_ID].stone_type, "wildcard"]:
+                                raise Exception("Specified stone is of incompatible type")
+                            if gm.stones[adopted_stone_ID].orientable and gm.flags[adopted_stone_progenitor].flag_args[1] != new_a:
+                                raise Exception("Specified stone jumps in at a different azimuth than proposed")
+
+                            for TJI_ID in gm.effects_by_round[round_number]:
+                                if TJI_ID == adopted_stone_progenitor:
+                                    raise Exception("Specified time-jump-in has been added only this round, and thus hasn't been realised yet.")
+
+                            return(Message("command", {"type" : "timejump", "new_t" : new_t, "new_x" : new_x, "new_y" : new_y, "new_a" : 0, "adopted_stone_ID" : adopted_stone_ID}))
+
+                        else:
+                            # not swapping
+                            return(Message("command", {"type" : "timejump", "new_t" : new_t, "new_x" : new_x, "new_y" : new_y, "new_a" : 0}))
 
                 if input_cmd_list[0] in ['t', 'tag']:
                     if len(input_cmd_list) != 2:
@@ -113,7 +140,7 @@ class Tagger(Stone):
                     if tag_type == "hide" and t >= gm.t_dim - 2:
                         raise Exception("The \"hide\" tagscreen cannot be selected on the second-to-last time-slice")
 
-                    return(Message("command", {"type" : "attack", "attack_arguments" : [tag_type]}))
+                    return(Message("command", {"type" : "tag", "tag_type" : tag_type}))
                 raise Exception("Your input couldn't be parsed")
 
             except Exception as e:
@@ -194,19 +221,6 @@ class Tagger(Stone):
     # Message("board action", STPos)
 
     def attack(self, gm, attack_flag_ID, t):
-        cur_x, cur_y, cur_a = self.history[t]
-        # We tag affected stones
-        tag_type = gm.flags[attack_flag_ID].flag_args[0]
-        if tag_type == "lock":
-            return(Message("tagscreen_lock", STPos(t, cur_x, cur_y)))
-        elif tag_type == "unlock":
-            return(Message("tagscreen_unlock", STPos(t, cur_x, cur_y)))
-        elif tag_type == "hide":
-            return(Message("tagscreen_hide", STPos(t, cur_x, cur_y)))
-        else:
-            print(f"ERROR: unrecognised tagscreen type {tag_type}")
-            return(-1)
-
         return(Message("pass"))
 
 
