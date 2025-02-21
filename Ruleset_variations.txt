@@ -27,4 +27,3 @@ The first option is always the default one.
      a) [presence] 'Antidote': If both 'unlock' and 'lock' are present, they cancel each other out, regardless of the number of tagscreens of each type. (i.e. unlock state is forced, but no interference)
      b) [saturation] 'Tug-o-war': The difference between the number of unlock and lock tagscreens for each stone is calculated in each time-slice. If positive, lock state is forced. If zero, nothing happens. If negative, stones in lock state become unlocked and unlocked states are interfered with.
 
-note that as of now, hide tagscreens save the hidden stone but also eat the bullet if it WOULD be stopped -> TODO make bullets always fly through tagscreens!

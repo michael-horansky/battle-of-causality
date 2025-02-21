@@ -1417,9 +1417,11 @@ class Gamemaster():
             # moves which result in conflict.
 
 
-            # Conflict resolution
+            # -------------------- 1. Conflict resolution ---------------------
             self.resolve_conflicts(t)
 
+
+            # -------------------- 2. Tagscreen resolution --------------------
             # We preliminarily record stone positions for the actions to be resolvable
             self.record_stones_at_time(t)
 
@@ -1487,8 +1489,10 @@ class Gamemaster():
                         if self.stones[stone_ID].has_been_tag_hidden_this_turn:
                             # We place the stone into the next time-slice
                             self.move_stone_forward_in_time(stone_ID, x, y, t, t + 1)
-            # Stone actions resolution
-            self.resolve_stone_actions(t)
+
+
+            # --------------- 3. Stone/board actions resolution ---------------
+            self.resolve_stone_actions(t) # Translates stone actions into board actions
             for x in range(self.x_dim):
                 for y in range(self.y_dim):
                     if len(self.board_actions[t][x][y]["destruction"]) != 0:
@@ -1533,7 +1537,12 @@ class Gamemaster():
                     for stone_ID in self.board_dynamic[t][x][y].stones:
                         # Stone exists on board, so we preliminarily set
                         # its causal freedom to here.
-                        self.stone_causal_freedom[stone_ID] = t
+
+                        # If tag locked and this is final timeslice, we set as causally locked
+                        if t == self.t_dim - 1 and self.stones[stone_ID].has_been_tag_locked:
+                            self.stone_causal_freedom[stone_ID] = None
+                        else:
+                            self.stone_causal_freedom[stone_ID] = t
 
                         # We assume that the list of flags is already ordered
                         # from earliest to latest

@@ -151,7 +151,18 @@ class Tank(Stone):
                 input_cmd_list = input_cmd_raw.split(' ')
 
                 if input_cmd_list[0] in ['tj', 'timejump']:
-                    if len(input_cmd_list) == 2:
+                    if len(input_cmd_list) not in [2, 3]:
+                        raise Exception("Required argument missing")
+                    target_time = int(input_cmd_list[1])
+                    adopted_stone_ID = None
+                    if len(input_cmd_list) == 3:
+                        adopted_stone_ID = int(input_cmd_list[2])
+                    check_timejump_validity_msg = self.check_if_timejump_valid(gm, round_number, t, cur_x, cur_y, cur_a, target_time, cur_x, cur_y, cur_a, adopted_stone_ID)
+                    if check_timejump_validity_msg.header == False:
+                        raise Exception(check_timejump_validity_msg.msg)
+                    return(Message("command", {"type" : "timejump", "new_t" : target_time, "new_x" : cur_x, "new_y" : cur_y, "new_a" : cur_a, "adopted_stone_ID" : adopted_stone_ID}))
+
+                    """if len(input_cmd_list) == 2:
                         # Only time specified
                         target_time = int(input_cmd_list[1])
                         if target_time < 0:
@@ -197,7 +208,7 @@ class Tank(Stone):
                         return(Message("command", {"type" : "timejump", "new_t" : target_time, "new_x" : cur_x, "new_y" : cur_y, "new_a" : cur_a, "adopted_stone_ID" : adopted_stone_ID}))
 
                     else:
-                        raise Exception("Required argument missing")
+                        raise Exception("Required argument missing")"""
 
                 raise Exception("Your input couldn't be parsed")
 

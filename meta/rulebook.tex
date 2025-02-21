@@ -279,7 +279,12 @@ The second condition is also simple, but there's a caveat. Note that if a stone 
 		\item Unopposable
 		\item Unorientable
 		\item Movement: the tagger jumps like a horse (two squares in any cardinal direction and one square in a perpendicular direction). Being unopposable, it naturally jumps over other stones.
-		\item Attacking: the tagger deploys a tagscreen at its position, which explodes one turn later, tagging any stone on its square and all of the $4$ adjanced squares. The tagged stones lose their ability to time-jump and become causally locked in the final time-slice.
+		\item Attacking: the tagger deploys a tagscreen at its position, tagging any stone on its square and all of the $4$ adjanced squares. There are multiple different tagscreen types the player can choose from:
+		\begin{itemize}
+			\item "Lock" tagscreen: The tagged stones lose their ability to time-jump-out and become causally locked in the final time-slice. However, this does not disrupt time-jumps-out already placed on the tagged stones' trajectories, only prevents the players for queueing new ones.
+			\item "Unlock" tagscreen: counteracts the "lock" tagscreen, or interferes with trajectories laid out on previous rounds, making stones causally free. See Sec. \ref{sec:ruleset variations} for details.
+			\item "Hide" tagscreen: Removes all tagged stones from the board and places them into the next time-slice. Cannot be deployed on the second-to-last time-slice.
+		\end{itemize}
 		\item Time-jumps: the tagger can time-jump at any time, but its time-jumps still obey the rules of its movement--either by two time-slices back and by one square in any cardinal direction, or by one time-slice back and by two squares in any cardinal direction.
 		\end{itemize}
 	\item \textbf{Wildcard}

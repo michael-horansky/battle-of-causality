@@ -127,53 +127,16 @@ class Bombardier(Stone):
                 input_cmd_list = input_cmd_raw.split(' ')
 
                 if input_cmd_list[0] in ['tj', 'timejump']:
-                    if len(input_cmd_list) == 2:
-                        # Only time specified
-                        target_time = int(input_cmd_list[1])
-                        if target_time < 0:
-                            raise Exception("Lowest target time value is 0")
-                        if target_time >= t:
-                            raise Exception("Target time must be in the past")
-                        return(Message("command", {"type" : "timejump", "new_t" : target_time, "new_x" : cur_x, "new_y" : cur_y, "new_a" : cur_a}))
-                    elif len(input_cmd_list) == 3:
-                        # Both time and stone_ID specified; an adoption of a TJI is attempted
-                        target_time = int(input_cmd_list[1])
-                        adopted_stone_ID = int(input_cmd_list[2])
-
-                        new_t = target_time
-                        new_x = cur_x
-                        new_y = cur_y
-                        new_a = cur_a
-
-                        # Is time correct?
-                        if target_time < 0:
-                            raise Exception("Lowest target time value is 0")
-                        if target_time >= t:
-                            raise Exception("Target time must be in the past")
-
-                        # Is stone correct?
-                        if adopted_stone_ID not in gm.stones:
-                            raise Exception("Stone ID invalid")
-                        adopted_stone_progenitor = gm.stones[adopted_stone_ID].progenitor_flag_ID
-                        if gm.flags[adopted_stone_progenitor].flag_type != "time_jump_in":
-                            raise Exception("Specified stone is not placed onto the board via a time-jump-in")
-                        if not (gm.flags[adopted_stone_progenitor].pos.t == new_t - 1 and gm.flags[adopted_stone_progenitor].pos.x == new_x and gm.flags[adopted_stone_progenitor].pos.y == new_y):
-                            raise Exception("Specified stone doesn't time-jump-in at the specified square")
-                        if self.player_faction != gm.stones[adopted_stone_ID].player_faction:
-                            raise Exception("Specified stone belongs to a different faction")
-                        if self.stone_type not in [gm.stones[adopted_stone_ID].stone_type, "wildcard"]:
-                            raise Exception("Specified stone is of incompatible type")
-                        if gm.stones[adopted_stone_ID].orientable and gm.flags[adopted_stone_progenitor].flag_args[1] != new_a:
-                            raise Exception("Specified stone jumps in at a different azimuth than proposed")
-
-                        for TJI_ID in gm.effects_by_round[round_number]:
-                            if TJI_ID == adopted_stone_progenitor:
-                                raise Exception("Specified time-jump-in has been added only this round, and thus hasn't been realised yet.")
-
-                        return(Message("command", {"type" : "timejump", "new_t" : target_time, "new_x" : cur_x, "new_y" : cur_y, "new_a" : cur_a, "adopted_stone_ID" : adopted_stone_ID}))
-
-                    else:
+                    if len(input_cmd_list) not in [2, 3]:
                         raise Exception("Required argument missing")
+                    target_time = int(input_cmd_list[1])
+                    adopted_stone_ID = None
+                    if len(input_cmd_list) == 3:
+                        adopted_stone_ID = int(input_cmd_list[2])
+                    check_timejump_validity_msg = self.check_if_timejump_valid(gm, round_number, t, cur_x, cur_y, cur_a, target_time, cur_x, cur_y, cur_a, adopted_stone_ID)
+                    if check_timejump_validity_msg.header == False:
+                        raise Exception(check_timejump_validity_msg.msg)
+                    return(Message("command", {"type" : "timejump", "new_t" : target_time, "new_x" : cur_x, "new_y" : cur_y, "new_a" : cur_a, "adopted_stone_ID" : adopted_stone_ID}))
 
                 raise Exception("Your input couldn't be parsed")
 

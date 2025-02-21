@@ -157,6 +157,41 @@ class Stone():
 
         return(Message("not a generic cmd"))
 
+    def check_if_timejump_valid(self, gm, round_number, old_t, old_x, old_y, old_a, new_t, new_x, new_y, new_a, adopted_stone_ID = None):
+
+        # Returns Message(True) if timejump valid, or Message(False, "message") if invalid
+        if self.has_been_tag_locked:
+            return(Message(False, "This stone has been tag locked, and thus cannot perform a new time-jump-out."))
+        if new_t < 0:
+            return(Message(False, "Lowest target time value is 0"))
+        if new_t >= gm.t_dim:
+            return(Message(False, f"Largest target time value is {gm.t_dim - 1}"))
+        if new_t >= old_t:
+            return(Message(False, "Target time must be in the past"))
+        if not gm.is_square_available(new_x, new_y):
+            # The stone is attempting to move into a wall
+            return(Message(False, "Target spatial position not available"))
+        if adopted_stone_ID is not None:
+            if adopted_stone_ID not in gm.stones:
+                return(Message(False, "Adopted stone ID invalid"))
+            adopted_stone_progenitor = gm.stones[adopted_stone_ID].progenitor_flag_ID
+            if gm.flags[adopted_stone_progenitor].flag_type != "time_jump_in":
+                return(Message(False, "Specified stone is not placed onto the board via a time-jump-in"))
+            if not (gm.flags[adopted_stone_progenitor].pos.t == new_t - 1 and gm.flags[adopted_stone_progenitor].pos.x == new_x and gm.flags[adopted_stone_progenitor].pos.y == new_y):
+                return(Message(False, "Specified stone doesn't time-jump-in at the specified square"))
+            if self.player_faction != gm.stones[adopted_stone_ID].player_faction:
+                return(Message(False, "Specified stone belongs to a different faction"))
+            if self.stone_type not in [gm.stones[adopted_stone_ID].stone_type, "wildcard"]:
+                return(Message(False, "Specified stone is of incompatible type"))
+            if self.orientable and gm.flags[adopted_stone_progenitor].flag_args[1] != new_a:
+                # If this is a wildcard, then the adopted stone can be orientable with any azimuth
+                return(Message(False, "Specified stone jumps in at a different azimuth than proposed"))
+
+            for TJI_ID in gm.effects_by_round[round_number]:
+                if TJI_ID == adopted_stone_progenitor:
+                    return(Message(False, "Specified time-jump-in has been added only this round, and thus hasn't been realised yet."))
+        return(Message(True))
+
     # -------------------------------------------------------------------------
     # -------------------------- Overridden methods ---------------------------
     # -------------------------------------------------------------------------

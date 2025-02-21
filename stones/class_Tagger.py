@@ -93,7 +93,7 @@ class Tagger(Stone):
                     if new_t < 0:
                         raise Exception("Lowest target time value is 0")
                     if new_t >= gm.t_dim:
-                        raise Exception(f"Lowest target time value is {gm.t_dim - 1}")
+                        raise Exception(f"Largest target time value is {gm.t_dim - 1}")
 
                     if not gm.is_square_available(new_x, new_y):
                         # The stone is attempting to move into a wall
@@ -103,6 +103,9 @@ class Tagger(Stone):
                         # We cannot swap a forward move! Just follow the old version bruv
                         return(Message("command", {"type" : "spatial_move", "new_x" : new_x, "new_y" : new_y, "new_a" : 0}))
                     else:
+                        # This is a timejump, and we need to check if the stone is tag locked
+                        if self.has_been_tag_locked:
+                            raise Exception("This stone has been tag locked, and thus cannot perform a new time-jump-out.")
                         # Check if swapping
                         if len(input_cmd_list) == 5:
                             adopted_stone_ID = int(input_cmd_list[4])
