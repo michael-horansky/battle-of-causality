@@ -1,9 +1,9 @@
 5
 XXXXXXXX
 X      X
-X      X
 X C    X
 XYT  L X
-X      X
+X    Z X
+X ST   X
 X      X
 XXXXXXXX

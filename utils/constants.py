@@ -87,19 +87,23 @@ stone_type_representations = {
         "Y" : ["A", "bombardier"],
         "V" : ["B", "bombardier"],
         "C" : ["A", "tagger"],
-        "G" : ["B", "tagger"]
+        "G" : ["B", "tagger"],
+        "S" : ["A", "sniper"],
+        "Z" : ["B", "sniper"]
     }
 
 stone_symbols = {
         "A" : {
                 "tank" : "T",
                 "bombardier" : "Y",
-                "tagger" : "C"
+                "tagger" : "C",
+                "sniper" : "S"
             },
         "B" : {
                 "tank" : "L",
                 "bombardier" : "V",
-                "tagger" : "G"
+                "tagger" : "G",
+                "sniper" : "Z"
             }
     }
 

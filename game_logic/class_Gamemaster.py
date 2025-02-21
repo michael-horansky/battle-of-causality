@@ -17,6 +17,7 @@ from stones.class_Stone import Stone
 from stones.class_Tank import Tank
 from stones.class_Bombardier import Bombardier
 from stones.class_Tagger import Tagger
+from stones.class_Sniper import Sniper
 
 # Import game logic components
 from game_logic.class_Flag import Flag
@@ -495,6 +496,8 @@ class Gamemaster():
             return(Bombardier(new_stone_ID, progenitor_flag_ID, player_faction, self.t_dim))
         elif stone_type == "tagger":
             return(Tagger(new_stone_ID, progenitor_flag_ID, player_faction, self.t_dim))
+        elif stone_type == "sniper":
+            return(Sniper(new_stone_ID, progenitor_flag_ID, player_faction, self.t_dim))
         else:
             self.print_log(f"ERROR: Unrecognizable stone type {stone_type} on setup.", 0)
             quit()
@@ -1299,6 +1302,9 @@ class Gamemaster():
         # Reads tracker and asks Stones to perform actions
         # Note: these actions ALWAYS have to be initiated AFTER their cause.
         for stone_ID in self.stone_actions[t].keys():
+            # Check if the stone hasn't been removed from the board since last time-slice
+            if self.stones[stone_ID].history[t] is None:
+                continue
             for action_flag_ID in self.stone_actions[t][stone_ID]:
                 if self.flags[action_flag_ID].flag_type == "attack":
                     stone_action_msg = self.stones[stone_ID].attack(self, action_flag_ID, t) # Stone translates flag into board action of appropriate type at appropriate position

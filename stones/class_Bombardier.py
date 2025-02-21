@@ -25,7 +25,7 @@ class Bombardier(Stone):
 
         self.type_specific_final_commands = {
                 "pass" : [None, None, "No plag is placed, and this stone remains causally free. This is also selected on an empty submission!"],
-                "timejump/tj" : ["time", "stone ID", "Jumps back into the specified time (spatial position unchanged). If stone ID specified, will adopt a time-jump-in which generates said stone."]
+                "timejump/tj" : ["time", "stone ID", "Jumps back into the specified time (spatial position unchanged). If stone ID specified, will swap the time-jump-in which generates said stone."]
             }
 
         self.opposable = True
@@ -98,7 +98,7 @@ class Bombardier(Stone):
 
     def parse_final_move_cmd(self, gm):
 
-        # Just the same as parse_move_cdm, except this one is called in the final time-slice. Here, the stones
+        # Just the same as parse_move_cmd, except this one is called in the final time-slice. Here, the stones
         # can either pass (if their type allows it), which leaves them causally free so that they can jump back
         # in the next rounds, or they can do a time-jump-out (or some other type-specific action which affects
         # the previous time-slices, not the future ones).
