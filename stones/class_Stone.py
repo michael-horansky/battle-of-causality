@@ -20,6 +20,9 @@ class Stone():
 
         self.history = [None] * t_dim # This allows the stone to remember its positions in time, shortening tracking time. [t] = (x,y,a)
 
+        # Trackers for spatial conflict resolution interactions
+        self.is_explosive_this_turn = False # At the beginning of SCR next turn this stone's square explodes, removing all but this stone
+
         # Trackers for tagscreen interactions
         self.has_been_tag_locked = False
         self.has_been_tag_unlocked_this_turn = False
@@ -47,12 +50,18 @@ class Stone():
         self.orientable = False
 
     def reset_temporary_trackers(self):
+        # SCR
+        self.is_explosive_this_turn = False
+        # Tagscreen
         self.has_been_tag_locked = False
         self.has_been_tag_unlocked_this_turn = False
         self.unlock_tag_max_flag_ID_this_turn = None
         self.has_been_tag_hidden_this_turn = False
 
     def reset_temporary_time_specific_trackers(self):
+        # SCR
+        self.is_explosive_this_turn = False
+        # Tagscreen
         self.has_been_tag_unlocked_this_turn = False
         self.unlock_tag_max_flag_ID_this_turn = None
         self.has_been_tag_hidden_this_turn = False

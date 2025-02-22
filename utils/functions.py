@@ -105,6 +105,18 @@ def encode_azimuth(human_readable_a):
         return(3)
     return(None)
 
+def diag_direction_to_delta_pos(human_readable_diag):
+    # Returns delta_x, delta_y
+    if human_readable_diag in ['upright', 'up-right', 'ur', 'northeast', 'ne', '^>', '0.5']:
+        return(1, -1)
+    if human_readable_diag in ['downright', 'down-right', 'dr', 'southeast', 'se', 'v>', '1.5']:
+        return(1, 1)
+    if human_readable_diag in ['downleft', 'down-left', 'dl', 'southwest', 'sw', '<v', '2.5']:
+        return(-1, 1)
+    if human_readable_diag in ['upleft', 'up-left', 'ul', 'northwest', 'nw', '<^', '3.5']:
+        return(-1, -1)
+    return(None)
+
 
 def str_to_int_or_none(s):
     if s in ['', 'None']:

@@ -1,7 +1,7 @@
 5
 XXXXXXXX
-X      X
-X C    X
+X W    X
+X C  M X
 XYT  L X
 X    Z X
 X ST   X

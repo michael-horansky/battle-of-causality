@@ -27,6 +27,7 @@
 
 # TAGGER
 -Jumps like a horse
+-Cannot wait! (so that movement is less easy, requires 3D planning)
 -Unopposable (jumps over stones)
 -Attacks by deploying a tagscreen
 -Tagscreen explodes one turn later, tagging stones on the 4 adjanced squares
@@ -39,12 +40,13 @@ NOTE: Ideas for other effects of the tagscreen in case timejump blocking is not 
     b) Support function: the tagscreen serves as a "free interference", setting the flag_ID_max for tagged stones to current round, so they become causally free again.
 
 NOTE: idea for movement: to make interference easier, how about the tagger has a "wait"-like movement option which makes it unpushable? or maybe some other stone?
+nah: interference is easy with the unlock tag
 
 
 # WILDCARD
--Moves in 8 directions by 1 horizontally, vertically, or diagonally
+-Moves in 4 diagonal directions by 1
 -Unopposable (jumps over stones)
--Attacks a selected adjanced square
+-Attacks on movement as if capturing in chess (i.e. becomes a mine which destroys all on the same square except self, but only on movement, not waiting or timejumping)
 -Friendly fire on
 -Can time jump any time
 -Cannot conquer bases (fun board where one tank and many wildcards so if the tank dies they have to downgrade to be able to win the game)

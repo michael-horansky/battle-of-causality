@@ -18,6 +18,7 @@ from stones.class_Tank import Tank
 from stones.class_Bombardier import Bombardier
 from stones.class_Tagger import Tagger
 from stones.class_Sniper import Sniper
+from stones.class_Wildcard import Wildcard
 
 # Import game logic components
 from game_logic.class_Flag import Flag
@@ -498,6 +499,8 @@ class Gamemaster():
             return(Tagger(new_stone_ID, progenitor_flag_ID, player_faction, self.t_dim))
         elif stone_type == "sniper":
             return(Sniper(new_stone_ID, progenitor_flag_ID, player_faction, self.t_dim))
+        elif stone_type == "wildcard":
+            return(Wildcard(new_stone_ID, progenitor_flag_ID, player_faction, self.t_dim))
         else:
             self.print_log(f"ERROR: Unrecognizable stone type {stone_type} on setup.", 0)
             quit()
@@ -838,6 +841,32 @@ class Gamemaster():
 
         # NOTE that this method is completely flag-independent, only dealing
         # with the placement of Stones on board!
+
+        # 0 Captures
+        # Captures are a special type of movement-based attack which destroys all other stones on the square of placement.
+        squares_to_be_checked = self.conflicting_squares[t].copy()
+        while(len(squares_to_be_checked) > 0):
+            cur_pos = squares_to_be_checked.pop(0)
+            x, y = cur_pos
+            explosive_stones_present = []
+            for stone_ID in self.board_dynamic[t][x][y].stones:
+                if self.stones[stone_ID].is_explosive_this_turn:
+                    explosive_stones_present.append(stone_ID)
+            if len(explosive_stones_present) == 0:
+                continue
+            elif len(explosive_stones_present) == 1:
+                # The explosive stone survives, all other die
+                for other_stone_ID in self.board_dynamic[t][x][y].stones:
+                    if other_stone_ID == explosive_stones_present[0]:
+                        continue
+                    self.board_dynamic[t][x][y].remove_stone(other_stone_ID)
+                # We remove the conflict
+                self.conflicting_squares[t].remove((x, y))
+            else:
+                # All stones die by mutual capture
+                self.board_dynamic[t][x][y].remove_stones()
+                # We remove the conflict
+                self.conflicting_squares[t].remove((x, y))
 
         # 1 Sokoban
         # Sokoban pushes do not occur at t = 0, as they depend on the state of the board in the previous time-slice
@@ -1575,6 +1604,9 @@ class Gamemaster():
                             if cur_flag.flag_type == "spatial_move":
                                 self.place_stone_on_board(STPos(t+1, cur_flag.flag_args[0], cur_flag.flag_args[1]), cur_flag.stone_ID, [cur_flag.flag_args[2]])
                                 self.stone_causal_freedom[cur_flag.stone_ID] = t+1
+                                # If Wildcard and not wait, we mark it as explosive
+                                if self.stones[cur_flag.stone_ID].stone_type == "wildcard" and cur_flag.flag_args[2] == 1:
+                                    self.stones[cur_flag.stone_ID].is_explosive_this_turn = True
                             if cur_flag.flag_type == "attack":
                                 self.place_stone_on_board(STPos(t+1, x, y), cur_flag.stone_ID, self.board_dynamic[t][x][y].stone_properties[cur_flag.stone_ID])
                                 self.stone_causal_freedom[cur_flag.stone_ID] = t+1
