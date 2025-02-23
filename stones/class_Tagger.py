@@ -6,7 +6,7 @@ from game_logic.class_Message import Message
 from stones.class_Stone import Stone
 
 # -----------------------------------------------------------------------------
-# ----------------------------- class Bombardier ------------------------------
+# ------------------------------- class Tagger --------------------------------
 # -----------------------------------------------------------------------------
 
 class Tagger(Stone):
@@ -248,12 +248,5 @@ class Tagger(Stone):
                 print("Try again; Arguments with numerical inputs should be well-formatted")
             except Exception as e:
                 print("Try again;", e)
-
-    # ------------------------- Stone action methods --------------------------
-    # These methods only read the state of gm, and always return
-    # Message("board action", STPos)
-
-    def attack(self, gm, attack_flag_ID, t):
-        return(Message("pass"))
 
 

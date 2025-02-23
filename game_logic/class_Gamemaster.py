@@ -19,6 +19,8 @@ from stones.class_Bombardier import Bombardier
 from stones.class_Tagger import Tagger
 from stones.class_Sniper import Sniper
 from stones.class_Wildcard import Wildcard
+from stones.class_Box import Box
+from stones.class_Mine import Mine
 
 # Import game logic components
 from game_logic.class_Flag import Flag
@@ -42,7 +44,7 @@ class Gamemaster():
 
         # Stone trackers. The lists are updated when flags are placed, and do not depend on which stones are actually present on the board dynamically.
         self.stones = {} #[ID] = Stone()
-        self.faction_armies = {} #[faction] = [ID_1, ID_2 ... ]
+        self.faction_armies = {} #[faction] = [ID_1, ID_2 ... ], with ["GM"] = [stones owned by GM]
         self.factions = ['A', 'B']
         self.stone_causal_freedom = {} # [stone_ID] = timeslice of causal freedom OR None if stone is not free/not on the board. NOTE: updated ONLY by execute_moves()
         # Setup trackers
@@ -491,6 +493,7 @@ class Gamemaster():
                     self.board_dynamic[t][x][y].remove_stones()
 
     def create_stone(self, new_stone_ID, stone_type, progenitor_flag_ID, player_faction):
+        # Playable stone types
         if stone_type == "tank":
             return(Tank(new_stone_ID, progenitor_flag_ID, player_faction, self.t_dim))
         elif stone_type == "bombardier":
@@ -501,9 +504,25 @@ class Gamemaster():
             return(Sniper(new_stone_ID, progenitor_flag_ID, player_faction, self.t_dim))
         elif stone_type == "wildcard":
             return(Wildcard(new_stone_ID, progenitor_flag_ID, player_faction, self.t_dim))
+        # Neutral stone types
+        elif stone_type == "box":
+            return(Box(new_stone_ID, progenitor_flag_ID, player_faction, self.t_dim))
+        elif stone_type == "mine":
+            return(Mine(new_stone_ID, progenitor_flag_ID, player_faction, self.t_dim))
         else:
             self.print_log(f"ERROR: Unrecognizable stone type {stone_type} on setup.", 0)
             quit()
+
+    def update_conflict_at_pos(self, pos):
+        # Updates the self.conflicting_squares tracker
+        if len(self.board_dynamic[pos.t][pos.x][pos.y].stones) > 1 or (self.board_dynamic[pos.t][pos.x][pos.y].occupied and (not self.is_square_available(pos.x, pos.y))):
+            # Conflicting square
+            if (pos.x, pos.y) not in self.conflicting_squares[pos.t]:
+                self.conflicting_squares[pos.t].append((pos.x, pos.y))
+        else:
+            # Non-conflicting square
+            if (pos.x, pos.y) in self.conflicting_squares[pos.t]:
+                self.conflicting_squares[pos.t].remove((pos.x, pos.y))
 
     def place_stone_on_board(self, pos, stone_ID, stone_properties):
         # If the square is already occupied or unavailable, we track the square in a list of conflicting squares
@@ -842,32 +861,6 @@ class Gamemaster():
         # NOTE that this method is completely flag-independent, only dealing
         # with the placement of Stones on board!
 
-        # 0 Captures
-        # Captures are a special type of movement-based attack which destroys all other stones on the square of placement.
-        squares_to_be_checked = self.conflicting_squares[t].copy()
-        while(len(squares_to_be_checked) > 0):
-            cur_pos = squares_to_be_checked.pop(0)
-            x, y = cur_pos
-            explosive_stones_present = []
-            for stone_ID in self.board_dynamic[t][x][y].stones:
-                if self.stones[stone_ID].is_explosive_this_turn:
-                    explosive_stones_present.append(stone_ID)
-            if len(explosive_stones_present) == 0:
-                continue
-            elif len(explosive_stones_present) == 1:
-                # The explosive stone survives, all other die
-                for other_stone_ID in self.board_dynamic[t][x][y].stones:
-                    if other_stone_ID == explosive_stones_present[0]:
-                        continue
-                    self.board_dynamic[t][x][y].remove_stone(other_stone_ID)
-                # We remove the conflict
-                self.conflicting_squares[t].remove((x, y))
-            else:
-                # All stones die by mutual capture
-                self.board_dynamic[t][x][y].remove_stones()
-                # We remove the conflict
-                self.conflicting_squares[t].remove((x, y))
-
         # 1 Sokoban
         # Sokoban pushes do not occur at t = 0, as they depend on the state of the board in the previous time-slice
 
@@ -892,28 +885,46 @@ class Gamemaster():
                 # Sokoban push only occurs if the moving stone moved by distance 1 in one of the four cardinal directions
                 if prev_x_a == x and prev_y_a == y:
                     # First stone was waiting
+                    if (not self.stones[stone_a].pushable) or (not self.stones[stone_b].opposable):
+                        continue
                     b_delta = functions.get_azimuth_from_delta_pos((prev_x_b, prev_y_b), (x, y))
-                    if b_delta != -1:
-                        # Sokoban push can occur!
-                        new_pos_x, new_pos_y = functions.pos_step((x, y), b_delta)
-                        if self.is_square_available(new_pos_x, new_pos_y) and not self.board_dynamic[t][new_pos_x][new_pos_y].occupied:
-                            #self.board_dynamic[t][new_pos_x][new_pos_y].add_stone(stone_a, self.board_dynamic[t][x][y].stone_properties[stone_a])
-                            #self.board_dynamic[t][x][y].remove_stone(stone_a)
-                            self.change_stone_pos(stone_a, t, x, y, new_pos_x, new_pos_y)
-                            # We remove the conflict
-                            self.conflicting_squares[t].remove((x, y))
+                    if b_delta == -1:
+                        continue
+                    # Sokoban push can occur!
+                    new_pos_x, new_pos_y = functions.pos_step((x, y), b_delta)
+                    if not self.is_square_available(new_pos_x, new_pos_y):
+                        continue
+                    #if self.board_dynamic[t][new_pos_x][new_pos_y].occupied:
+                        #if self.stones[]
+                    #    continue
+                    #self.board_dynamic[t][new_pos_x][new_pos_y].add_stone(stone_a, self.board_dynamic[t][x][y].stone_properties[stone_a])
+                    #self.board_dynamic[t][x][y].remove_stone(stone_a)
+                    self.change_stone_pos(stone_a, t, x, y, new_pos_x, new_pos_y)
+                    # We remove the conflict
+                    self.conflicting_squares[t].remove((x, y))
+                    # We check if the new square is conflicting
+                    self.update_conflict_at_pos(STPos(t, new_pos_x, new_pos_y))
+
                 if prev_x_b == x and prev_y_b == y:
                     # Second stone was waiting
+                    if (not self.stones[stone_b].pushable) or (not self.stones[stone_a].opposable):
+                        continue
                     a_delta = functions.get_azimuth_from_delta_pos((prev_x_a, prev_y_a), (x, y))
-                    if a_delta != -1:
-                        # Sokoban push can occur!
-                        new_pos_x, new_pos_y = functions.pos_step((x, y), a_delta)
-                        if self.is_square_available(new_pos_x, new_pos_y) and not self.board_dynamic[t][new_pos_x][new_pos_y].occupied:
-                            #self.board_dynamic[t][new_pos_x][new_pos_y].add_stone(stone_b, self.board_dynamic[t][x][y].stone_properties[stone_b])
-                            #self.board_dynamic[t][x][y].remove_stone(stone_b)
-                            self.change_stone_pos(stone_b, t, x, y, new_pos_x, new_pos_y)
-                            # We remove the conflict
-                            self.conflicting_squares[t].remove((x, y))
+                    if a_delta == -1:
+                        continue
+                    # Sokoban push can occur!
+                    new_pos_x, new_pos_y = functions.pos_step((x, y), a_delta)
+                    if not self.is_square_available(new_pos_x, new_pos_y):
+                        continue
+                    #if self.board_dynamic[t][new_pos_x][new_pos_y].occupied:
+                    #    continue
+                    #self.board_dynamic[t][new_pos_x][new_pos_y].add_stone(stone_b, self.board_dynamic[t][x][y].stone_properties[stone_b])
+                    #self.board_dynamic[t][x][y].remove_stone(stone_b)
+                    self.change_stone_pos(stone_b, t, x, y, new_pos_x, new_pos_y)
+                    # We remove the conflict
+                    self.conflicting_squares[t].remove((x, y))
+                    # We check if the new square is conflicting
+                    self.update_conflict_at_pos(STPos(t, new_pos_x, new_pos_y))
 
         # 2 Opposition
         # Opposition do not occur at t = 0, as they depend on the state of the board in the previous time-slice
@@ -942,6 +953,32 @@ class Gamemaster():
                                 self.change_stone_pos(one_ID, t, x, y, old_x, old_y)
                                 self.change_stone_pos(two_ID, t, old_x, old_y, x, y)
                                 break
+
+        # 2.5 Captures
+        # Captures are a special type of movement-based attack which destroys all other stones on the square of placement.
+        squares_to_be_checked = self.conflicting_squares[t].copy()
+        while(len(squares_to_be_checked) > 0):
+            cur_pos = squares_to_be_checked.pop(0)
+            x, y = cur_pos
+            explosive_stones_present = []
+            for stone_ID in self.board_dynamic[t][x][y].stones:
+                if self.stones[stone_ID].is_explosive_this_turn:
+                    explosive_stones_present.append(stone_ID)
+            if len(explosive_stones_present) == 0:
+                continue
+            elif len(explosive_stones_present) == 1 and not self.stones[explosive_stones_present[0]].susceptible_to_own_explosion:
+                # The explosive stone survives, all other die
+                for other_stone_ID in self.board_dynamic[t][x][y].stones:
+                    if other_stone_ID == explosive_stones_present[0]:
+                        continue
+                    self.board_dynamic[t][x][y].remove_stone(other_stone_ID)
+                # We remove the conflict
+                self.conflicting_squares[t].remove((x, y))
+            else:
+                # All stones die by mutual capture
+                self.board_dynamic[t][x][y].remove_stones()
+                # We remove the conflict
+                self.conflicting_squares[t].remove((x, y))
 
         # 3 Impasse
         # Impasses do not occur at t = 0, as they depend on the state of the board in the previous time-slice
@@ -1550,7 +1587,10 @@ class Gamemaster():
                 for y in range(self.y_dim):
                     if self.board_dynamic[t][x][y].has_base:
                         if self.board_dynamic[t][x][y].occupied:
-                            self.board_dynamic[t][x][y].base_allegiance = self.stones[self.board_dynamic[t][x][y].stones[0]].player_faction
+                            if self.stones[self.board_dynamic[t][x][y].stones[0]].stone_type not in ["wildcard"]:
+                                # Neutral stones do not revert base allegiance to neutral
+                                if self.stones[self.board_dynamic[t][x][y].stones[0]].player_faction in self.factions:
+                                    self.board_dynamic[t][x][y].base_allegiance = self.stones[self.board_dynamic[t][x][y].stones[0]].player_faction
                         if t < self.t_dim - 1:
                             self.board_dynamic[t+1][x][y].add_base(self.board_dynamic[t][x][y].base_allegiance)
 
@@ -1570,6 +1610,16 @@ class Gamemaster():
                         if cur_flag_ID in flags_to_execute and self.flags[cur_flag_ID].is_active:
                             local_flags_to_execute.append(cur_flag_ID)
                     for stone_ID in self.board_dynamic[t][x][y].stones:
+                        # If neutral stone, instead of asking for a Flag, we directly perform the default action
+                        if self.stones[stone_ID].player_faction == "GM":
+                            # Neutral stones are always causally locked
+                            self.stone_causal_freedom[stone_ID] = None
+                            if t < self.t_dim - 1:
+                                new_x, new_y, new_props = self.stones[stone_ID].find_next_default_position(self, t, x, y, self.board_dynamic[t][x][y].stone_properties[stone_ID])
+                                self.place_stone_on_board(STPos(t+1, new_x, new_y), stone_ID, new_props)
+                            continue
+
+
                         # Stone exists on board, so we preliminarily set
                         # its causal freedom to here.
 
@@ -1981,7 +2031,7 @@ class Gamemaster():
 
         # Setup players
         self.stones = {}
-        self.faction_armies = {}
+        self.faction_armies = {"GM" : []}
         self.setup_stones = {}
         self.removed_setup_stones = {}
         self.effects_by_round = [[]]
@@ -1991,7 +2041,7 @@ class Gamemaster():
         for faction in self.factions:
             self.faction_armies[faction] = []
 
-        faction_orientations = {'A': 1, 'B' : 3} #TODO load this from the board dynamically
+        faction_orientations = {'A': 1, 'B' : 3, 'GM' : 0} #TODO load this from the board dynamically
 
         # Read the board setup
         setup_commands = []
@@ -2061,7 +2111,7 @@ class Gamemaster():
 
         # Setup players
         self.stones = {}
-        self.faction_armies = {}
+        self.faction_armies = {"GM" : []}
         self.setup_stones = {}
         self.removed_setup_stones = {}
         for faction in self.factions:

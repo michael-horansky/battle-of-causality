@@ -6,7 +6,7 @@ from game_logic.class_Message import Message
 from stones.class_Stone import Stone
 
 # -----------------------------------------------------------------------------
-# ----------------------------- class Bombardier ------------------------------
+# ------------------------------ class Wildcard -------------------------------
 # -----------------------------------------------------------------------------
 
 class Wildcard(Stone):
@@ -30,6 +30,8 @@ class Wildcard(Stone):
 
         self.opposable = False
         self.orientable = False
+
+        self.susceptible_to_own_explosion = False
 
     # -------------------------------------------------------------------------
     # -------------------------- Overridden methods ---------------------------

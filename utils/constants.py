@@ -91,7 +91,9 @@ stone_type_representations = {
         "S" : ["A", "sniper"],
         "Z" : ["B", "sniper"],
         "W" : ["A", "wildcard"],
-        "M" : ["B", "wildcard"]
+        "M" : ["B", "wildcard"],
+        "#" : ["GM", "box"],
+        "@" : ["GM", "mine"]
     }
 
 stone_symbols = {
@@ -108,6 +110,10 @@ stone_symbols = {
                 "tagger" : "G",
                 "sniper" : "Z",
                 "wildcard" : "M"
+            },
+        "GM" : {
+                "box" : "#",
+                "mine" : "@"
             }
     }
 

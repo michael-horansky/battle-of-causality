@@ -22,6 +22,7 @@ class Stone():
 
         # Trackers for spatial conflict resolution interactions
         self.is_explosive_this_turn = False # At the beginning of SCR next turn this stone's square explodes, removing all but this stone
+        self.susceptible_to_own_explosion = False # This is a non-temporary stone-type-specific property
 
         # Trackers for tagscreen interactions
         self.has_been_tag_locked = False
@@ -47,6 +48,7 @@ class Stone():
         self.type_specific_final_commands = {}
 
         self.opposable = True
+        self.pushable = True
         self.orientable = False
 
     def reset_temporary_trackers(self):
@@ -269,5 +271,10 @@ class Stone():
 
     def attack(self, gm, attack_flag_ID, t):
         return(Message("pass"))
+
+    def find_next_default_position(self, gm, t, x, y, props):
+        # Method used only by neutral stones(owned bu 'GM')
+        # Returns new_x, new_y, new_props for the next time-slice
+        return(x, y, props.copy())
 
 
