@@ -7,23 +7,30 @@ The first option is always the default one.
 
 2. [end_without_win] If the game ends with no players satisfying the primary win condition,
      a) [draw] 'Poiccard's Gambit': The game counts as a draw.
-     b) [win_by_points] 'Fighting in the War Room': If one player owns the majority of bases in the final timeslice of the last canonized round, that player wins the game.
+     b) [win_by_points] 'Fighting in the War Room': If one player owns the majority of bases in the final timeslice of the last canonised round, that player wins the game.
 
 3. [scenario_priority] If a paradox is reached and two or more variations of setup stone deactivations are causally consistent, what criterions are used to trim down the number of variations to choose from?
-     a) [conserve_setup] 'Shield and Spear': 1. Smaller number of setup deactivations is prioritized; 2. Not deactivating setup stones more recently touched by the player is prioritized; 3. Keeping effects added more recently active is prioritized.
-     b) [activity_interaction_recency] 'Ace Wildcard': 1. Not deactivating stones (setup or TJI) more recently touched by the player is prioritized; 2. Keeping effects added more recently active is prioritized.
-     c) [conserve_effects_stones_hc] 'Merry Chronos': 1. Bigger number of active effects is prioritized; 2. Bigger number of stones present on board is prioritized; 3. Keeping more recently added stones is prioritized (where the recency of setup stones is determined in first round by a headcount by each player); 4. Keeping actions added more recently active is prioritized.
+     a) [conserve_setup] 'Shield and Spear': 1. Smaller number of setup deactivations is prioritised; 2. Not deactivating setup stones more recently touched by the player is prioritised; 3. Keeping effects added more recently active is prioritised.
+     b) [activity_interaction_recency] 'Ace Wildcard': 1. Not deactivating stones (setup or TJI) more recently touched by the player is prioritised; 2. Keeping effects added more recently active is prioritised.
+     c) [conserve_effects_stones_hc] 'Merry Chronos': 1. Bigger number of active effects is prioritised; 2. Bigger number of stones present on board is prioritised; 3. Keeping more recently added stones is prioritised (where the recency of setup stones is determined in first round by a headcount by each player); 4. Keeping actions added more recently active is prioritised.
 
    If we select 'Know your paradoxes!' for Q1, the options for 3 change to
-     a) [all_setup_activity_recency] 'Out with the Old': Keeping effects added more recently active is prioritized.
-     b) [all_setup_conserve_effects] 'Conservative': 1. Bigger number of active effects is prioritized; 2. Keeping effects added more recently active is prioritized.
+     a) [all_setup_activity_recency] 'Out with the Old': Keeping effects added more recently active is prioritised.
+     b) [all_setup_conserve_effects] 'Conservative': 1. Bigger number of active effects is prioritised; 2. Keeping effects added more recently active is prioritised.
 
 4. [viewing_scope] On a given turn, can the players view what the succeeding time-slices look like, including the placed causally free stones?
      a) [view_entire_board] 'Omniscience': The players can view the entire board
      b) [hide_future] 'Fog of War': The players can only view time-slices up to and including the active one. This means they cannot see the time-jumps-in placed by the opponent in the previous round, and they will get surprised by them as they activate.
      Note: we cannot do the hybrid where a player can see the time evolution of their stones across the entire board, but cannot yet see non-active causally free stones, since due to the rule of dogma, buffered time-jumps-in were already canonised, and they could destroy the player's stone on placement, giving away the progenition.
 
-5. [tagger_rules] What is the behaviour of the "lock" and "unlock" tagscreens?
+5. [unlock_tagscreen_behaviour] What is the behaviour of the "lock" and "unlock" tagscreens?
      a) [presence] 'Antidote': If both 'unlock' and 'lock' are present, they cancel each other out, regardless of the number of tagscreens of each type. (i.e. unlock state is forced, but no interference)
      b) [saturation] 'Tug-o-war': The difference between the number of unlock and lock tagscreens for each stone is calculated in each time-slice. If positive, lock state is forced. If zero, nothing happens. If negative, stones in lock state become unlocked and unlocked states are interfered with.
+
+6. [deadline] At what pace does the game progress?
+     a) [one_day_per_move] 'One day per move': If there are stones for a player to command and the player does not submit a full set of commands for that turn in under one day, that player loses the game. In case of simultaneous deadline violation, the game ends and is resolved according to 2. end_without_win.
+     b) [three_days_per_move] 'Three days per move': Same as 'One day per move', except the deadline for each turn is three days.
+     c) [one_hour_cumulative] 'One hour, cumulative': When opening the game and being prompted for turn T, a timer starts. Its value is added to a cumulative sum after the full turn is submitted. If this sum exceeds one hour, the player automatically loses the game. In case of simultaneous deadline violation, the game ends and is resolved according to 2. end_without_win.
+     d) [one_day_cumulative] 'One day, cumulative': Same as 'One hour, cumulative', except the cumulative deadline is one day.
+     e) [no_deadline] 'Open game': There is no deadline. This game cannot end by abandonment.
 

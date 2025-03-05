@@ -2,6 +2,15 @@ import sys
 import os
 import json
 
+# -----------------------------------------------------------------------------
+# ---------------------------- Data flow paradigm -----------------------------
+# -----------------------------------------------------------------------------
+# The game logic is self contained and portable regardless of the renderer.
+# An instance of Gamemaster is created, which outputs structured arrays which
+# describe the output to be rendered. This "abstract output" is eaten by an
+# instance of any renderer class, which then formats the output into a specific
+# context.
+
 
 # We add the parent folder to PYTHONPATH, ensuring sane import paths for all subfolders
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))

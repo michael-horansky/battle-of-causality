@@ -956,29 +956,18 @@ class Gamemaster():
 
         # 2.5 Captures
         # Captures are a special type of movement-based attack which destroys all other stones on the square of placement.
-        squares_to_be_checked = self.conflicting_squares[t].copy()
-        while(len(squares_to_be_checked) > 0):
-            cur_pos = squares_to_be_checked.pop(0)
-            x, y = cur_pos
-            explosive_stones_present = []
-            for stone_ID in self.board_dynamic[t][x][y].stones:
-                if self.stones[stone_ID].is_explosive_this_turn:
-                    explosive_stones_present.append(stone_ID)
-            if len(explosive_stones_present) == 0:
-                continue
-            elif len(explosive_stones_present) == 1 and not self.stones[explosive_stones_present[0]].susceptible_to_own_explosion:
-                # The explosive stone survives, all other die
-                for other_stone_ID in self.board_dynamic[t][x][y].stones:
-                    if other_stone_ID == explosive_stones_present[0]:
-                        continue
-                    self.board_dynamic[t][x][y].remove_stone(other_stone_ID)
-                # We remove the conflict
-                self.conflicting_squares[t].remove((x, y))
-            else:
-                # All stones die by mutual capture
-                self.board_dynamic[t][x][y].remove_stones()
-                # We remove the conflict
-                self.conflicting_squares[t].remove((x, y))
+        # They are resolved after impasse, but squares occupied by capturing stones are not subject to impasse, and therefore
+        # will be tagged here
+        squares_with_capture = []
+        for x in range(self.x_dim):
+            for y in range(self.y_dim):
+                explosive_stones_present = False
+                for stone_ID in self.board_dynamic[t][x][y].stones:
+                    if self.stones[stone_ID].is_explosive_this_turn:
+                        explosive_stones_present = True
+                        break
+                if explosive_stones_present:
+                    squares_with_capture.append((x, y))
 
         # 3 Impasse
         # Impasses do not occur at t = 0, as they depend on the state of the board in the previous time-slice
@@ -989,6 +978,10 @@ class Gamemaster():
             stones_checked = []
             while(len(squares_to_be_checked) > 0):
                 cur_pos = squares_to_be_checked.pop(0)
+                # If this square has a capture, that will take care of the conflict after the impasse phase, and should be ignored now
+                if cur_pos in squares_with_capture:
+                    continue
+
                 x, y = cur_pos
                 # We take all the stones present, add them to the stones_checked tracker, and move those which existed in the previous time-slice back
                 # If we move them back into an occupied square, that square is naturally added to squares_to_be_checked AND to self.conflicting_squares
@@ -1019,6 +1012,37 @@ class Gamemaster():
                         self.conflicting_squares[t].remove(cur_pos)
                 elif not self.board_dynamic[t][x][y].occupied:
                     self.conflicting_squares[t].remove(cur_pos)
+
+        # Capture resolution
+        squares_to_be_checked = squares_with_capture.copy()
+        while(len(squares_to_be_checked) > 0):
+            cur_pos = squares_to_be_checked.pop(0)
+            x, y = cur_pos
+            # If there is only one stone present (the explosive one), it does NOT explode.
+            if len(self.board_dynamic[t][x][y].stones) < 2:
+                continue
+            explosive_stones_present = []
+            for stone_ID in self.board_dynamic[t][x][y].stones:
+                if self.stones[stone_ID].is_explosive_this_turn:
+                    explosive_stones_present.append(stone_ID)
+                    break
+            if len(explosive_stones_present) == 0:
+                continue
+            elif len(explosive_stones_present) == 1 and not self.stones[explosive_stones_present[0]].susceptible_to_own_explosion:
+                # The explosive stone survives, all other die
+                for other_stone_ID in self.board_dynamic[t][x][y].stones:
+                    if other_stone_ID == explosive_stones_present[0]:
+                        continue
+                    self.board_dynamic[t][x][y].remove_stone(other_stone_ID)
+                # We remove the conflict
+                if (x,y) in self.conflicting_squares[t]:
+                    self.conflicting_squares[t].remove((x, y))
+            else:
+                # All stones die by mutual capture
+                self.board_dynamic[t][x][y].remove_stones()
+                # We remove the conflict
+                if (x,y) in self.conflicting_squares[t]:
+                    self.conflicting_squares[t].remove((x, y))
 
         # 4 Explosion
         # We remove all stones from all remaining conflicting squares

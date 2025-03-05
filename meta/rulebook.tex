@@ -149,8 +149,8 @@
 			\item the other stone is not opposable.
 		\end{itemize}
 		\item "Opposition": For every opposable stone, if it moved from position A to position B and there exists another opposable stone which moved from position B to position A, both stones are returned to their original position.
+		\item "Impasse": Now, for every square occupied by more than one stone (and no explosive stones), all the stones on this square which have \textbf{not} been placed on the board in this time-slice (i.e. they are present in the previous time-slice) are moved back to the square which they occupied in the previous time-slice, as well as the stones they pushed through the "sokoban push" rule. This rule chains, and is applied repeatedly until all stones which are still placed on squares which are occupied by more than one stone have already been moved by this rule.
 		\item "Pyrotechnics" : Explosive stones destroy all stones which share their square, and, optionally, themselves.
-		\item "Impasse": Now, for every square occupied by more than one stone, all the stones on this square which have \textbf{not} been placed on the board in this time-slice (i.e. they are present in the previous time-slice) are moved back to the square which they occupied in the previous time-slice, as well as the stones they pushed through the "sokoban push" rule. This rule chains, and is applied repeatedly until all stones which are still placed on squares which are occupied by more than one stone have already been moved by this rule.
 		\item "Explosion": Finally, for every square occupied by more than one stone, all stones on this square are removed from the board.
 	\end{enumerate}
 	Notice the order of these rules. We see that sokoban pushes only happen to stones which have not moved between this and the previous time-slice, or have been placed onto the board, but rather chose a stationary action, such as "wait", "rotate", "attack" etc. Notably, two stones moving onto the same square, be it in opposing or perpendicular directions, are returned back onto their original squares due to the "impasse" rule. This means that no stone has priority in movement. Also, if a stone time-jumps-in at time $t$ on the same square a stone moves onto from time-slice $t-1$, the spatial movement of the second stone is blocked. Hence, opening time portals are treated as momentary blockades.% Finally, since the "sokoban push" rule doesn't apply if the waiting stone would be pushed onto an occupied square, this means that sokoban-like movement does have a lower priority than regular movement (you can think of this as the fact stones are "slowed down" by pushing a stone in front of them). For an example, see Fig. \ref{fig:scr_1}.
@@ -164,7 +164,9 @@
 	
 	The second rule "opposition" is a simple manifestation that moving stones cannot simply phase through each other if moving in opposite directions, unless they are stones which "jump" over others (i.e. unopposable stones).
 	
-	The third rule "pyrotechnics" simply designates the proper time at which certain stone actions are performed, such as the activation of mines when being stepped on, or the offensive move of a wildcard-type stone (see Sec. \ref{sec:stone types}). Its position after sokoban pushing and opposition, but before impasse, is deliberate, as stones can be pushed onto mines or into the wildcard's captures, and if two or more stones attempt to move onto a square with a mine, the fact that the impasse rule would block their movement does not save them (see example in Fig. \ref{fig:scr_1}).
+	Note that the third rule "impasse" does chain. Thus, if multiple moving stones form a "promenade", each moving onto the previous stone's square of origin, a single "impasse" event at the front blocks all of this movement, halting the promenade.
+	
+	The fourth rule "pyrotechnics" simply designates the proper time at which certain stone actions are performed, such as the activation of mines when being stepped on, or the offensive move of a wildcard-type stone (see Sec. \ref{sec:stone types}). Its position after all rules which push stones around is deliberate, as stones can be pushed onto mines or into the wildcard's captures, and if two or more stones attempt to move onto a square with a mine, the fact that the impasse rule would block their movement does not save them (see example in Fig. \ref{fig:scr_1}).
 	
 	\begin{figure}[h]
 \begin{center}
@@ -173,7 +175,6 @@
 \end{center}
 \end{figure}
 	
-	Note that the fourth rule "impasse" does chain. Thus, if multiple moving stones form a "promenade", each moving onto the previous stone's square of origin, a single "impasse" event at the front blocks all of this movement, halting the promenade.
 
 The fifth rule specifically addresses situations which arise from placing stones into a time-slice through placing progenitor flags such as time-jumps-in. If a stone at time $t-1$ chooses to wait and therefore is present on the same square at time $t$, and another stone time-jumps-in onto the same square at time $t$, both of these stones are removed. This is treated as two deaths (presumably via an unsightly explosion). This means that time-jumps-in may override sokoban pushes by creating an additional impasse (see example in Fig. \ref{fig:scr_2}).
 
@@ -297,7 +298,7 @@ The second condition is also simple, but there's a caveat. Note that if a stone 
 		\begin{itemize}
 			\item "Lock" tagscreen: The tagged stones lose their ability to time-jump-out and become causally locked in the final time-slice. However, this does not disrupt time-jumps-out already placed on the tagged stones' trajectories, only prevents the players for queueing new ones.
 			\item "Unlock" tagscreen: counteracts the "lock" tagscreen, or interferes with trajectories laid out on previous rounds, making stones causally free. See Sec. \ref{sec:ruleset variations} for details.
-			\item "Hide" tagscreen: Removes all tagged stones from the board and places them into the next time-slice. Cannot be deployed on the second-to-last time-slice.
+			\item "Hide" tagscreen: Removes all tagged stones from the board and places them into the next time-slice. Cannot be deployed on the second-to-last time-slice. Note that this saves stones from enemy fire, but not from explosions of pyrotechnic entities, such as mines or a moving wildcard.
 		\end{itemize}
 		\item Time-jumps: the tagger can time-jump at any time, but its time-jumps still obey the rules of its movement--either by two time-slices back and by one square in any cardinal direction, or by one time-slice back and by two squares in any cardinal direction.
 		\end{itemize}

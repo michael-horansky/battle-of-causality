@@ -1,9 +1,6 @@
 FEATURES FOR THE GAME
 
 give the player the option to view a paradox to play out ("why didnt this happen as i planned it??")
-boxes, mines
-tagger, wildcard, sniper
-other stone types or methods to interfere with a stone without needing to push or block it ("commander" etc, making stones causally free at will)
 
 FEATURES FOR THE REPO
 
