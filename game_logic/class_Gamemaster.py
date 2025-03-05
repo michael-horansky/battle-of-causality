@@ -26,6 +26,9 @@ from stones.class_Mine import Mine
 from game_logic.class_Flag import Flag
 from game_logic.class_Board_square import Board_square
 
+# Import rendering utilities
+from rendering.class_Abstract_Output import Abstract_Output
+
 # -----------------------------------------------------------------------------
 # ----------------------------- class Gamemaster ------------------------------
 # -----------------------------------------------------------------------------
@@ -92,9 +95,9 @@ class Gamemaster():
         self.board_delim = ' | '
 
 
-        # ---------------------------------------------------------------
-        # ------------------- Saving and loading game -------------------
-        # ---------------------------------------------------------------
+        # ---------------------------------------------------------------------
+        # ---------------------- Saving and loading game ----------------------
+        # ---------------------------------------------------------------------
         # An instance of Gamemaster is created freshly whenever the Game
         # url is loaded. From the unique Game ID, the appropriate data
         # from the server-side db are loaded into this instance, and the
@@ -118,7 +121,7 @@ class Gamemaster():
         #      where different flags are separated by ';' and the args
         #      for each flag are separated by ','.
         # The loading paradigm is as follows:
-        #   1. Astatic board is initialized from the static data
+        #   1. A static board is initialized from the static data
         #      representation.
         #   2. For each move index:
         #     2.1. All the moves are placed as flags onto the board
@@ -143,6 +146,16 @@ class Gamemaster():
         # And finally, the loaded Ruleset, which is static (determined when the
         # game is created), as a dict {"rule group" : "rule"}
         self.ruleset = {}
+
+        # ---------------------------------------------------------------------
+        # -------------------- Rendering output management --------------------
+        # ---------------------------------------------------------------------
+        # The game represents itself with an instance of Abstract_Output, which
+        # informs a renderer how to draw the board, where to place stones in
+        # each turn in different stages of SCR, what board effects to draw,
+        # which stones are explosive, which squares have time portals etc.
+        # This instance is managed dynamically.
+        self.rendering_output = Abstract_Output()
 
 
     # -------------------------------------------------------------------------
@@ -706,7 +719,7 @@ class Gamemaster():
             self.flags[tjo_flag.flag_ID] = tjo_flag
 
             # effects start inactive
-            self.set_flag_activity(tji_flag.flag_ID, False)
+            #self.set_flag_activity(tji_flag.flag_ID, False)
 
             # Trackers
             self.effects_by_round = functions.add_tail_to_list(self.effects_by_round, round_number + 1, [])
@@ -741,7 +754,7 @@ class Gamemaster():
         self.flags[attack_flag.flag_ID] = attack_flag
 
         # effects start inactive
-        self.set_flag_activity(spawn_bomb_flag.flag_ID, False)
+        #self.set_flag_activity(spawn_bomb_flag.flag_ID, False)
 
         # Trackers
         self.effects_by_round = functions.add_tail_to_list(self.effects_by_round, round_number + 1, [])
@@ -1421,7 +1434,7 @@ class Gamemaster():
         # included round (used when finding scenario).
 
         if max_turn_index is None:
-            max_turn_index = self.current_turn_index #len(self.flags_by_turn) - 1
+            max_turn_index = self.current_turn_index - 1 # current_turn is the one which is not yet comitted
         max_round_number, max_timeslice = self.round_from_turn(max_turn_index)
 
         # First, we clear the board
@@ -1743,7 +1756,7 @@ class Gamemaster():
         else:
             current_scenario = self.scenarios_by_round[round_number]
         self.realise_scenario(current_scenario)
-        self.execute_moves(read_causality_trackers = False, max_turn_index = turn_index - 1, ignore_buffer_effects = False)
+        self.execute_moves(read_causality_trackers = False, max_turn_index = turn_index - 1, ignore_buffer_effects = True)
 
 
 
@@ -1828,7 +1841,7 @@ class Gamemaster():
                 self.current_turn_index += 1
                 self.flags_by_turn.append({}) # NOTE  nahh
                 # First, we find the canonical state of the board
-                self.execute_moves()
+                self.execute_moves(ignore_buffer_effects = True)
 
                 # Second, we display the board state
                 #self.print_heading_message(f"Time = {self.current_time}", 1)
@@ -2113,6 +2126,11 @@ class Gamemaster():
         # First turn next
         self.current_turn_index = 1
         self.flags_by_turn.append({})
+
+        # Rendering properties
+        self.rendering_output.set_board_dimensions(self.t_dim, self.x_dim, self.y_dim)
+        self.rendering_output.set_board_static(self.board_static)
+        self.rendering_output.reset_turn(0) # The zeroth turn is always left empty, since it was never the current turn
 
     def load_board_representation(self, t_dim, x_dim, y_dim, board_representation):
         # Initializes everything from dimensions and a board representation string

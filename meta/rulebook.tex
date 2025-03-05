@@ -315,7 +315,7 @@ The second condition is also simple, but there's a caveat. Note that if a stone 
 	There are also neutral stones, which are not controlled by any player, and are simply placed onto the board to be interacted with:
 	\begin{itemize}
 		\item \textbf{Box}: an unorientable stone which can be pushed around. It is destroyed if targeted by an attack.
-		\item \textbf{Mine}: an unorientable stone. If a stone ends up on the same square as a mine after flag execution but \textit{before} spatial conflict resolution, instead of the mine being pushed or the stone returning back, there is an explosion which destroyes all stones on this and the four adjanced squares. Note that because this overrides spatial conflict resolution, the \textbf{impasse} rule doesn't prevent multiple stones from stepping onto the mine and exploding all together!
+		\item \textbf{Mine}: an unorientable stone which explodes during the \textbf{pyrotechnics} stage of spatial conflict resolution. As an explosive stone, its square is not subject to the impasse rule, and hence multiple stones can step on the mine and explode altogether. The mine is destroyed by its own explosion.
 	\end{itemize}
 	
 	\section{Ruleset variations}\label{sec:ruleset variations}
@@ -324,7 +324,7 @@ The second condition is also simple, but there's a caveat. Note that if a stone 
 		\item Reaching a paradox (a situation where no possible scenario for the next round is causally consistent) results in what action?
 		\begin{enumerate}
 			\item "Auditors of Reality": Variations of deactivating stones on setup are tried in a specific order (prioritizing an arbitrary ordering, see below) until a causally-consistent scenario is possible. Setup stones deactivated this way stay deactivated for the rest of the game, even if, in future canonizations, their reactivation would be causally consistent.
-			\item "Hulot's Holiday": Same as 'Auditors of reality', except the stones are not removed permanently and their reactivation is considered in every future canonization.
+			\item "Hulot's Holiday": Same as "Auditors of reality", except the stones are not removed permanently and their reactivation is considered in every future canonization.
 			\item "Know your paradoxes!": A paradox immediately ends the game!
 		\end{enumerate}
 		\item If the game ends with no players satisfying the primary win condition, what is the outcome of the game?
