@@ -19,6 +19,9 @@ class Abstract_Output():
 
     def __init__(self):
         self.board_static = None
+        # ------------------------ Turnwise properties ------------------------
+        # These variables always have the first axis [turn index], and describe
+        # the state of the game as said turn BEGINS (is equal to current_turn).
         self.board_stones = [] # [turn][t]["process"][stone_ID] = state, where "process" specifies which part of the turn this state describes
 
     def set_board_dimensions(self, t_dim, x_dim, y_dim):

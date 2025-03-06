@@ -1381,7 +1381,7 @@ class Gamemaster():
         for round_number in range(max_included_round): # We ignore the buffer round
             reference_effect_ID_list += self.effects_by_round[round_number]
         # include the buffer round, but ignore the buffer effects
-        current_causality_trackers = self.execute_moves(read_causality_trackers = True, max_turn_index = self.t_dim * (max_included_round + 1), ignore_buffer_effects = True)
+        current_causality_trackers = self.execute_moves(read_causality_trackers = True, max_turn_index = self.t_dim * (max_included_round + 1), precanonisation = True)
         for effect_ID in reference_effect_ID_list:
             if self.flags[effect_ID].is_active and current_causality_trackers["effect_load"][effect_ID] != 1:
                 return(None)
@@ -1417,7 +1417,7 @@ class Gamemaster():
 
 
 
-    def execute_moves(self, read_causality_trackers = False, max_turn_index = None, ignore_buffer_effects = False):
+    def execute_moves(self, read_causality_trackers = False, max_turn_index = None, precanonisation = False):
         # This function populates Board_squares with stones according to flags
         # placed on up to (and including) turn with i = max_turn_index.
 
@@ -1430,12 +1430,19 @@ class Gamemaster():
 
         # read_causality_trackers: If False, runs faster but returns empty dict
         # max_turn_index: index of last turn whose flags are to be included
-        # ignore_buffer_effects: If True, ignores effects placed in the last
-        # included round (used when finding scenario).
+        # precanonisation: If True, even though max_turn_index is the final
+        # turn of a round, we still take that round as the buffer round.
 
         if max_turn_index is None:
             max_turn_index = self.current_turn_index - 1 # current_turn is the one which is not yet comitted
-        max_round_number, max_timeslice = self.round_from_turn(max_turn_index)
+        if precanonisation:
+            max_round_number, max_timeslice = self.round_from_turn(max_turn_index)
+        else:
+            max_round_number, max_timeslice = self.round_from_turn(max_turn_index + 1) # If we include all timeslices in a round, we assume it is no longer buffered
+        if max_round_number < len(self.effects_by_round):
+            buffered_effects_list = self.effects_by_round[max_round_number]
+        else:
+            buffered_effects_list = []
 
         # First, we clear the board
         self.clear_board()
@@ -1486,13 +1493,12 @@ class Gamemaster():
         for stone_ID in self.stones.keys():
             self.stones[stone_ID].reset_temporary_trackers()
 
-
         # Then we prepare a flat list of all flag IDs to execute
         flags_to_execute = []
         for t_i in range(max_turn_index + 1):
             for move_flag_IDs in self.flags_by_turn[t_i].values():
                 for move_flag_ID in move_flag_IDs:
-                    if not ignore_buffer_effects or move_flag_ID not in self.effects_by_round[max_round_number]: # We ignore buffered effects
+                    if move_flag_ID not in buffered_effects_list: # We ignore buffered effects
                         flags_to_execute.append(move_flag_ID)
 
         # Then, we execute setup flags, i.e. initial stone creation
@@ -1756,7 +1762,7 @@ class Gamemaster():
         else:
             current_scenario = self.scenarios_by_round[round_number]
         self.realise_scenario(current_scenario)
-        self.execute_moves(read_causality_trackers = False, max_turn_index = turn_index - 1, ignore_buffer_effects = True)
+        self.execute_moves(read_causality_trackers = False, max_turn_index = turn_index - 1)
 
 
 
@@ -1841,7 +1847,7 @@ class Gamemaster():
                 self.current_turn_index += 1
                 self.flags_by_turn.append({}) # NOTE  nahh
                 # First, we find the canonical state of the board
-                self.execute_moves(ignore_buffer_effects = True)
+                self.execute_moves()
 
                 # Second, we display the board state
                 #self.print_heading_message(f"Time = {self.current_time}", 1)
@@ -1877,7 +1883,7 @@ class Gamemaster():
             # Check if win condition satisfied
             # NOTE: The win condition must be satisfied when board state is determined WITHOUT buffered effects! (so timejumps etc... added this round)
             self.realise_scenario(scenario_for_next_round)
-            self.execute_moves(read_causality_trackers = False, max_turn_index = self.current_turn_index, ignore_buffer_effects = True)
+            self.execute_moves(read_causality_trackers = False, max_turn_index = self.current_turn_index, precanonisation = True)
             self.print_heading_message(f"Canonized board for next round, omitting reverse-causality effects added this round.", 1)
             self.print_board_horizontally(active_turn = self.current_turn_index, highlight_active_timeslice = False)
             current_game_winner = self.game_winner()
@@ -1938,7 +1944,7 @@ class Gamemaster():
 
                 # Win condition testing
                 self.realise_scenario(scenario_for_next_round)
-                self.execute_moves(read_causality_trackers = False, max_turn_index = self.current_turn_index, ignore_buffer_effects = True)
+                self.execute_moves(read_causality_trackers = False, max_turn_index = self.current_turn_index, precanonisation = True)
                 self.print_heading_message(f"Canonized board for next round, omitting reverse-causality effects added this round.", 1)
                 self.print_board_horizontally(active_turn = self.current_turn_index, highlight_active_timeslice = False)
                 current_game_winner = self.game_winner()
@@ -2219,15 +2225,26 @@ class Gamemaster():
                 for command in commands:
                     self.execute_command(command, commander)
 
+        # We find Scenarios for each started round, assuming the last turn is incomplete
+        current_round_number, active_timeslice = self.round_from_turn(len(dynamic_data_representation) - 1)
+        self.effects_by_round = functions.add_tail_to_list(self.effects_by_round, current_round_number + 1, [])
 
-        # If all of the loaded turns are finished, we prepare the next turn.
+        self.scenarios_by_round = []
+
+        for round_number in range(current_round_number + 1):
+            self.print_log(f"Finding scenario for round {round_number}...", 1)
+            round_canon_scenario = self.resolve_causal_consistency(for_which_round = round_number)
+            self.scenarios_by_round.append(round_canon_scenario)
+            self.print_log(f"Effects added this round: {self.effects_by_round[round_number]}...", 2)
+
+
+        # We now determine whether the last turn is complete or not
         if len(dynamic_data_representation) == 1:
             # only setup occured so far
             self.current_turn_index = 1
         else:
             # We execute all moves except the last one to see if it was finished
-            self.execute_moves(max_turn_index = len(dynamic_data_representation) - 2, ignore_buffer_effects = False)
-
+            self.execute_moves(max_turn_index = len(dynamic_data_representation) - 2)
 
             if self.did_everyone_finish_turn(len(dynamic_data_representation) - 1):
                 self.current_turn_index = len(dynamic_data_representation)
@@ -2238,14 +2255,10 @@ class Gamemaster():
             # Prepare new turn
             self.flags_by_turn.append({})
 
-        # We find Scenarios for each started round
-        current_round_number, active_timeslice = self.round_from_turn(self.current_turn_index)
-        self.effects_by_round = functions.add_tail_to_list(self.effects_by_round, current_round_number + 1, [])
-
-        self.scenarios_by_round = []
-
-        for round_number in range(current_round_number + 1):
-            self.print_log(f"Finding for round {round_number}...", 1)
+        # If the last turn was also the last in a round, we need to find the scenario for the next round
+        final_round_number, final_active_timeslice = self.round_from_turn(self.current_turn_index)
+        for round_number in range(current_round_number + 1, final_round_number + 1):
+            self.print_log(f"Finding scenario for round {round_number}...", 1)
             round_canon_scenario = self.resolve_causal_consistency(for_which_round = round_number)
             self.scenarios_by_round.append(round_canon_scenario)
             self.print_log(f"Effects added this round: {self.effects_by_round[round_number]}...", 2)
