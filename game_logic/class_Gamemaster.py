@@ -1501,7 +1501,8 @@ class Gamemaster():
             self.stones[stone_ID].reset_temporary_trackers()
 
         # Rendering output properties
-        self.rendering_output.reset_turn(max_turn_index + 1)
+        if save_to_output:
+            self.rendering_output.reset_turn(max_turn_index + 1)
 
         # Then we prepare a flat list of all flag IDs to execute
         flags_to_execute = []

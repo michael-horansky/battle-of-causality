@@ -10,3 +10,5 @@ __pycache__/
 *.toc
 # and GIMP files
 *.xcf
+# ignore kate cash files
+*.kate-swp
