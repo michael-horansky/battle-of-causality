@@ -608,6 +608,12 @@ class Gamemaster():
         if player in self.flags_by_turn[turn_index].keys():
             return(True)
 
+        # If no causally free stones exist, we know this player finished their turn
+        round_number, active_timeslice = self.round_from_turn(turn_index)
+        currently_causally_free_stones = self.causally_free_stones_at_time_by_player(active_timeslice, player)
+        if len(currently_causally_free_stones) == 0:
+            return(True)
+
         # This function assumes that moves were executed prior to asking,
         # and activity maps were applied.
         if player not in self.flags_by_turn[turn_index].keys():
@@ -1417,7 +1423,7 @@ class Gamemaster():
 
 
 
-    def execute_moves(self, read_causality_trackers = False, max_turn_index = None, precanonisation = False):
+    def execute_moves(self, read_causality_trackers = False, max_turn_index = None, precanonisation = False, save_to_output = False):
         # This function populates Board_squares with stones according to flags
         # placed on up to (and including) turn with i = max_turn_index.
 
@@ -1432,6 +1438,7 @@ class Gamemaster():
         # max_turn_index: index of last turn whose flags are to be included
         # precanonisation: If True, even though max_turn_index is the final
         # turn of a round, we still take that round as the buffer round.
+        # save_to_output: If True, saves everything to self.rendering_output.
 
         if max_turn_index is None:
             max_turn_index = self.current_turn_index - 1 # current_turn is the one which is not yet comitted
@@ -1492,6 +1499,9 @@ class Gamemaster():
         # We reset trackers owned by stones
         for stone_ID in self.stones.keys():
             self.stones[stone_ID].reset_temporary_trackers()
+
+        # Rendering output properties
+        self.rendering_output.reset_turn(max_turn_index + 1)
 
         # Then we prepare a flat list of all flag IDs to execute
         flags_to_execute = []
@@ -1907,7 +1917,8 @@ class Gamemaster():
             # This player has already submitted his moves
             self.print_heading_message(f"Player {player} has already finished his turn, and is waiting for his opponent.", 2)
             # In case key does not exist, we go ahead and populate with empty string
-            self.commit_commands([], self.current_turn_index, player)
+            if player not in self.flags_by_turn[self.current_turn_index].keys():
+                self.commit_commands([], self.current_turn_index, player)
         else:
             output_message = self.prompt_player_input(active_timeslice, player)
             #flags_added_by_player = self.prompt_player_input(self.current_time, player)
@@ -1931,6 +1942,10 @@ class Gamemaster():
 
         if self.did_everyone_finish_turn(self.current_turn_index):
             # Turn ended
+            for finished_player in self.factions:
+                # In case key does not exist, we go ahead and populate with empty string
+                if finished_player not in self.flags_by_turn[self.current_turn_index].keys():
+                    self.commit_commands([], self.current_turn_index, finished_player)
             next_round, next_timeslice = self.round_from_turn(self.current_turn_index + 1)
             if next_round > current_round:
                 # Change of round! Canonization routine!
