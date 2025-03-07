@@ -16,6 +16,7 @@ import json
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from game_logic.class_Gamemaster import Gamemaster
+from rendering.class_HTMLRenderer import HTMLRenderer
 
 gamefile_name = "resources/games/saving_test"
 
@@ -53,6 +54,13 @@ if cur_client_player == "ng":
     lol.load_board(ng_board_number)
     lol.ruleset = ruleset_rep # TODO make this load well
     lol.standard_game_loop()
+    """print("------------------------------ abstract output inspection ----------------------------")
+    print(lol.rendering_output.stone_trajectories)
+    print(lol.rendering_output.stone_endpoints)
+    print(lol.rendering_output.canonised_stone_trajectories)
+    print(lol.rendering_output.canonised_stone_endpoints)"""
+    silly_renderer = HTMLRenderer(lol.rendering_output)
+    silly_renderer.render_game("html_render_test")
 elif cur_client_player in ["A", "B"]:
     full_static, full_dynamic = load_full_data_from_file()
     lol.load_from_database(full_static, full_dynamic, ruleset_rep)

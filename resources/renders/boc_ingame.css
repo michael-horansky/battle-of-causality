@@ -1,0 +1,43 @@
+*{
+padding: 0;
+margin: 0;
+}
+
+#board_control_panel {
+    width : 150px;
+    height : 400px;
+    float : left;
+    margin-top : 200px
+}
+
+.board_control_panel_button {
+    fill : pink;
+    fill-opacity : 0.2;
+    stroke : black;
+    stroke-width : 1;
+}
+
+.board_control_panel_button:hover {
+    fill : pink;
+    fill-opacity : 0.1;
+    stroke : black;
+    stroke-width : 2;
+}
+
+#board_window {
+    float : left;
+}
+
+.board_square_empty {
+    fill : blue;
+    fill-opacity : 0.1;
+    stroke : azure;
+}
+
+.board_square_wall {
+    fill : black;
+    fill-opacity : 0.9;
+    stroke : azure;
+}
+
+
