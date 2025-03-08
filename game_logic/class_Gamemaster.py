@@ -1952,6 +1952,7 @@ class Gamemaster():
                         self.commit_commands([], self.current_turn_index, player)
                     elif output_message.header == "option":
                         if output_message.msg == "quit":
+                            self.exit_routine()
                             return(0)
 
 
@@ -1977,6 +1978,7 @@ class Gamemaster():
             if current_game_winner is not None:
                 self.print_heading_message(f"Player {current_game_winner} wins the game!", 0)
                 self.outcome = (constants.Gamemaster_delim).join(["win", current_game_winner])
+                self.exit_routine()
                 return(0)
 
             self.round_number += 1
@@ -2006,6 +2008,7 @@ class Gamemaster():
                 self.commit_commands([], self.current_turn_index, player)
             elif output_message.header == "option":
                 if output_message.msg == "quit":
+                    self.exit_routine()
                     return(0)
 
         # For every player that didn't play their turn yet, but has no causally
@@ -2043,6 +2046,7 @@ class Gamemaster():
                 if current_game_winner is not None:
                     self.print_heading_message(f"Player {current_game_winner} wins the game!", 0)
                     self.outcome = (constants.Gamemaster_delim).join(["win", current_game_winner])
+                    self.exit_routine()
                     return(0)
 
                 self.effects_by_round.append([])
@@ -2052,7 +2056,12 @@ class Gamemaster():
             self.current_turn_index += 1
             self.open_game(player)
 
+    def exit_routine(self):
+        # This method is called right before the program quits. It performs a
+        # cleanup, and finalises self.rendering_output.
 
+        self.rendering_output.record_faction_armies(self.factions, self.faction_armies)
+        self.rendering_output.record_number_of_turns(len(self.flags_by_turn))
 
     # -------------------------------------------------------------------------
     # ---------------------- Data saving/loading methods ----------------------

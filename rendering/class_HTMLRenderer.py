@@ -6,6 +6,9 @@
 # A hidden form is dynamically altered by user interaction, and can be resolved
 # on submission, serverside.
 
+
+import json
+
 from rendering.class_Renderer import Renderer
 
 
@@ -66,18 +69,36 @@ class HTMLRenderer(Renderer):
     def encode_timeslice_id(self, t):
         return(f"timeslice_{t}")
 
+    def encode_stone_ID(self, stone_ID):
+        return(f"stone_{stone_ID}")
+
     # ---------------------- Document structure methods -----------------------
     def deposit_datum(self, name, value):
-        self.commit_to_output(f"  var {name} = {value}")
+        self.commit_to_output(f"  const {name} = {value};")
+
+    def deposit_list(self, name, value):
+        # If there are no dictionaries in the nest, the output of json.dumps is
+        # immediately interpretable by javascript
+        self.commit_to_output(f"  const {name} = {json.dumps(value)};")
+
+    def deposit_object(self, name, value):
+        self.commit_to_output(f"  const {name} = JSON.parse('{json.dumps(value)}');")
 
     def deposit_contextual_data(self):
         # This method creates a <script> environment which deposits all data
         # which change between games and which are needed by the JavaScript.
         # This means the main script can be global for all the games :)
         self.commit_to_output(f"<script>")
+        # ------------------------ General properties -------------------------
         self.deposit_datum("t_dim", self.render_object.t_dim)
         self.deposit_datum("x_dim", self.render_object.x_dim)
         self.deposit_datum("y_dim", self.render_object.y_dim)
+        self.deposit_list("factions", self.render_object.factions)
+        self.deposit_list("faction_armies", self.render_object.faction_armies)
+        self.deposit_datum("number_of_turns", self.render_object.number_of_turns)
+
+        self.deposit_object("stone_trajectories", self.render_object.stone_trajectories)
+
 
         self.deposit_datum("active_turn", self.render_object.active_turn)
 
@@ -121,17 +142,18 @@ class HTMLRenderer(Renderer):
         # Next timeslice button
         next_timeslice_button_points = [[0, 20], [80, 20], [80, 0], [130, 50], [80, 100], [80, 80], [0, 80]]
         next_timeslice_button_polygon = f"<polygon points=\"{self.get_polygon_points(next_timeslice_button_points, [10, 0])}\" class=\"board_control_panel_button\" id=\"next_timeslice_button\" onclick=\"show_next_timeslice()\" />"
-        next_timeslice_button_text = "<text x=\"20\" y=\"55\" class=\"button_label\" id=\"next_timeslice_button_label\">Next timeslice</text>"
+        next_timeslice_button_text = "<text x=\"16\" y=\"55\" class=\"button_label\" id=\"next_timeslice_button_label\">Next timeslice</text>"
 
         # Active timeslice button
-        active_timeslice_button_object = f"<rect x=\"20\" y=\"120\" width=\"110\" height=\"60\" rx=\"5\" ry=\"5\" class=\"board_control_panel_button\" id=\"active_timeslice_button\" onlick=\"show_active_timeslice()\" />"
+        active_timeslice_button_object = f"<rect x=\"20\" y=\"120\" width=\"110\" height=\"60\" rx=\"5\" ry=\"5\" class=\"board_control_panel_button\" id=\"active_timeslice_button\" onclick=\"show_active_timeslice()\" />"
+        active_timeslice_button_text = "<text x=\"40\" y=\"127\" class=\"button_label\" id=\"active_timeslice_button_label\"><tspan x=\"50\" dy=\"1.2em\">Active</tspan><tspan x=\"40\" dy=\"1.2em\">timeslice</tspan></text>"
 
         # Previous timeslice button
         prev_timeslice_button_points = [[130, 20], [50, 20], [50, 0], [0, 50], [50, 100], [50, 80], [130, 80]]
         prev_timeslice_button_polygon = f"<polygon points=\"{self.get_polygon_points(prev_timeslice_button_points, [10, 200])}\" class=\"board_control_panel_button\" id=\"prev_timeslice_button\" onclick=\"show_prev_timeslice()\" />"
-        prev_timeslice_button_text = "<text x=20 y=255 class=\"button_label\" id=\"prev_timeslice_button_label\">Prev timeslice</text>"
+        prev_timeslice_button_text = "<text x=27 y=255 class=\"button_label\" id=\"prev_timeslice_button_label\">Prev timeslice</text>"
 
-        self.commit_to_output([next_timeslice_button_polygon, next_timeslice_button_text, active_timeslice_button_object, prev_timeslice_button_polygon, prev_timeslice_button_text])
+        self.commit_to_output([next_timeslice_button_polygon, next_timeslice_button_text, active_timeslice_button_object, active_timeslice_button_text, prev_timeslice_button_polygon, prev_timeslice_button_text])
 
         self.commit_to_output("</svg>\n</div>")
 
@@ -142,7 +164,7 @@ class HTMLRenderer(Renderer):
         # Draws a board square object into the active context
         # ID is position
         # Class is static type
-        board_square_object = f"<rect width=\"{self.board_square_base_side_length}\" height=\"{self.board_square_base_side_length}\" x=\"{x * self.board_square_base_side_length}\" y=\"{y * self.board_square_base_side_length}\" class=\"{self.encode_board_square_class(t, x ,y)}\" id=\"{self.encode_board_square_id(t, x, y)}\" onclick=\"board_square_click({t},{x},{y})\" />"
+        board_square_object = f"  <rect width=\"{self.board_square_base_side_length}\" height=\"{self.board_square_base_side_length}\" x=\"{x * self.board_square_base_side_length}\" y=\"{y * self.board_square_base_side_length}\" class=\"{self.encode_board_square_class(t, x ,y)}\" id=\"{self.encode_board_square_id(t, x, y)}\" onclick=\"board_square_click({t},{x},{y})\" />"
         self.commit_to_output(board_square_object)
 
     def draw_timeslice(self, t):
@@ -153,11 +175,31 @@ class HTMLRenderer(Renderer):
                 self.draw_board_square(t, x, y)
         self.commit_to_output("</g>")
 
+    # Stone type particulars
+    def draw_tank(self, allegiance, stone_ID):
+        self.commit_to_output(f"<g x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"{allegiance}_tank\" id=\"{self.encode_stone_ID(stone_ID)}\">")
+        self.commit_to_output(f"  <rect x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"stone_pedestal\" visibility=\"hidden\" />")
+        self.commit_to_output(f"  <rect x=\"45\" y=\"10\" width=\"10\" height=\"30\" class=\"{allegiance}_tank_barrel\" />")
+        self.commit_to_output(f"  <circle cx=\"50\" cy=\"50\" r=\"20\" class=\"{allegiance}_tank_body\" />")
+        self.commit_to_output("</g>")
+
+    def draw_stones(self):
+        # These are drawn on the x=0,y=0 square with display:none, and will be
+        # moved around by JavaScript using the 'transform' attrib1ute.
+        # First, we prepare the neutral stones
+        for neutral_stone_ID in self.render_object.faction_armies["GM"]:
+            pass
+        for faction in self.render_object.factions:
+            for faction_stone_ID in self.render_object.faction_armies[faction]:
+                self.draw_tank(faction, faction_stone_ID)
+
     def draw_board(self):
         self.open_board_window()
         for t in range(self.render_object.t_dim):
             self.draw_timeslice(t)
+        self.draw_stones()
         self.close_board_window()
+
 
 
     # ---------------------------- Global methods -----------------------------

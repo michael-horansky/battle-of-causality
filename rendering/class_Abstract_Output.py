@@ -18,7 +18,14 @@ class Abstract_Output():
         ]
 
     def __init__(self):
+        # ------------------------ General properties -------------------------
         self.board_static = None
+        self.t_dim = None
+        self.x_dim = None
+        self.y_dim = None
+        self.factions = []
+        self.faction_armies = [] # ["faction"] = [stone_ID list]
+        self.number_of_turns = None
         # ------------------------ Turnwise properties ------------------------
         # These variables always have the first axis [turn index], and describe
         # the state of the game as said turn BEGINS (is equal to current_turn).
@@ -29,6 +36,11 @@ class Abstract_Output():
 
         self.active_turn = None
 
+
+    # -------------------------------------------------------------------------
+    # ---------------------- General property management ----------------------
+    # -------------------------------------------------------------------------
+
     def set_board_dimensions(self, t_dim, x_dim, y_dim):
         self.t_dim = t_dim
         self.x_dim = x_dim
@@ -36,6 +48,19 @@ class Abstract_Output():
 
     def set_board_static(self, board_static):
         self.board_static = board_static # [x][y] = square string rep
+
+    def record_faction_armies(self, factions, faction_armies):
+        self.factions = factions
+        self.faction_armies = faction_armies
+
+    def record_number_of_turns(self, number_of_turns):
+        self.number_of_turns = number_of_turns
+
+    # -------------------------------------------------------------------------
+    # --------------------- Turnwise property management ----------------------
+    # -------------------------------------------------------------------------
+
+    # ------------------------- Resets at turn start --------------------------
 
     def reset_turn(self, turn):
         # Prepares all variables to contain turn key
@@ -78,6 +103,8 @@ class Abstract_Output():
         else:
             while(len(self.canonised_stone_endpoints) <= canonised_round):
                 self.canonised_stone_endpoints.append({})
+
+    # --------------------------- Value assignment ----------------------------
 
     def add_empty_trajectory(self, turn, stone_ID):
         self.stone_trajectories[turn][stone_ID] = []

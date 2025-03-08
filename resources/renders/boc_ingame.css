@@ -24,6 +24,10 @@ margin: 0;
     stroke-width : 2;
 }
 
+.button_label {
+    pointer-events : none;
+}
+
 #board_window {
     float : left;
 }
@@ -40,4 +44,27 @@ margin: 0;
     stroke : azure;
 }
 
+.A_tank_body {
+    fill : #27391C;
+    stroke : #18230F;
+    stroke-width : 5;
+}
+
+.A_tank_barrel {
+    fill : #1F7D53;
+    stroke : #255F38;
+    stroke-width : 5;
+}
+
+.B_tank_body {
+    fill : #B03052;
+    stroke : #3D0301;
+    stroke-width : 5;
+}
+
+.B_tank_barrel {
+    fill : #EBE8DB;
+    stroke : #D76C82;
+    stroke-width : 5;
+}
 

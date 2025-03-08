@@ -1,10 +1,10 @@
 
 // Rendering constants
-var board_square_rx = 2;
-var board_square_ry = 2;
-var board_square_fill = "blue";
+const board_square_rx = 2;
+const board_square_ry = 2;
+const board_square_fill = "blue";
 
-
+const stone_rotation_offset = [[0, 0], [1, 0], [1, 1], [0, 1]];
 
 function write_to_html(html_object){
     // If html_object is a string, it is printed into the html document
@@ -33,6 +33,7 @@ function round_from_turn(turn_index) {
 // ---------------------------------- Events ----------------------------------
 
 function show_timeslice(t){
+    visible_timeslice = t;
     for (let cur_t = 0; cur_t < 6; cur_t++) {
         if (cur_t == t) {
             document.getElementById(`timeslice_${cur_t}`).style.display = "inline";
@@ -42,12 +43,12 @@ function show_timeslice(t){
             //alert("hiding " + cur_t)
         }
     }
+    show_stones_at_process("canon");
 }
 
 function show_next_timeslice(){
     if (visible_timeslice < t_dim - 1) {
-        visible_timeslice += 1;
-        show_timeslice(visible_timeslice);
+        show_timeslice(visible_timeslice + 1);
     } else{
         alert("No more timeslices to show");
     }
@@ -55,8 +56,7 @@ function show_next_timeslice(){
 
 function show_prev_timeslice(){
     if (visible_timeslice > 0) {
-        visible_timeslice -= 1;
-        show_timeslice(visible_timeslice);
+        show_timeslice(visible_timeslice - 1);
     } else{
         alert("No more timeslices to show");
     }
@@ -67,12 +67,37 @@ function show_active_timeslice(){
     show_timeslice(turn_props[1]);
 }
 
+function hide_all_stones(){
+    all_factions.forEach(function(faction, faction_index) {
+        faction_armies[faction].forEach(function(stone_ID, stone_index){
+            document.getElementById(`stone_${stone_ID}`).style.display = "none";
+        });
+    });
+}
+
+function show_stones_at_process(process_key){
+    all_factions.forEach(function(faction, faction_index) {
+        faction_armies[faction].forEach(function(stone_ID, stone_index){
+            let stone_state = stone_trajectories[selected_turn][`${stone_ID}`][visible_timeslice][process_key]
+            if (stone_state == null) {
+                document.getElementById(`stone_${stone_ID}`).style.display = "none";
+            } else {
+                document.getElementById(`stone_${stone_ID}`).style.transform = `translate(${100 * (stone_state[0] + stone_rotation_offset[stone_state[2][0]][0])}px,${100 * (stone_state[1] + stone_rotation_offset[stone_state[2][0]][1])}px) rotate(${90 * stone_state[2][0]}deg)`;
+                document.getElementById(`stone_${stone_ID}`).style.display = "inline";
+            }
+        });
+    });
+}
+
+
+
 function board_square_click(t, x, y){
     alert(`This is a board square at time ${t} and position (${x}, ${y}).`);
 }
 
+var all_factions = ["GM"].concat(factions)
 
 var visible_timeslice = 0;
 var selected_turn = active_turn;
 
-show_timeslice(visible_timeslice);
+show_active_timeslice();
