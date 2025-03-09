@@ -1436,13 +1436,13 @@ class Gamemaster():
         for x in range(self.x_dim):
             for y in range(self.y_dim):
                 for stone_ID in self.board_dynamic[output_t][x][y].stones:
-                    self.rendering_output.stone_trajectories[output_turn][stone_ID][output_t][process_key] = (x, y, self.board_dynamic[output_t][x][y].stone_properties[stone_ID])
+                    self.rendering_output.stone_trajectories[output_turn][output_t][process_key][stone_ID] = [x, y] + self.board_dynamic[output_t][x][y].stone_properties[stone_ID]
 
     def save_canonised_timeslice_to_output(self, output_round, output_t, process_key):
         for x in range(self.x_dim):
             for y in range(self.y_dim):
                 for stone_ID in self.board_dynamic[output_t][x][y].stones:
-                    self.rendering_output.canonised_stone_trajectories[output_round][stone_ID][output_t][process_key] = (x, y, self.board_dynamic[output_t][x][y].stone_properties[stone_ID])
+                    self.rendering_output.canonised_stone_trajectories[output_round][output_t][process_key][stone_ID] = [x, y] + self.board_dynamic[output_t][x][y].stone_properties[stone_ID]
 
 
     def execute_moves(self, read_causality_trackers = False, max_turn_index = None, precanonisation = False, save_to_output = False):

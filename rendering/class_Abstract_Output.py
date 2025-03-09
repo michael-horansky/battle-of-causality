@@ -23,15 +23,16 @@ class Abstract_Output():
         self.t_dim = None
         self.x_dim = None
         self.y_dim = None
+
         self.factions = []
         self.faction_armies = [] # ["faction"] = [stone_ID list]
         self.number_of_turns = None
         # ------------------------ Turnwise properties ------------------------
         # These variables always have the first axis [turn index], and describe
         # the state of the game as said turn BEGINS (is equal to current_turn).
-        self.stone_trajectories = [] # [turn][stone_ID][t]["process"] = state, where "process" specifies which part of the turn this state describes
+        self.stone_trajectories = [] # [turn][t]["process"][stone_ID] = state, where "process" specifies which part of the turn this state describes
         self.stone_endpoints = [] #[turn][stone_ID] = {"start" : desc, "end" : desc} or None
-        self.canonised_stone_trajectories = [] # [round_number][stone_ID][t]["process"] = state; this is used for the omit-ante-effects scenes which are found at the end of each round.
+        self.canonised_stone_trajectories = [] # [round_number][t]["process"][stone_ID] = state; this is used for the omit-ante-effects scenes which are found at the end of each round.
         self.canonised_stone_endpoints = []
 
         self.active_turn = None
@@ -66,19 +67,19 @@ class Abstract_Output():
         # Prepares all variables to contain turn key
         if len(self.stone_trajectories) > turn:
             # key exists
-            self.stone_trajectories[turn] = {}
-            """for t in range(self.t_dim):
+            self.stone_trajectories[turn] = []
+            for t in range(self.t_dim):
                 self.stone_trajectories[turn].append({})
                 for process_key in Abstract_Output.process_list:
-                    self.stone_trajectories[turn][t][process_key] = []"""
+                    self.stone_trajectories[turn][t][process_key] = {}
         else:
             # We keep appending empty turns until key exists
             while(len(self.stone_trajectories) <= turn):
-                self.stone_trajectories.append({})
-                """for t in range(self.t_dim):
+                self.stone_trajectories.append([])
+                for t in range(self.t_dim):
                     self.stone_trajectories[-1].append({})
                     for process_key in Abstract_Output.process_list:
-                        self.stone_trajectories[-1][t][process_key] = []"""
+                        self.stone_trajectories[-1][t][process_key] = {}
 
         if len(self.stone_endpoints) > turn:
             # key exists
@@ -91,11 +92,19 @@ class Abstract_Output():
         # Prepares all variables to contain turn key
         if len(self.canonised_stone_trajectories) > canonised_round:
             # key exists
-            self.canonised_stone_trajectories[canonised_round] = {}
+            self.canonised_stone_trajectories[canonised_round] = []
+            for t in range(self.t_dim):
+                self.canonised_stone_trajectories[canonised_round].append({})
+                for process_key in Abstract_Output.process_list:
+                    self.canonised_stone_trajectories[canonised_round][t][process_key] = {}
         else:
             # We keep appending empty turns until key exists
             while(len(self.canonised_stone_trajectories) <= canonised_round):
-                self.canonised_stone_trajectories.append({})
+                self.canonised_stone_trajectories.append([])
+                for t in range(self.t_dim):
+                    self.canonised_stone_trajectories[-1].append({})
+                    for process_key in Abstract_Output.process_list:
+                        self.canonised_stone_trajectories[-1][t][process_key] = {}
 
         if len(self.canonised_stone_endpoints) > canonised_round:
             # key exists
@@ -107,19 +116,15 @@ class Abstract_Output():
     # --------------------------- Value assignment ----------------------------
 
     def add_empty_trajectory(self, turn, stone_ID):
-        self.stone_trajectories[turn][stone_ID] = []
         for t in range(self.t_dim):
-            self.stone_trajectories[turn][stone_ID].append({})
             for process_key in Abstract_Output.process_list:
-                self.stone_trajectories[turn][stone_ID][t][process_key] = None
+                self.stone_trajectories[turn][t][process_key][stone_ID] = None
         self.stone_endpoints[turn][stone_ID] = None
 
     def add_empty_canonised_trajectory(self, canonised_round, stone_ID):
-        self.canonised_stone_trajectories[canonised_round][stone_ID] = []
         for t in range(self.t_dim):
-            self.canonised_stone_trajectories[canonised_round][stone_ID].append({})
             for process_key in Abstract_Output.process_list:
-                self.canonised_stone_trajectories[canonised_round][stone_ID][t][process_key] = None
+                self.canonised_stone_trajectories[canonised_round][t][process_key][stone_ID] = None
         self.canonised_stone_endpoints[canonised_round][stone_ID] = None
 
     def add_stone_endpoint(self, turn, stone_ID, endpoint_key, endpoint_value):

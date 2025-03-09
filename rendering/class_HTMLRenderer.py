@@ -29,6 +29,9 @@ class HTMLRenderer(Renderer):
         self.board_window_width = 800
         self.board_window_height = 800
 
+        self.game_log_width = 400
+        self.game_log_height = 200
+
         # Board structure
         self.board_square_base_side_length = 100
 
@@ -36,7 +39,7 @@ class HTMLRenderer(Renderer):
 
     def create_output_file(self):
         output_file = open(self.output_path + self.output_filename + ".html", "w")
-        output_file.write("<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Such and such game</title>\n    <link rel=\"stylesheet\" href=\"boc_ingame.css\">\n</head>\n<body>\n")
+        output_file.write("<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Such and such game</title>\n    <link rel=\"stylesheet\" href=\"boc_ingame.css\">\n</head>\n<body onkeydown=\"parse_keydown_event(event)\">\n")
         output_file.close()
 
     def finish_output_file(self):
@@ -121,6 +124,20 @@ class HTMLRenderer(Renderer):
         enclosing_div = "</div>"
         self.commit_to_output([svg_window, enclosing_div])
 
+    def open_gameside(self):
+        # Gameside is bottom third of the screen, containing the game control panel and the game log
+        self.commit_to_output("<div id=\"gameside\">")
+
+    def close_gameside(self):
+        self.commit_to_output("</div>")
+
+    def draw_game_log(self):
+        self.commit_to_output(f"<div width=\"{self.game_log_width}\" height=\"{self.game_log_height}\" id=\"game_log\">")
+
+        self.commit_to_output(f"<p id=\"navigation_label\"></p>")
+
+        self.commit_to_output("</div>")
+
 
     # -------------------------- General svg methods --------------------------
 
@@ -177,7 +194,7 @@ class HTMLRenderer(Renderer):
 
     # Stone type particulars
     def draw_tank(self, allegiance, stone_ID):
-        self.commit_to_output(f"<g x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"{allegiance}_tank\" id=\"{self.encode_stone_ID(stone_ID)}\">")
+        self.commit_to_output(f"<g x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"{allegiance}_tank\" id=\"{self.encode_stone_ID(stone_ID)}\" transform-origin=\"50px 50px\">")
         self.commit_to_output(f"  <rect x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"stone_pedestal\" visibility=\"hidden\" />")
         self.commit_to_output(f"  <rect x=\"45\" y=\"10\" width=\"10\" height=\"30\" class=\"{allegiance}_tank_barrel\" />")
         self.commit_to_output(f"  <circle cx=\"50\" cy=\"50\" r=\"20\" class=\"{allegiance}_tank_body\" />")
@@ -221,6 +238,14 @@ class HTMLRenderer(Renderer):
 
         # Close boardside
         self.close_boardside()
+
+        # Open gameside
+        self.open_gameside()
+
+        self.draw_game_log()
+
+        # Close gameside
+        self.close_gameside()
 
         self.finish_output_file()
 

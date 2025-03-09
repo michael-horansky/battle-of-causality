@@ -3,6 +3,10 @@ padding: 0;
 margin: 0;
 }
 
+.button_label {
+    pointer-events : none;
+}
+
 #board_control_panel {
     width : 150px;
     height : 400px;
@@ -24,10 +28,6 @@ margin: 0;
     stroke-width : 2;
 }
 
-.button_label {
-    pointer-events : none;
-}
-
 #board_window {
     float : left;
 }
@@ -43,6 +43,10 @@ margin: 0;
     fill-opacity : 0.9;
     stroke : azure;
 }
+
+/*.A_tank {
+    transition: transform 0.1s ease;
+}*/
 
 .A_tank_body {
     fill : #27391C;
