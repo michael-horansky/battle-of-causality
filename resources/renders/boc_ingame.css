@@ -7,11 +7,40 @@ margin: 0;
     pointer-events : none;
 }
 
+
+/* --------------------------------- */
+/* ---- General structure style ---- */
+/* --------------------------------- */
+
+#boardside {
+    position : absolute;
+    left : 0px;
+    top : 0px;
+    width : 950px;
+    height : 700px;
+}
+
+#gameside {
+    position : absolute;
+    left : 0px;
+    top : 700px;
+    width : 950px;
+    height : 200px;
+}
+
+
 #board_control_panel {
     width : 150px;
     height : 400px;
     float : left;
-    margin-top : 200px
+    margin-top : 150px;
+}
+
+#game_control_panel {
+    width : 550px;
+    height : 140px;
+    float : left;
+    margin-top : 30px;
 }
 
 .board_control_panel_button {
@@ -28,47 +57,86 @@ margin: 0;
     stroke-width : 2;
 }
 
+.game_control_panel_button {
+    fill : pink;
+    fill-opacity : 0.2;
+    stroke : black;
+    stroke-width : 1;
+}
+
+.game_control_panel_button:hover {
+    fill : pink;
+    fill-opacity : 0.1;
+    stroke : black;
+    stroke-width : 2;
+}
+
 #board_window {
     float : left;
 }
 
+/* --------------------------------- */
+/* ------ Board window style ------- */
+/* --------------------------------- */
+
+
+/* --------- Board squares --------- */
+
 .board_square_empty {
+    position : absolute;
     fill : blue;
     fill-opacity : 0.1;
     stroke : azure;
 }
 
 .board_square_wall {
+    position : absolute;
     fill : black;
     fill-opacity : 0.9;
     stroke : azure;
 }
 
-/*.A_tank {
-    transition: transform 0.1s ease;
-}*/
+/* ------------ Stones ------------- */
 
 .A_tank_body {
+    position : absolute;
     fill : #27391C;
     stroke : #18230F;
     stroke-width : 5;
 }
 
 .A_tank_barrel {
+    position : absolute;
     fill : #1F7D53;
     stroke : #255F38;
     stroke-width : 5;
 }
 
 .B_tank_body {
+    position : absolute;
     fill : #B03052;
     stroke : #3D0301;
     stroke-width : 5;
 }
 
 .B_tank_barrel {
+    position : absolute;
     fill : #EBE8DB;
     stroke : #D76C82;
     stroke-width : 5;
+}
+
+/* - Temporary animation elements -- */
+
+.TAE_causal_freedom_marker {
+    position : absolute;
+}
+
+.TAE_tank_attack {
+    position : absolute;
+}
+
+#board_animation_overlay_text {
+    font-size : 15em;
 }
 

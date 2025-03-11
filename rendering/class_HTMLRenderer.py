@@ -27,7 +27,7 @@ class HTMLRenderer(Renderer):
         self.board_control_panel_height = 400
 
         self.board_window_width = 800
-        self.board_window_height = 800
+        self.board_window_height = 700
 
         self.game_log_width = 400
         self.game_log_height = 200
@@ -58,19 +58,23 @@ class HTMLRenderer(Renderer):
 
     # ------------------------ Label mangling methods -------------------------
 
-    def encode_board_square_id(self, t, x, y):
-        return(f"board_square_{t}_{x}_{y}")
+    def encode_board_square_id(self, x, y):
+        return(f"board_square_{x}_{y}")
 
-    def encode_board_square_class(self, t, x, y):
+    def encode_board_square_class(self, x, y):
+        # returns a tuple (class_name, z_index)
         if self.render_object.board_static[x][y] == " ":
-            return("board_square_empty")
+            return("board_square_empty", 0)
         elif self.render_object.board_static[x][y] == "X":
-            return("board_square_wall")
+            return("board_square_wall", 3)
         else:
-            return("board_square_unknown")
+            return("board_square_unknown", 0)
 
-    def encode_timeslice_id(self, t):
-        return(f"timeslice_{t}")
+    def encode_used_time_jump_marker_id(self, x, y):
+        return(f"used_time_jump_marker_{x}_{y}")
+
+    def encode_unused_time_jump_marker_id(self, x, y):
+        return(f"unused_time_jump_marker_{x}_{y}")
 
     def encode_stone_ID(self, stone_ID):
         return(f"stone_{stone_ID}")
@@ -101,7 +105,9 @@ class HTMLRenderer(Renderer):
         self.deposit_datum("number_of_turns", self.render_object.number_of_turns)
 
         self.deposit_object("stone_trajectories", self.render_object.stone_trajectories)
+        self.deposit_list("stone_actions", self.render_object.stone_actions)
 
+        self.deposit_object("time_jumps", self.render_object.time_jumps)
 
         self.deposit_datum("active_turn", self.render_object.active_turn)
 
@@ -118,6 +124,35 @@ class HTMLRenderer(Renderer):
         enclosing_div = "<div id=\"board_window\">"
         svg_window = f"<svg width=\"{self.board_window_width}\" height=\"{self.board_window_height}\" xmlns=\"http://www.w3.org/2000/svg\" id=\"board_window_svg\">"
         self.commit_to_output([enclosing_div, svg_window])
+        self.board_window_definitions()
+
+    def board_window_definitions(self):
+        # Declarations after opening the board window <svg> environment
+        used_TJI = []
+        used_TJI.append("<radialGradient id=\"grad_used_TJI\" cx=\"50%\" cy=\"50%\" r=\"70%\" fx=\"50%\" fy=\"50%\">")
+        used_TJI.append("  <stop offset=\"40%\" stop-color=\"cyan\" />")
+        used_TJI.append("  <stop offset=\"100%\" stop-color=\"blue\" />")
+        used_TJI.append("</radialGradient>")
+        used_TJO = []
+        used_TJO.append("<radialGradient id=\"grad_used_TJO\" cx=\"50%\" cy=\"50%\" r=\"70%\" fx=\"50%\" fy=\"50%\">")
+        used_TJO.append("  <stop offset=\"40%\" stop-color=\"orange\" />")
+        used_TJO.append("  <stop offset=\"100%\" stop-color=\"coral\" />")
+        used_TJO.append("</radialGradient>")
+        used_TJ_conflict = []
+        used_TJ_conflict.append("<radialGradient id=\"grad_used_conflict\" cx=\"50%\" cy=\"50%\" r=\"70%\" fx=\"50%\" fy=\"50%\">")
+        used_TJ_conflict.append("  <stop offset=\"40%\" stop-color=\"red\" />")
+        used_TJ_conflict.append("  <stop offset=\"100%\" stop-color=\"crimson\" />") #try crimson-brown
+        used_TJ_conflict.append("</radialGradient>")
+
+        self.commit_to_output([used_TJI, used_TJO, used_TJ_conflict])
+
+    def draw_board_animation_overlay(self):
+        animation_overlay = []
+        animation_overlay.append(f"<g id=\"board_animation_overlay\" width=\"{self.board_window_width}\" height=\"{self.board_window_height}\" visibility=\"hidden\">")
+        animation_overlay.append(f"  <rect id=\"board_animation_overlay_bg\" x=\"0\" y=\"0\" width=\"{self.board_window_width}\" height=\"{self.board_window_height}\" />")
+        animation_overlay.append(f"  <text id=\"board_animation_overlay_text\"  x=\"50%\" y=\"50%\" dominant-baseline=\"middle\" text-anchor=\"middle\" >changeme</text>")
+        animation_overlay.append("</g>")
+        self.commit_to_output(animation_overlay)
 
     def close_board_window(self):
         svg_window = "</svg>"
@@ -132,7 +167,7 @@ class HTMLRenderer(Renderer):
         self.commit_to_output("</div>")
 
     def draw_game_log(self):
-        self.commit_to_output(f"<div width=\"{self.game_log_width}\" height=\"{self.game_log_height}\" id=\"game_log\">")
+        self.commit_to_output(f"<div width=\"{self.game_log_width}px\" height=\"{self.game_log_height}px\" id=\"game_log\">")
 
         self.commit_to_output(f"<p id=\"navigation_label\"></p>")
 
@@ -177,28 +212,53 @@ class HTMLRenderer(Renderer):
 
     # ------------------------- Static board methods --------------------------
 
-    def draw_board_square(self, t, x, y):
+    def create_board_layer_structure(self, number_of_layers):
+        self.board_layer_structure = []
+        for n in range(number_of_layers):
+            self.board_layer_structure.append([f"<g class=\"board_layer\" id=\"board_layer_{n}\">"])
+
+    def commit_board_layer_structure(self):
+        for n in range(len(self.board_layer_structure)):
+            self.board_layer_structure[n].append([f"</g>"])
+        self.commit_to_output(self.board_layer_structure)
+
+    def draw_board_square(self, x, y):
         # Draws a board square object into the active context
         # ID is position
         # Class is static type
-        board_square_object = f"  <rect width=\"{self.board_square_base_side_length}\" height=\"{self.board_square_base_side_length}\" x=\"{x * self.board_square_base_side_length}\" y=\"{y * self.board_square_base_side_length}\" class=\"{self.encode_board_square_class(t, x ,y)}\" id=\"{self.encode_board_square_id(t, x, y)}\" onclick=\"board_square_click({t},{x},{y})\" />"
-        self.commit_to_output(board_square_object)
+        class_name, z_index = self.encode_board_square_class(x, y)
+        board_square_object = f"  <rect width=\"{self.board_square_base_side_length}\" height=\"{self.board_square_base_side_length}\" x=\"{x * self.board_square_base_side_length}\" y=\"{y * self.board_square_base_side_length}\" class=\"{class_name}\" id=\"{self.encode_board_square_id(x, y)}\" onclick=\"board_square_click({x},{y})\" />"
+        self.board_layer_structure[z_index].append(board_square_object)
 
-    def draw_timeslice(self, t):
-        enclosing_group = f"<g id=\"{self.encode_timeslice_id(t)}\" class=\"timeslice_group\">"
-        self.commit_to_output(enclosing_group)
+        # Draws time jump marker into z-index = 1, with
+        # For each square, there is one marker for used and one marker for unused time jumps, and its color depends on whether a TJO, a TJI, or both are present
+        # For efficiency, we omit squares whose main markers are placed above the time jump z index
+        if z_index <= 1:
+            used_time_jump_marker = f"  <rect width=\"{self.board_square_base_side_length}\" height=\"{self.board_square_base_side_length}\" x=\"{x * self.board_square_base_side_length}\" y=\"{y * self.board_square_base_side_length}\" class=\"used_time_jump_marker\" id=\"{self.encode_used_time_jump_marker_id(x, y)}\" visibility=\"hidden\" />"
+            unused_time_jump_marker_points = [[0, 0], [100, 0], [100, 100], [0, 100], [0, 20], [20, 20], [20, 80], [80, 80], [80, 20], [0, 20]]
+            unused_time_jump_marker = f"  <polygon class=\"unused_time_jump_marker\" id=\"{self.encode_unused_time_jump_marker_id(x, y)}\" points=\"{self.get_polygon_points(unused_time_jump_marker_points, [x * self.board_square_base_side_length, y * self.board_square_base_side_length])}\" visibility=\"hidden\" />"
+            self.board_layer_structure[1] += [used_time_jump_marker, unused_time_jump_marker]
+
+
+    def draw_board_squares(self):
+        #enclosing_group = f"<g id=\"static_board_squares\">"
+        #self.commit_to_output(enclosing_group)
         for x in range(self.render_object.x_dim):
             for y in range(self.render_object.y_dim):
-                self.draw_board_square(t, x, y)
-        self.commit_to_output("</g>")
+                self.draw_board_square(x, y)
+        #self.commit_to_output("</g>")
 
     # Stone type particulars
     def draw_tank(self, allegiance, stone_ID):
-        self.commit_to_output(f"<g x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"{allegiance}_tank\" id=\"{self.encode_stone_ID(stone_ID)}\" transform-origin=\"50px 50px\">")
-        self.commit_to_output(f"  <rect x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"stone_pedestal\" visibility=\"hidden\" />")
-        self.commit_to_output(f"  <rect x=\"45\" y=\"10\" width=\"10\" height=\"30\" class=\"{allegiance}_tank_barrel\" />")
-        self.commit_to_output(f"  <circle cx=\"50\" cy=\"50\" r=\"20\" class=\"{allegiance}_tank_body\" />")
-        self.commit_to_output("</g>")
+        tank_object = []
+        tank_object.append(f"<g x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"{allegiance}_tank\" id=\"{self.encode_stone_ID(stone_ID)}\" transform-origin=\"50px 50px\">")
+        tank_object.append(f"  <g x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"{allegiance}_tank_animation_effects\" id=\"{self.encode_stone_ID(stone_ID)}_animation_effects\" transform-origin=\"50px 50px\">")
+        tank_object.append(f"    <rect x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"stone_pedestal\" visibility=\"hidden\" />")
+        tank_object.append(f"    <rect x=\"45\" y=\"10\" width=\"10\" height=\"30\" class=\"{allegiance}_tank_barrel\" />")
+        tank_object.append(f"    <circle cx=\"50\" cy=\"50\" r=\"20\" class=\"{allegiance}_tank_body\" />")
+        tank_object.append("  </g>")
+        tank_object.append("</g>")
+        self.board_layer_structure[4].append(tank_object)
 
     def draw_stones(self):
         # These are drawn on the x=0,y=0 square with display:none, and will be
@@ -212,11 +272,40 @@ class HTMLRenderer(Renderer):
 
     def draw_board(self):
         self.open_board_window()
-        for t in range(self.render_object.t_dim):
-            self.draw_timeslice(t)
+        self.create_board_layer_structure(5) # every element is first added to this, where index = z-index
+        self.draw_board_squares()
         self.draw_stones()
+        self.commit_board_layer_structure()
+        self.draw_board_animation_overlay()
         self.close_board_window()
 
+
+
+    # ---------------------- Game control panel methods -----------------------
+
+    def draw_game_control_panel(self):
+        # game control panel allows one to traverse turns, as well as change the game status (resign, offer draw, submit commands, request paradox viewing...).
+        enclosing_div = "<div id=\"game_control_panel\">"
+        enclosing_svg = "<svg width=\"100%\" height=\"100%\" xmlns=\"http://www.w3.org/2000/svg\" id=\"board_control_panel_svg\">"
+        self.commit_to_output([enclosing_div, enclosing_svg])
+
+        # Previous turn button
+        prev_turn_button_points = [[130, 20], [50, 20], [50, 0], [0, 50], [50, 100], [50, 80], [130, 80]]
+        prev_turn_button_polygon = f"<polygon points=\"{self.get_polygon_points(prev_turn_button_points, [10, 0])}\" class=\"game_control_panel_button\" id=\"prev_turn_button\" onclick=\"show_prev_turn()\" />"
+        prev_turn_button_text = "<text x=50 y=55 class=\"button_label\" id=\"prev_turn_button_label\">Prev turn</text>"
+
+        # Active turn button
+        current_turn_button_object = f"<rect x=\"150\" y=\"20\" width=\"110\" height=\"60\" rx=\"5\" ry=\"5\" class=\"game_control_panel_button\" id=\"current_turn_button\" onclick=\"show_current_turn()\" />"
+        current_turn_button_text = "<text x=\"170\" y=\"27\" class=\"button_label\" id=\"current_turn_button_label\"><tspan x=\"175\" dy=\"1.2em\">Current</tspan><tspan x=\"190\" dy=\"1.2em\">turn</tspan></text>"
+
+        # Next turn button
+        next_turn_button_points = [[0, 20], [80, 20], [80, 0], [130, 50], [80, 100], [80, 80], [0, 80]]
+        next_turn_button_polygon = f"<polygon points=\"{self.get_polygon_points(next_turn_button_points, [270, 0])}\" class=\"game_control_panel_button\" id=\"next_turn_button\" onclick=\"show_next_turn()\" />"
+        next_turn_button_text = "<text x=\"289\" y=\"55\" class=\"button_label\" id=\"next_turn_button_label\">Next turn</text>"
+
+        self.commit_to_output([prev_turn_button_polygon, prev_turn_button_text, current_turn_button_object, current_turn_button_text, next_turn_button_polygon, next_turn_button_text])
+
+        self.commit_to_output("</svg>\n</div>")
 
 
     # ---------------------------- Global methods -----------------------------
@@ -242,6 +331,7 @@ class HTMLRenderer(Renderer):
         # Open gameside
         self.open_gameside()
 
+        self.draw_game_control_panel()
         self.draw_game_log()
 
         # Close gameside

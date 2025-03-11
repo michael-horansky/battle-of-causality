@@ -11,10 +11,12 @@
   const x_dim = 7;
   const y_dim = 7;
   const factions = ["A", "B"];
-  const faction_armies = {"GM": [], "A": [0, 1], "B": [2, 3]};
-  const number_of_turns = 8;
-  const stone_trajectories = JSON.parse('[[{"flags": {}, "pushes": {}, "destructions": {}, "tagscreens": {}, "canon": {}}, {"flags": {}, "pushes": {}, "destructions": {}, "tagscreens": {}, "canon": {}}, {"flags": {}, "pushes": {}, "destructions": {}, "tagscreens": {}, "canon": {}}, {"flags": {}, "pushes": {}, "destructions": {}, "tagscreens": {}, "canon": {}}, {"flags": {}, "pushes": {}, "destructions": {}, "tagscreens": {}, "canon": {}}, {"flags": {}, "pushes": {}, "destructions": {}, "tagscreens": {}, "canon": {}}], [{"flags": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "pushes": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "destructions": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "tagscreens": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "canon": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}}, {"flags": {"0": null, "1": null, "2": null, "3": null}, "pushes": {"0": null, "1": null, "2": null, "3": null}, "destructions": {"0": null, "1": null, "2": null, "3": null}, "tagscreens": {"0": null, "1": null, "2": null, "3": null}, "canon": {"0": null, "1": null, "2": null, "3": null}}, {"flags": {"0": null, "1": null, "2": null, "3": null}, "pushes": {"0": null, "1": null, "2": null, "3": null}, "destructions": {"0": null, "1": null, "2": null, "3": null}, "tagscreens": {"0": null, "1": null, "2": null, "3": null}, "canon": {"0": null, "1": null, "2": null, "3": null}}, {"flags": {"0": null, "1": null, "2": null, "3": null}, "pushes": {"0": null, "1": null, "2": null, "3": null}, "destructions": {"0": null, "1": null, "2": null, "3": null}, "tagscreens": {"0": null, "1": null, "2": null, "3": null}, "canon": {"0": null, "1": null, "2": null, "3": null}}, {"flags": {"0": null, "1": null, "2": null, "3": null}, "pushes": {"0": null, "1": null, "2": null, "3": null}, "destructions": {"0": null, "1": null, "2": null, "3": null}, "tagscreens": {"0": null, "1": null, "2": null, "3": null}, "canon": {"0": null, "1": null, "2": null, "3": null}}, {"flags": {"0": null, "1": null, "2": null, "3": null}, "pushes": {"0": null, "1": null, "2": null, "3": null}, "destructions": {"0": null, "1": null, "2": null, "3": null}, "tagscreens": {"0": null, "1": null, "2": null, "3": null}, "canon": {"0": null, "1": null, "2": null, "3": null}}], [{"flags": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "pushes": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "destructions": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "tagscreens": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "canon": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}}, {"flags": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "pushes": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "destructions": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "tagscreens": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "canon": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}}, {"flags": {"0": null, "1": null, "2": null, "3": null}, "pushes": {"0": null, "1": null, "2": null, "3": null}, "destructions": {"0": null, "1": null, "2": null, "3": null}, "tagscreens": {"0": null, "1": null, "2": null, "3": null}, "canon": {"0": null, "1": null, "2": null, "3": null}}, {"flags": {"0": null, "1": null, "2": null, "3": null}, "pushes": {"0": null, "1": null, "2": null, "3": null}, "destructions": {"0": null, "1": null, "2": null, "3": null}, "tagscreens": {"0": null, "1": null, "2": null, "3": null}, "canon": {"0": null, "1": null, "2": null, "3": null}}, {"flags": {"0": null, "1": null, "2": null, "3": null}, "pushes": {"0": null, "1": null, "2": null, "3": null}, "destructions": {"0": null, "1": null, "2": null, "3": null}, "tagscreens": {"0": null, "1": null, "2": null, "3": null}, "canon": {"0": null, "1": null, "2": null, "3": null}}, {"flags": {"0": null, "1": null, "2": null, "3": null}, "pushes": {"0": null, "1": null, "2": null, "3": null}, "destructions": {"0": null, "1": null, "2": null, "3": null}, "tagscreens": {"0": null, "1": null, "2": null, "3": null}, "canon": {"0": null, "1": null, "2": null, "3": null}}], [{"flags": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "pushes": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "destructions": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "tagscreens": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "canon": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}}, {"flags": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "pushes": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "destructions": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "tagscreens": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "canon": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}}, {"flags": {"0": [1, 2, 1], "1": [2, 3, 0], "2": [4, 3, 3], "3": [5, 3, 3]}, "pushes": {"0": [1, 2, 1], "1": [2, 3, 0], "2": [4, 3, 3], "3": [5, 3, 3]}, "destructions": {"0": [1, 2, 1], "1": [2, 3, 0], "2": [4, 3, 3], "3": [5, 3, 3]}, "tagscreens": {"0": [1, 2, 1], "1": [2, 3, 0], "2": [4, 3, 3], "3": [5, 3, 3]}, "canon": {"0": [1, 2, 1], "1": [2, 3, 0], "2": [4, 3, 3], "3": [5, 3, 3]}}, {"flags": {"0": null, "1": null, "2": null, "3": null}, "pushes": {"0": null, "1": null, "2": null, "3": null}, "destructions": {"0": null, "1": null, "2": null, "3": null}, "tagscreens": {"0": null, "1": null, "2": null, "3": null}, "canon": {"0": null, "1": null, "2": null, "3": null}}, {"flags": {"0": null, "1": null, "2": null, "3": null}, "pushes": {"0": null, "1": null, "2": null, "3": null}, "destructions": {"0": null, "1": null, "2": null, "3": null}, "tagscreens": {"0": null, "1": null, "2": null, "3": null}, "canon": {"0": null, "1": null, "2": null, "3": null}}, {"flags": {"0": null, "1": null, "2": null, "3": null}, "pushes": {"0": null, "1": null, "2": null, "3": null}, "destructions": {"0": null, "1": null, "2": null, "3": null}, "tagscreens": {"0": null, "1": null, "2": null, "3": null}, "canon": {"0": null, "1": null, "2": null, "3": null}}], [{"flags": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "pushes": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "destructions": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "tagscreens": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "canon": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}}, {"flags": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "pushes": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "destructions": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "tagscreens": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "canon": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}}, {"flags": {"0": [1, 2, 1], "1": [2, 3, 0], "2": [4, 3, 3], "3": [5, 3, 3]}, "pushes": {"0": [1, 2, 1], "1": [2, 3, 0], "2": [4, 3, 3], "3": [5, 3, 3]}, "destructions": {"0": [1, 2, 1], "1": [2, 3, 0], "2": [4, 3, 3], "3": [5, 3, 3]}, "tagscreens": {"0": [1, 2, 1], "1": [2, 3, 0], "2": [4, 3, 3], "3": [5, 3, 3]}, "canon": {"0": [1, 2, 1], "1": [2, 3, 0], "2": [4, 3, 3], "3": [5, 3, 3]}}, {"flags": {"0": [2, 2, 1], "1": [2, 2, 0], "2": [4, 3, 3], "3": [5, 3, 3]}, "pushes": {"0": [1, 2, 1], "1": [2, 3, 0], "2": [4, 3, 3], "3": [5, 3, 3]}, "destructions": {"0": [1, 2, 1], "1": [2, 3, 0], "2": [4, 3, 3], "3": [5, 3, 3]}, "tagscreens": {"0": [1, 2, 1], "1": [2, 3, 0], "2": [4, 3, 3], "3": [5, 3, 3]}, "canon": {"0": [1, 2, 1], "1": [2, 3, 0], "2": null, "3": [5, 3, 3]}}, {"flags": {"0": null, "1": null, "2": null, "3": null}, "pushes": {"0": null, "1": null, "2": null, "3": null}, "destructions": {"0": null, "1": null, "2": null, "3": null}, "tagscreens": {"0": null, "1": null, "2": null, "3": null}, "canon": {"0": null, "1": null, "2": null, "3": null}}, {"flags": {"0": null, "1": null, "2": null, "3": null}, "pushes": {"0": null, "1": null, "2": null, "3": null}, "destructions": {"0": null, "1": null, "2": null, "3": null}, "tagscreens": {"0": null, "1": null, "2": null, "3": null}, "canon": {"0": null, "1": null, "2": null, "3": null}}], [{"flags": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "pushes": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "destructions": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "tagscreens": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "canon": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}}, {"flags": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "pushes": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "destructions": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "tagscreens": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "canon": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}}, {"flags": {"0": [1, 2, 1], "1": [2, 3, 0], "2": [4, 3, 3], "3": [5, 3, 3]}, "pushes": {"0": [1, 2, 1], "1": [2, 3, 0], "2": [4, 3, 3], "3": [5, 3, 3]}, "destructions": {"0": [1, 2, 1], "1": [2, 3, 0], "2": [4, 3, 3], "3": [5, 3, 3]}, "tagscreens": {"0": [1, 2, 1], "1": [2, 3, 0], "2": [4, 3, 3], "3": [5, 3, 3]}, "canon": {"0": [1, 2, 1], "1": [2, 3, 0], "2": [4, 3, 3], "3": [5, 3, 3]}}, {"flags": {"0": [2, 2, 1], "1": [2, 2, 0], "2": [4, 3, 3], "3": [5, 3, 3]}, "pushes": {"0": [1, 2, 1], "1": [2, 3, 0], "2": [4, 3, 3], "3": [5, 3, 3]}, "destructions": {"0": [1, 2, 1], "1": [2, 3, 0], "2": [4, 3, 3], "3": [5, 3, 3]}, "tagscreens": {"0": [1, 2, 1], "1": [2, 3, 0], "2": [4, 3, 3], "3": [5, 3, 3]}, "canon": {"0": [1, 2, 1], "1": [2, 3, 0], "2": null, "3": [5, 3, 3]}}, {"flags": {"0": [2, 2, 1], "1": [2, 3, 0], "2": null, "3": [4, 3, 0]}, "pushes": {"0": [2, 2, 1], "1": [2, 3, 0], "2": null, "3": [4, 3, 0]}, "destructions": {"0": [2, 2, 1], "1": [2, 3, 0], "2": null, "3": [4, 3, 0]}, "tagscreens": {"0": [2, 2, 1], "1": [2, 3, 0], "2": null, "3": [4, 3, 0]}, "canon": {"0": [2, 2, 1], "1": [2, 3, 0], "2": null, "3": [4, 3, 0]}}, {"flags": {"0": null, "1": null, "2": null, "3": null}, "pushes": {"0": null, "1": null, "2": null, "3": null}, "destructions": {"0": null, "1": null, "2": null, "3": null}, "tagscreens": {"0": null, "1": null, "2": null, "3": null}, "canon": {"0": null, "1": null, "2": null, "3": null}}], [{"flags": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "pushes": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "destructions": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "tagscreens": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "canon": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}}, {"flags": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "pushes": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "destructions": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "tagscreens": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "canon": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}}, {"flags": {"0": [1, 2, 1], "1": [2, 3, 0], "2": [4, 3, 3], "3": [5, 3, 3]}, "pushes": {"0": [1, 2, 1], "1": [2, 3, 0], "2": [4, 3, 3], "3": [5, 3, 3]}, "destructions": {"0": [1, 2, 1], "1": [2, 3, 0], "2": [4, 3, 3], "3": [5, 3, 3]}, "tagscreens": {"0": [1, 2, 1], "1": [2, 3, 0], "2": [4, 3, 3], "3": [5, 3, 3]}, "canon": {"0": [1, 2, 1], "1": [2, 3, 0], "2": [4, 3, 3], "3": [5, 3, 3]}}, {"flags": {"0": [2, 2, 1], "1": [2, 2, 0], "2": [4, 3, 3], "3": [5, 3, 3]}, "pushes": {"0": [1, 2, 1], "1": [2, 3, 0], "2": [4, 3, 3], "3": [5, 3, 3]}, "destructions": {"0": [1, 2, 1], "1": [2, 3, 0], "2": [4, 3, 3], "3": [5, 3, 3]}, "tagscreens": {"0": [1, 2, 1], "1": [2, 3, 0], "2": [4, 3, 3], "3": [5, 3, 3]}, "canon": {"0": [1, 2, 1], "1": [2, 3, 0], "2": null, "3": [5, 3, 3]}}, {"flags": {"0": [2, 2, 1], "1": [2, 3, 0], "2": null, "3": [4, 3, 0]}, "pushes": {"0": [2, 2, 1], "1": [2, 3, 0], "2": null, "3": [4, 3, 0]}, "destructions": {"0": [2, 2, 1], "1": [2, 3, 0], "2": null, "3": [4, 3, 0]}, "tagscreens": {"0": [2, 2, 1], "1": [2, 3, 0], "2": null, "3": [4, 3, 0]}, "canon": {"0": [2, 2, 1], "1": [2, 3, 0], "2": null, "3": [4, 3, 0]}}, {"flags": {"0": [2, 2, 2], "1": [2, 2, 3], "2": null, "3": [4, 4, 1]}, "pushes": {"0": [2, 1, 2], "1": [2, 2, 3], "2": null, "3": [4, 4, 1]}, "destructions": {"0": [2, 1, 2], "1": [2, 2, 3], "2": null, "3": [4, 4, 1]}, "tagscreens": {"0": [2, 1, 2], "1": [2, 2, 3], "2": null, "3": [4, 4, 1]}, "canon": {"0": [2, 1, 2], "1": [2, 2, 3], "2": null, "3": [4, 4, 1]}}]]');
-  const active_turn = 6;
+  const faction_armies = {"GM": [], "A": [0, 1, 4], "B": [2, 3]};
+  const number_of_turns = 10;
+  const stone_trajectories = JSON.parse('[[{"flags": {}, "pushes": {}, "destructions": {}, "tagscreens": {}, "canon": {}}, {"flags": {}, "pushes": {}, "destructions": {}, "tagscreens": {}, "canon": {}}, {"flags": {}, "pushes": {}, "destructions": {}, "tagscreens": {}, "canon": {}}, {"flags": {}, "pushes": {}, "destructions": {}, "tagscreens": {}, "canon": {}}, {"flags": {}, "pushes": {}, "destructions": {}, "tagscreens": {}, "canon": {}}, {"flags": {}, "pushes": {}, "destructions": {}, "tagscreens": {}, "canon": {}}], [{"flags": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "pushes": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "destructions": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "tagscreens": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "canon": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}}, {"flags": {"0": null, "1": null, "2": null, "3": null}, "pushes": {"0": null, "1": null, "2": null, "3": null}, "destructions": {"0": null, "1": null, "2": null, "3": null}, "tagscreens": {"0": null, "1": null, "2": null, "3": null}, "canon": {"0": null, "1": null, "2": null, "3": null}}, {"flags": {"0": null, "1": null, "2": null, "3": null}, "pushes": {"0": null, "1": null, "2": null, "3": null}, "destructions": {"0": null, "1": null, "2": null, "3": null}, "tagscreens": {"0": null, "1": null, "2": null, "3": null}, "canon": {"0": null, "1": null, "2": null, "3": null}}, {"flags": {"0": null, "1": null, "2": null, "3": null}, "pushes": {"0": null, "1": null, "2": null, "3": null}, "destructions": {"0": null, "1": null, "2": null, "3": null}, "tagscreens": {"0": null, "1": null, "2": null, "3": null}, "canon": {"0": null, "1": null, "2": null, "3": null}}, {"flags": {"0": null, "1": null, "2": null, "3": null}, "pushes": {"0": null, "1": null, "2": null, "3": null}, "destructions": {"0": null, "1": null, "2": null, "3": null}, "tagscreens": {"0": null, "1": null, "2": null, "3": null}, "canon": {"0": null, "1": null, "2": null, "3": null}}, {"flags": {"0": null, "1": null, "2": null, "3": null}, "pushes": {"0": null, "1": null, "2": null, "3": null}, "destructions": {"0": null, "1": null, "2": null, "3": null}, "tagscreens": {"0": null, "1": null, "2": null, "3": null}, "canon": {"0": null, "1": null, "2": null, "3": null}}], [{"flags": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "pushes": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "destructions": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "tagscreens": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "canon": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}}, {"flags": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "pushes": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "destructions": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "tagscreens": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "canon": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}}, {"flags": {"0": null, "1": null, "2": null, "3": null}, "pushes": {"0": null, "1": null, "2": null, "3": null}, "destructions": {"0": null, "1": null, "2": null, "3": null}, "tagscreens": {"0": null, "1": null, "2": null, "3": null}, "canon": {"0": null, "1": null, "2": null, "3": null}}, {"flags": {"0": null, "1": null, "2": null, "3": null}, "pushes": {"0": null, "1": null, "2": null, "3": null}, "destructions": {"0": null, "1": null, "2": null, "3": null}, "tagscreens": {"0": null, "1": null, "2": null, "3": null}, "canon": {"0": null, "1": null, "2": null, "3": null}}, {"flags": {"0": null, "1": null, "2": null, "3": null}, "pushes": {"0": null, "1": null, "2": null, "3": null}, "destructions": {"0": null, "1": null, "2": null, "3": null}, "tagscreens": {"0": null, "1": null, "2": null, "3": null}, "canon": {"0": null, "1": null, "2": null, "3": null}}, {"flags": {"0": null, "1": null, "2": null, "3": null}, "pushes": {"0": null, "1": null, "2": null, "3": null}, "destructions": {"0": null, "1": null, "2": null, "3": null}, "tagscreens": {"0": null, "1": null, "2": null, "3": null}, "canon": {"0": null, "1": null, "2": null, "3": null}}], [{"flags": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "pushes": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "destructions": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "tagscreens": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "canon": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}}, {"flags": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "pushes": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "destructions": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "tagscreens": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "canon": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}}, {"flags": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "pushes": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "destructions": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "tagscreens": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "canon": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}}, {"flags": {"0": null, "1": null, "2": null, "3": null}, "pushes": {"0": null, "1": null, "2": null, "3": null}, "destructions": {"0": null, "1": null, "2": null, "3": null}, "tagscreens": {"0": null, "1": null, "2": null, "3": null}, "canon": {"0": null, "1": null, "2": null, "3": null}}, {"flags": {"0": null, "1": null, "2": null, "3": null}, "pushes": {"0": null, "1": null, "2": null, "3": null}, "destructions": {"0": null, "1": null, "2": null, "3": null}, "tagscreens": {"0": null, "1": null, "2": null, "3": null}, "canon": {"0": null, "1": null, "2": null, "3": null}}, {"flags": {"0": null, "1": null, "2": null, "3": null}, "pushes": {"0": null, "1": null, "2": null, "3": null}, "destructions": {"0": null, "1": null, "2": null, "3": null}, "tagscreens": {"0": null, "1": null, "2": null, "3": null}, "canon": {"0": null, "1": null, "2": null, "3": null}}], [{"flags": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "pushes": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "destructions": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "tagscreens": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "canon": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}}, {"flags": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "pushes": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "destructions": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "tagscreens": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "canon": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}}, {"flags": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "pushes": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "destructions": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "tagscreens": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "canon": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}}, {"flags": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "pushes": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "destructions": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "tagscreens": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "canon": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}}, {"flags": {"0": null, "1": null, "2": null, "3": null}, "pushes": {"0": null, "1": null, "2": null, "3": null}, "destructions": {"0": null, "1": null, "2": null, "3": null}, "tagscreens": {"0": null, "1": null, "2": null, "3": null}, "canon": {"0": null, "1": null, "2": null, "3": null}}, {"flags": {"0": null, "1": null, "2": null, "3": null}, "pushes": {"0": null, "1": null, "2": null, "3": null}, "destructions": {"0": null, "1": null, "2": null, "3": null}, "tagscreens": {"0": null, "1": null, "2": null, "3": null}, "canon": {"0": null, "1": null, "2": null, "3": null}}], [{"flags": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "pushes": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "destructions": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "tagscreens": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "canon": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}}, {"flags": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "pushes": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "destructions": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "tagscreens": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "canon": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}}, {"flags": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "pushes": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "destructions": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "tagscreens": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "canon": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}}, {"flags": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "pushes": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "destructions": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "tagscreens": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "canon": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}}, {"flags": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "pushes": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "destructions": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "tagscreens": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "canon": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}}, {"flags": {"0": null, "1": null, "2": null, "3": null}, "pushes": {"0": null, "1": null, "2": null, "3": null}, "destructions": {"0": null, "1": null, "2": null, "3": null}, "tagscreens": {"0": null, "1": null, "2": null, "3": null}, "canon": {"0": null, "1": null, "2": null, "3": null}}], [{"flags": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "pushes": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "destructions": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "tagscreens": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "canon": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}}, {"flags": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "pushes": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "destructions": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "tagscreens": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "canon": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}}, {"flags": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "pushes": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "destructions": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "tagscreens": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "canon": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}}, {"flags": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "pushes": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "destructions": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "tagscreens": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "canon": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}}, {"flags": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "pushes": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "destructions": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "tagscreens": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "canon": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}}, {"flags": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "pushes": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "destructions": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "tagscreens": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}, "canon": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3]}}], [{"flags": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": [1, 2, 0]}, "pushes": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": [1, 2, 0]}, "destructions": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": [1, 2, 0]}, "tagscreens": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": [1, 2, 0]}, "canon": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": [1, 2, 0]}}, {"flags": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}, "pushes": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}, "destructions": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}, "tagscreens": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}, "canon": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}}, {"flags": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}, "pushes": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}, "destructions": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}, "tagscreens": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}, "canon": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}}, {"flags": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}, "pushes": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}, "destructions": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}, "tagscreens": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}, "canon": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}}, {"flags": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}, "pushes": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}, "destructions": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}, "tagscreens": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}, "canon": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}}, {"flags": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}, "pushes": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}, "destructions": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}, "tagscreens": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}, "canon": {"0": [1, 2, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}}], [{"flags": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": [1, 2, 0]}, "pushes": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": [1, 2, 0]}, "destructions": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": [1, 2, 0]}, "tagscreens": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": [1, 2, 0]}, "canon": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": [1, 2, 0]}}, {"flags": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": [1, 3, 0]}, "pushes": {"0": [1, 4, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": [1, 3, 0]}, "destructions": {"0": [1, 4, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": [1, 3, 0]}, "tagscreens": {"0": [1, 4, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": [1, 3, 0]}, "canon": {"0": [1, 4, 0], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": [1, 3, 0]}}, {"flags": {"0": null, "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}, "pushes": {"0": null, "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}, "destructions": {"0": null, "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}, "tagscreens": {"0": null, "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}, "canon": {"0": null, "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}}, {"flags": {"0": null, "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}, "pushes": {"0": null, "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}, "destructions": {"0": null, "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}, "tagscreens": {"0": null, "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}, "canon": {"0": null, "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}}, {"flags": {"0": null, "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}, "pushes": {"0": null, "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}, "destructions": {"0": null, "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}, "tagscreens": {"0": null, "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}, "canon": {"0": null, "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}}, {"flags": {"0": null, "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}, "pushes": {"0": null, "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}, "destructions": {"0": null, "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}, "tagscreens": {"0": null, "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}, "canon": {"0": null, "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null}}]]');
+  const stone_actions = [[[], [], [], [], [], []], [[], [], [], [], [], []], [[], [], [], [], [], []], [[], [], [], [], [], []], [[], [], [], [], [], []], [[], [], [], [], [], []], [[], [], [], [], [], []], [[], [], [], [], [], []], [[], [], [], [], [], []]];
+  const time_jumps = JSON.parse('[{}, {}, {}, {}, {}, {}, {}, {"0": {"present": true, "1": {"2": {"used": "TJI"}}}, "5": {"present": true, "1": {"2": {"used": "TJO"}}}}, {"0": {"present": true, "1": {"2": {"used": "TJI"}}}}]');
+  const active_turn = 8;
 </script>
 <div id="boardside">
 <div id="board_control_panel">
@@ -28,338 +30,180 @@
 </svg>
 </div>
 <div id="board_window">
-<svg width="800" height="800" xmlns="http://www.w3.org/2000/svg" id="board_window_svg">
-<g id="timeslice_0" class="timeslice_group">
-  <rect width="100" height="100" x="0" y="0" class="board_square_wall" id="board_square_0_0_0" onclick="board_square_click(0,0,0)" />
-  <rect width="100" height="100" x="0" y="100" class="board_square_wall" id="board_square_0_0_1" onclick="board_square_click(0,0,1)" />
-  <rect width="100" height="100" x="0" y="200" class="board_square_wall" id="board_square_0_0_2" onclick="board_square_click(0,0,2)" />
-  <rect width="100" height="100" x="0" y="300" class="board_square_wall" id="board_square_0_0_3" onclick="board_square_click(0,0,3)" />
-  <rect width="100" height="100" x="0" y="400" class="board_square_wall" id="board_square_0_0_4" onclick="board_square_click(0,0,4)" />
-  <rect width="100" height="100" x="0" y="500" class="board_square_wall" id="board_square_0_0_5" onclick="board_square_click(0,0,5)" />
-  <rect width="100" height="100" x="0" y="600" class="board_square_wall" id="board_square_0_0_6" onclick="board_square_click(0,0,6)" />
-  <rect width="100" height="100" x="100" y="0" class="board_square_wall" id="board_square_0_1_0" onclick="board_square_click(0,1,0)" />
-  <rect width="100" height="100" x="100" y="100" class="board_square_empty" id="board_square_0_1_1" onclick="board_square_click(0,1,1)" />
-  <rect width="100" height="100" x="100" y="200" class="board_square_empty" id="board_square_0_1_2" onclick="board_square_click(0,1,2)" />
-  <rect width="100" height="100" x="100" y="300" class="board_square_empty" id="board_square_0_1_3" onclick="board_square_click(0,1,3)" />
-  <rect width="100" height="100" x="100" y="400" class="board_square_empty" id="board_square_0_1_4" onclick="board_square_click(0,1,4)" />
-  <rect width="100" height="100" x="100" y="500" class="board_square_empty" id="board_square_0_1_5" onclick="board_square_click(0,1,5)" />
-  <rect width="100" height="100" x="100" y="600" class="board_square_wall" id="board_square_0_1_6" onclick="board_square_click(0,1,6)" />
-  <rect width="100" height="100" x="200" y="0" class="board_square_wall" id="board_square_0_2_0" onclick="board_square_click(0,2,0)" />
-  <rect width="100" height="100" x="200" y="100" class="board_square_empty" id="board_square_0_2_1" onclick="board_square_click(0,2,1)" />
-  <rect width="100" height="100" x="200" y="200" class="board_square_empty" id="board_square_0_2_2" onclick="board_square_click(0,2,2)" />
-  <rect width="100" height="100" x="200" y="300" class="board_square_empty" id="board_square_0_2_3" onclick="board_square_click(0,2,3)" />
-  <rect width="100" height="100" x="200" y="400" class="board_square_empty" id="board_square_0_2_4" onclick="board_square_click(0,2,4)" />
-  <rect width="100" height="100" x="200" y="500" class="board_square_empty" id="board_square_0_2_5" onclick="board_square_click(0,2,5)" />
-  <rect width="100" height="100" x="200" y="600" class="board_square_wall" id="board_square_0_2_6" onclick="board_square_click(0,2,6)" />
-  <rect width="100" height="100" x="300" y="0" class="board_square_wall" id="board_square_0_3_0" onclick="board_square_click(0,3,0)" />
-  <rect width="100" height="100" x="300" y="100" class="board_square_empty" id="board_square_0_3_1" onclick="board_square_click(0,3,1)" />
-  <rect width="100" height="100" x="300" y="200" class="board_square_empty" id="board_square_0_3_2" onclick="board_square_click(0,3,2)" />
-  <rect width="100" height="100" x="300" y="300" class="board_square_wall" id="board_square_0_3_3" onclick="board_square_click(0,3,3)" />
-  <rect width="100" height="100" x="300" y="400" class="board_square_empty" id="board_square_0_3_4" onclick="board_square_click(0,3,4)" />
-  <rect width="100" height="100" x="300" y="500" class="board_square_empty" id="board_square_0_3_5" onclick="board_square_click(0,3,5)" />
-  <rect width="100" height="100" x="300" y="600" class="board_square_wall" id="board_square_0_3_6" onclick="board_square_click(0,3,6)" />
-  <rect width="100" height="100" x="400" y="0" class="board_square_wall" id="board_square_0_4_0" onclick="board_square_click(0,4,0)" />
-  <rect width="100" height="100" x="400" y="100" class="board_square_empty" id="board_square_0_4_1" onclick="board_square_click(0,4,1)" />
-  <rect width="100" height="100" x="400" y="200" class="board_square_empty" id="board_square_0_4_2" onclick="board_square_click(0,4,2)" />
-  <rect width="100" height="100" x="400" y="300" class="board_square_empty" id="board_square_0_4_3" onclick="board_square_click(0,4,3)" />
-  <rect width="100" height="100" x="400" y="400" class="board_square_empty" id="board_square_0_4_4" onclick="board_square_click(0,4,4)" />
-  <rect width="100" height="100" x="400" y="500" class="board_square_empty" id="board_square_0_4_5" onclick="board_square_click(0,4,5)" />
-  <rect width="100" height="100" x="400" y="600" class="board_square_wall" id="board_square_0_4_6" onclick="board_square_click(0,4,6)" />
-  <rect width="100" height="100" x="500" y="0" class="board_square_wall" id="board_square_0_5_0" onclick="board_square_click(0,5,0)" />
-  <rect width="100" height="100" x="500" y="100" class="board_square_empty" id="board_square_0_5_1" onclick="board_square_click(0,5,1)" />
-  <rect width="100" height="100" x="500" y="200" class="board_square_empty" id="board_square_0_5_2" onclick="board_square_click(0,5,2)" />
-  <rect width="100" height="100" x="500" y="300" class="board_square_empty" id="board_square_0_5_3" onclick="board_square_click(0,5,3)" />
-  <rect width="100" height="100" x="500" y="400" class="board_square_empty" id="board_square_0_5_4" onclick="board_square_click(0,5,4)" />
-  <rect width="100" height="100" x="500" y="500" class="board_square_empty" id="board_square_0_5_5" onclick="board_square_click(0,5,5)" />
-  <rect width="100" height="100" x="500" y="600" class="board_square_wall" id="board_square_0_5_6" onclick="board_square_click(0,5,6)" />
-  <rect width="100" height="100" x="600" y="0" class="board_square_wall" id="board_square_0_6_0" onclick="board_square_click(0,6,0)" />
-  <rect width="100" height="100" x="600" y="100" class="board_square_wall" id="board_square_0_6_1" onclick="board_square_click(0,6,1)" />
-  <rect width="100" height="100" x="600" y="200" class="board_square_wall" id="board_square_0_6_2" onclick="board_square_click(0,6,2)" />
-  <rect width="100" height="100" x="600" y="300" class="board_square_wall" id="board_square_0_6_3" onclick="board_square_click(0,6,3)" />
-  <rect width="100" height="100" x="600" y="400" class="board_square_wall" id="board_square_0_6_4" onclick="board_square_click(0,6,4)" />
-  <rect width="100" height="100" x="600" y="500" class="board_square_wall" id="board_square_0_6_5" onclick="board_square_click(0,6,5)" />
-  <rect width="100" height="100" x="600" y="600" class="board_square_wall" id="board_square_0_6_6" onclick="board_square_click(0,6,6)" />
+<svg width="800" height="700" xmlns="http://www.w3.org/2000/svg" id="board_window_svg">
+<radialGradient id="grad_used_TJI" cx="50%" cy="50%" r="70%" fx="50%" fy="50%">
+  <stop offset="40%" stop-color="cyan" />
+  <stop offset="100%" stop-color="blue" />
+</radialGradient>
+<radialGradient id="grad_used_TJO" cx="50%" cy="50%" r="70%" fx="50%" fy="50%">
+  <stop offset="40%" stop-color="orange" />
+  <stop offset="100%" stop-color="coral" />
+</radialGradient>
+<radialGradient id="grad_used_conflict" cx="50%" cy="50%" r="70%" fx="50%" fy="50%">
+  <stop offset="40%" stop-color="red" />
+  <stop offset="100%" stop-color="crimson" />
+</radialGradient>
+<g class="board_layer" id="board_layer_0">
+  <rect width="100" height="100" x="100" y="100" class="board_square_empty" id="board_square_1_1" onclick="board_square_click(1,1)" />
+  <rect width="100" height="100" x="100" y="200" class="board_square_empty" id="board_square_1_2" onclick="board_square_click(1,2)" />
+  <rect width="100" height="100" x="100" y="300" class="board_square_empty" id="board_square_1_3" onclick="board_square_click(1,3)" />
+  <rect width="100" height="100" x="100" y="400" class="board_square_empty" id="board_square_1_4" onclick="board_square_click(1,4)" />
+  <rect width="100" height="100" x="100" y="500" class="board_square_empty" id="board_square_1_5" onclick="board_square_click(1,5)" />
+  <rect width="100" height="100" x="200" y="100" class="board_square_empty" id="board_square_2_1" onclick="board_square_click(2,1)" />
+  <rect width="100" height="100" x="200" y="200" class="board_square_empty" id="board_square_2_2" onclick="board_square_click(2,2)" />
+  <rect width="100" height="100" x="200" y="300" class="board_square_empty" id="board_square_2_3" onclick="board_square_click(2,3)" />
+  <rect width="100" height="100" x="200" y="400" class="board_square_empty" id="board_square_2_4" onclick="board_square_click(2,4)" />
+  <rect width="100" height="100" x="200" y="500" class="board_square_empty" id="board_square_2_5" onclick="board_square_click(2,5)" />
+  <rect width="100" height="100" x="300" y="100" class="board_square_empty" id="board_square_3_1" onclick="board_square_click(3,1)" />
+  <rect width="100" height="100" x="300" y="200" class="board_square_empty" id="board_square_3_2" onclick="board_square_click(3,2)" />
+  <rect width="100" height="100" x="300" y="400" class="board_square_empty" id="board_square_3_4" onclick="board_square_click(3,4)" />
+  <rect width="100" height="100" x="300" y="500" class="board_square_empty" id="board_square_3_5" onclick="board_square_click(3,5)" />
+  <rect width="100" height="100" x="400" y="100" class="board_square_empty" id="board_square_4_1" onclick="board_square_click(4,1)" />
+  <rect width="100" height="100" x="400" y="200" class="board_square_empty" id="board_square_4_2" onclick="board_square_click(4,2)" />
+  <rect width="100" height="100" x="400" y="300" class="board_square_empty" id="board_square_4_3" onclick="board_square_click(4,3)" />
+  <rect width="100" height="100" x="400" y="400" class="board_square_empty" id="board_square_4_4" onclick="board_square_click(4,4)" />
+  <rect width="100" height="100" x="400" y="500" class="board_square_empty" id="board_square_4_5" onclick="board_square_click(4,5)" />
+  <rect width="100" height="100" x="500" y="100" class="board_square_empty" id="board_square_5_1" onclick="board_square_click(5,1)" />
+  <rect width="100" height="100" x="500" y="200" class="board_square_empty" id="board_square_5_2" onclick="board_square_click(5,2)" />
+  <rect width="100" height="100" x="500" y="300" class="board_square_empty" id="board_square_5_3" onclick="board_square_click(5,3)" />
+  <rect width="100" height="100" x="500" y="400" class="board_square_empty" id="board_square_5_4" onclick="board_square_click(5,4)" />
+  <rect width="100" height="100" x="500" y="500" class="board_square_empty" id="board_square_5_5" onclick="board_square_click(5,5)" />
 </g>
-<g id="timeslice_1" class="timeslice_group">
-  <rect width="100" height="100" x="0" y="0" class="board_square_wall" id="board_square_1_0_0" onclick="board_square_click(1,0,0)" />
-  <rect width="100" height="100" x="0" y="100" class="board_square_wall" id="board_square_1_0_1" onclick="board_square_click(1,0,1)" />
-  <rect width="100" height="100" x="0" y="200" class="board_square_wall" id="board_square_1_0_2" onclick="board_square_click(1,0,2)" />
-  <rect width="100" height="100" x="0" y="300" class="board_square_wall" id="board_square_1_0_3" onclick="board_square_click(1,0,3)" />
-  <rect width="100" height="100" x="0" y="400" class="board_square_wall" id="board_square_1_0_4" onclick="board_square_click(1,0,4)" />
-  <rect width="100" height="100" x="0" y="500" class="board_square_wall" id="board_square_1_0_5" onclick="board_square_click(1,0,5)" />
-  <rect width="100" height="100" x="0" y="600" class="board_square_wall" id="board_square_1_0_6" onclick="board_square_click(1,0,6)" />
-  <rect width="100" height="100" x="100" y="0" class="board_square_wall" id="board_square_1_1_0" onclick="board_square_click(1,1,0)" />
-  <rect width="100" height="100" x="100" y="100" class="board_square_empty" id="board_square_1_1_1" onclick="board_square_click(1,1,1)" />
-  <rect width="100" height="100" x="100" y="200" class="board_square_empty" id="board_square_1_1_2" onclick="board_square_click(1,1,2)" />
-  <rect width="100" height="100" x="100" y="300" class="board_square_empty" id="board_square_1_1_3" onclick="board_square_click(1,1,3)" />
-  <rect width="100" height="100" x="100" y="400" class="board_square_empty" id="board_square_1_1_4" onclick="board_square_click(1,1,4)" />
-  <rect width="100" height="100" x="100" y="500" class="board_square_empty" id="board_square_1_1_5" onclick="board_square_click(1,1,5)" />
-  <rect width="100" height="100" x="100" y="600" class="board_square_wall" id="board_square_1_1_6" onclick="board_square_click(1,1,6)" />
-  <rect width="100" height="100" x="200" y="0" class="board_square_wall" id="board_square_1_2_0" onclick="board_square_click(1,2,0)" />
-  <rect width="100" height="100" x="200" y="100" class="board_square_empty" id="board_square_1_2_1" onclick="board_square_click(1,2,1)" />
-  <rect width="100" height="100" x="200" y="200" class="board_square_empty" id="board_square_1_2_2" onclick="board_square_click(1,2,2)" />
-  <rect width="100" height="100" x="200" y="300" class="board_square_empty" id="board_square_1_2_3" onclick="board_square_click(1,2,3)" />
-  <rect width="100" height="100" x="200" y="400" class="board_square_empty" id="board_square_1_2_4" onclick="board_square_click(1,2,4)" />
-  <rect width="100" height="100" x="200" y="500" class="board_square_empty" id="board_square_1_2_5" onclick="board_square_click(1,2,5)" />
-  <rect width="100" height="100" x="200" y="600" class="board_square_wall" id="board_square_1_2_6" onclick="board_square_click(1,2,6)" />
-  <rect width="100" height="100" x="300" y="0" class="board_square_wall" id="board_square_1_3_0" onclick="board_square_click(1,3,0)" />
-  <rect width="100" height="100" x="300" y="100" class="board_square_empty" id="board_square_1_3_1" onclick="board_square_click(1,3,1)" />
-  <rect width="100" height="100" x="300" y="200" class="board_square_empty" id="board_square_1_3_2" onclick="board_square_click(1,3,2)" />
-  <rect width="100" height="100" x="300" y="300" class="board_square_wall" id="board_square_1_3_3" onclick="board_square_click(1,3,3)" />
-  <rect width="100" height="100" x="300" y="400" class="board_square_empty" id="board_square_1_3_4" onclick="board_square_click(1,3,4)" />
-  <rect width="100" height="100" x="300" y="500" class="board_square_empty" id="board_square_1_3_5" onclick="board_square_click(1,3,5)" />
-  <rect width="100" height="100" x="300" y="600" class="board_square_wall" id="board_square_1_3_6" onclick="board_square_click(1,3,6)" />
-  <rect width="100" height="100" x="400" y="0" class="board_square_wall" id="board_square_1_4_0" onclick="board_square_click(1,4,0)" />
-  <rect width="100" height="100" x="400" y="100" class="board_square_empty" id="board_square_1_4_1" onclick="board_square_click(1,4,1)" />
-  <rect width="100" height="100" x="400" y="200" class="board_square_empty" id="board_square_1_4_2" onclick="board_square_click(1,4,2)" />
-  <rect width="100" height="100" x="400" y="300" class="board_square_empty" id="board_square_1_4_3" onclick="board_square_click(1,4,3)" />
-  <rect width="100" height="100" x="400" y="400" class="board_square_empty" id="board_square_1_4_4" onclick="board_square_click(1,4,4)" />
-  <rect width="100" height="100" x="400" y="500" class="board_square_empty" id="board_square_1_4_5" onclick="board_square_click(1,4,5)" />
-  <rect width="100" height="100" x="400" y="600" class="board_square_wall" id="board_square_1_4_6" onclick="board_square_click(1,4,6)" />
-  <rect width="100" height="100" x="500" y="0" class="board_square_wall" id="board_square_1_5_0" onclick="board_square_click(1,5,0)" />
-  <rect width="100" height="100" x="500" y="100" class="board_square_empty" id="board_square_1_5_1" onclick="board_square_click(1,5,1)" />
-  <rect width="100" height="100" x="500" y="200" class="board_square_empty" id="board_square_1_5_2" onclick="board_square_click(1,5,2)" />
-  <rect width="100" height="100" x="500" y="300" class="board_square_empty" id="board_square_1_5_3" onclick="board_square_click(1,5,3)" />
-  <rect width="100" height="100" x="500" y="400" class="board_square_empty" id="board_square_1_5_4" onclick="board_square_click(1,5,4)" />
-  <rect width="100" height="100" x="500" y="500" class="board_square_empty" id="board_square_1_5_5" onclick="board_square_click(1,5,5)" />
-  <rect width="100" height="100" x="500" y="600" class="board_square_wall" id="board_square_1_5_6" onclick="board_square_click(1,5,6)" />
-  <rect width="100" height="100" x="600" y="0" class="board_square_wall" id="board_square_1_6_0" onclick="board_square_click(1,6,0)" />
-  <rect width="100" height="100" x="600" y="100" class="board_square_wall" id="board_square_1_6_1" onclick="board_square_click(1,6,1)" />
-  <rect width="100" height="100" x="600" y="200" class="board_square_wall" id="board_square_1_6_2" onclick="board_square_click(1,6,2)" />
-  <rect width="100" height="100" x="600" y="300" class="board_square_wall" id="board_square_1_6_3" onclick="board_square_click(1,6,3)" />
-  <rect width="100" height="100" x="600" y="400" class="board_square_wall" id="board_square_1_6_4" onclick="board_square_click(1,6,4)" />
-  <rect width="100" height="100" x="600" y="500" class="board_square_wall" id="board_square_1_6_5" onclick="board_square_click(1,6,5)" />
-  <rect width="100" height="100" x="600" y="600" class="board_square_wall" id="board_square_1_6_6" onclick="board_square_click(1,6,6)" />
+<g class="board_layer" id="board_layer_1">
+  <rect width="100" height="100" x="100" y="100" class="used_time_jump_marker" id="used_time_jump_marker_1_1" visibility="hidden" />
+  <polygon class="unused_time_jump_marker" id="unused_time_jump_marker_1_1" points="100,100 200,100 200,200 100,200 100,120 120,120 120,180 180,180 180,120 100,120" visibility="hidden" />
+  <rect width="100" height="100" x="100" y="200" class="used_time_jump_marker" id="used_time_jump_marker_1_2" visibility="hidden" />
+  <polygon class="unused_time_jump_marker" id="unused_time_jump_marker_1_2" points="100,200 200,200 200,300 100,300 100,220 120,220 120,280 180,280 180,220 100,220" visibility="hidden" />
+  <rect width="100" height="100" x="100" y="300" class="used_time_jump_marker" id="used_time_jump_marker_1_3" visibility="hidden" />
+  <polygon class="unused_time_jump_marker" id="unused_time_jump_marker_1_3" points="100,300 200,300 200,400 100,400 100,320 120,320 120,380 180,380 180,320 100,320" visibility="hidden" />
+  <rect width="100" height="100" x="100" y="400" class="used_time_jump_marker" id="used_time_jump_marker_1_4" visibility="hidden" />
+  <polygon class="unused_time_jump_marker" id="unused_time_jump_marker_1_4" points="100,400 200,400 200,500 100,500 100,420 120,420 120,480 180,480 180,420 100,420" visibility="hidden" />
+  <rect width="100" height="100" x="100" y="500" class="used_time_jump_marker" id="used_time_jump_marker_1_5" visibility="hidden" />
+  <polygon class="unused_time_jump_marker" id="unused_time_jump_marker_1_5" points="100,500 200,500 200,600 100,600 100,520 120,520 120,580 180,580 180,520 100,520" visibility="hidden" />
+  <rect width="100" height="100" x="200" y="100" class="used_time_jump_marker" id="used_time_jump_marker_2_1" visibility="hidden" />
+  <polygon class="unused_time_jump_marker" id="unused_time_jump_marker_2_1" points="200,100 300,100 300,200 200,200 200,120 220,120 220,180 280,180 280,120 200,120" visibility="hidden" />
+  <rect width="100" height="100" x="200" y="200" class="used_time_jump_marker" id="used_time_jump_marker_2_2" visibility="hidden" />
+  <polygon class="unused_time_jump_marker" id="unused_time_jump_marker_2_2" points="200,200 300,200 300,300 200,300 200,220 220,220 220,280 280,280 280,220 200,220" visibility="hidden" />
+  <rect width="100" height="100" x="200" y="300" class="used_time_jump_marker" id="used_time_jump_marker_2_3" visibility="hidden" />
+  <polygon class="unused_time_jump_marker" id="unused_time_jump_marker_2_3" points="200,300 300,300 300,400 200,400 200,320 220,320 220,380 280,380 280,320 200,320" visibility="hidden" />
+  <rect width="100" height="100" x="200" y="400" class="used_time_jump_marker" id="used_time_jump_marker_2_4" visibility="hidden" />
+  <polygon class="unused_time_jump_marker" id="unused_time_jump_marker_2_4" points="200,400 300,400 300,500 200,500 200,420 220,420 220,480 280,480 280,420 200,420" visibility="hidden" />
+  <rect width="100" height="100" x="200" y="500" class="used_time_jump_marker" id="used_time_jump_marker_2_5" visibility="hidden" />
+  <polygon class="unused_time_jump_marker" id="unused_time_jump_marker_2_5" points="200,500 300,500 300,600 200,600 200,520 220,520 220,580 280,580 280,520 200,520" visibility="hidden" />
+  <rect width="100" height="100" x="300" y="100" class="used_time_jump_marker" id="used_time_jump_marker_3_1" visibility="hidden" />
+  <polygon class="unused_time_jump_marker" id="unused_time_jump_marker_3_1" points="300,100 400,100 400,200 300,200 300,120 320,120 320,180 380,180 380,120 300,120" visibility="hidden" />
+  <rect width="100" height="100" x="300" y="200" class="used_time_jump_marker" id="used_time_jump_marker_3_2" visibility="hidden" />
+  <polygon class="unused_time_jump_marker" id="unused_time_jump_marker_3_2" points="300,200 400,200 400,300 300,300 300,220 320,220 320,280 380,280 380,220 300,220" visibility="hidden" />
+  <rect width="100" height="100" x="300" y="400" class="used_time_jump_marker" id="used_time_jump_marker_3_4" visibility="hidden" />
+  <polygon class="unused_time_jump_marker" id="unused_time_jump_marker_3_4" points="300,400 400,400 400,500 300,500 300,420 320,420 320,480 380,480 380,420 300,420" visibility="hidden" />
+  <rect width="100" height="100" x="300" y="500" class="used_time_jump_marker" id="used_time_jump_marker_3_5" visibility="hidden" />
+  <polygon class="unused_time_jump_marker" id="unused_time_jump_marker_3_5" points="300,500 400,500 400,600 300,600 300,520 320,520 320,580 380,580 380,520 300,520" visibility="hidden" />
+  <rect width="100" height="100" x="400" y="100" class="used_time_jump_marker" id="used_time_jump_marker_4_1" visibility="hidden" />
+  <polygon class="unused_time_jump_marker" id="unused_time_jump_marker_4_1" points="400,100 500,100 500,200 400,200 400,120 420,120 420,180 480,180 480,120 400,120" visibility="hidden" />
+  <rect width="100" height="100" x="400" y="200" class="used_time_jump_marker" id="used_time_jump_marker_4_2" visibility="hidden" />
+  <polygon class="unused_time_jump_marker" id="unused_time_jump_marker_4_2" points="400,200 500,200 500,300 400,300 400,220 420,220 420,280 480,280 480,220 400,220" visibility="hidden" />
+  <rect width="100" height="100" x="400" y="300" class="used_time_jump_marker" id="used_time_jump_marker_4_3" visibility="hidden" />
+  <polygon class="unused_time_jump_marker" id="unused_time_jump_marker_4_3" points="400,300 500,300 500,400 400,400 400,320 420,320 420,380 480,380 480,320 400,320" visibility="hidden" />
+  <rect width="100" height="100" x="400" y="400" class="used_time_jump_marker" id="used_time_jump_marker_4_4" visibility="hidden" />
+  <polygon class="unused_time_jump_marker" id="unused_time_jump_marker_4_4" points="400,400 500,400 500,500 400,500 400,420 420,420 420,480 480,480 480,420 400,420" visibility="hidden" />
+  <rect width="100" height="100" x="400" y="500" class="used_time_jump_marker" id="used_time_jump_marker_4_5" visibility="hidden" />
+  <polygon class="unused_time_jump_marker" id="unused_time_jump_marker_4_5" points="400,500 500,500 500,600 400,600 400,520 420,520 420,580 480,580 480,520 400,520" visibility="hidden" />
+  <rect width="100" height="100" x="500" y="100" class="used_time_jump_marker" id="used_time_jump_marker_5_1" visibility="hidden" />
+  <polygon class="unused_time_jump_marker" id="unused_time_jump_marker_5_1" points="500,100 600,100 600,200 500,200 500,120 520,120 520,180 580,180 580,120 500,120" visibility="hidden" />
+  <rect width="100" height="100" x="500" y="200" class="used_time_jump_marker" id="used_time_jump_marker_5_2" visibility="hidden" />
+  <polygon class="unused_time_jump_marker" id="unused_time_jump_marker_5_2" points="500,200 600,200 600,300 500,300 500,220 520,220 520,280 580,280 580,220 500,220" visibility="hidden" />
+  <rect width="100" height="100" x="500" y="300" class="used_time_jump_marker" id="used_time_jump_marker_5_3" visibility="hidden" />
+  <polygon class="unused_time_jump_marker" id="unused_time_jump_marker_5_3" points="500,300 600,300 600,400 500,400 500,320 520,320 520,380 580,380 580,320 500,320" visibility="hidden" />
+  <rect width="100" height="100" x="500" y="400" class="used_time_jump_marker" id="used_time_jump_marker_5_4" visibility="hidden" />
+  <polygon class="unused_time_jump_marker" id="unused_time_jump_marker_5_4" points="500,400 600,400 600,500 500,500 500,420 520,420 520,480 580,480 580,420 500,420" visibility="hidden" />
+  <rect width="100" height="100" x="500" y="500" class="used_time_jump_marker" id="used_time_jump_marker_5_5" visibility="hidden" />
+  <polygon class="unused_time_jump_marker" id="unused_time_jump_marker_5_5" points="500,500 600,500 600,600 500,600 500,520 520,520 520,580 580,580 580,520 500,520" visibility="hidden" />
 </g>
-<g id="timeslice_2" class="timeslice_group">
-  <rect width="100" height="100" x="0" y="0" class="board_square_wall" id="board_square_2_0_0" onclick="board_square_click(2,0,0)" />
-  <rect width="100" height="100" x="0" y="100" class="board_square_wall" id="board_square_2_0_1" onclick="board_square_click(2,0,1)" />
-  <rect width="100" height="100" x="0" y="200" class="board_square_wall" id="board_square_2_0_2" onclick="board_square_click(2,0,2)" />
-  <rect width="100" height="100" x="0" y="300" class="board_square_wall" id="board_square_2_0_3" onclick="board_square_click(2,0,3)" />
-  <rect width="100" height="100" x="0" y="400" class="board_square_wall" id="board_square_2_0_4" onclick="board_square_click(2,0,4)" />
-  <rect width="100" height="100" x="0" y="500" class="board_square_wall" id="board_square_2_0_5" onclick="board_square_click(2,0,5)" />
-  <rect width="100" height="100" x="0" y="600" class="board_square_wall" id="board_square_2_0_6" onclick="board_square_click(2,0,6)" />
-  <rect width="100" height="100" x="100" y="0" class="board_square_wall" id="board_square_2_1_0" onclick="board_square_click(2,1,0)" />
-  <rect width="100" height="100" x="100" y="100" class="board_square_empty" id="board_square_2_1_1" onclick="board_square_click(2,1,1)" />
-  <rect width="100" height="100" x="100" y="200" class="board_square_empty" id="board_square_2_1_2" onclick="board_square_click(2,1,2)" />
-  <rect width="100" height="100" x="100" y="300" class="board_square_empty" id="board_square_2_1_3" onclick="board_square_click(2,1,3)" />
-  <rect width="100" height="100" x="100" y="400" class="board_square_empty" id="board_square_2_1_4" onclick="board_square_click(2,1,4)" />
-  <rect width="100" height="100" x="100" y="500" class="board_square_empty" id="board_square_2_1_5" onclick="board_square_click(2,1,5)" />
-  <rect width="100" height="100" x="100" y="600" class="board_square_wall" id="board_square_2_1_6" onclick="board_square_click(2,1,6)" />
-  <rect width="100" height="100" x="200" y="0" class="board_square_wall" id="board_square_2_2_0" onclick="board_square_click(2,2,0)" />
-  <rect width="100" height="100" x="200" y="100" class="board_square_empty" id="board_square_2_2_1" onclick="board_square_click(2,2,1)" />
-  <rect width="100" height="100" x="200" y="200" class="board_square_empty" id="board_square_2_2_2" onclick="board_square_click(2,2,2)" />
-  <rect width="100" height="100" x="200" y="300" class="board_square_empty" id="board_square_2_2_3" onclick="board_square_click(2,2,3)" />
-  <rect width="100" height="100" x="200" y="400" class="board_square_empty" id="board_square_2_2_4" onclick="board_square_click(2,2,4)" />
-  <rect width="100" height="100" x="200" y="500" class="board_square_empty" id="board_square_2_2_5" onclick="board_square_click(2,2,5)" />
-  <rect width="100" height="100" x="200" y="600" class="board_square_wall" id="board_square_2_2_6" onclick="board_square_click(2,2,6)" />
-  <rect width="100" height="100" x="300" y="0" class="board_square_wall" id="board_square_2_3_0" onclick="board_square_click(2,3,0)" />
-  <rect width="100" height="100" x="300" y="100" class="board_square_empty" id="board_square_2_3_1" onclick="board_square_click(2,3,1)" />
-  <rect width="100" height="100" x="300" y="200" class="board_square_empty" id="board_square_2_3_2" onclick="board_square_click(2,3,2)" />
-  <rect width="100" height="100" x="300" y="300" class="board_square_wall" id="board_square_2_3_3" onclick="board_square_click(2,3,3)" />
-  <rect width="100" height="100" x="300" y="400" class="board_square_empty" id="board_square_2_3_4" onclick="board_square_click(2,3,4)" />
-  <rect width="100" height="100" x="300" y="500" class="board_square_empty" id="board_square_2_3_5" onclick="board_square_click(2,3,5)" />
-  <rect width="100" height="100" x="300" y="600" class="board_square_wall" id="board_square_2_3_6" onclick="board_square_click(2,3,6)" />
-  <rect width="100" height="100" x="400" y="0" class="board_square_wall" id="board_square_2_4_0" onclick="board_square_click(2,4,0)" />
-  <rect width="100" height="100" x="400" y="100" class="board_square_empty" id="board_square_2_4_1" onclick="board_square_click(2,4,1)" />
-  <rect width="100" height="100" x="400" y="200" class="board_square_empty" id="board_square_2_4_2" onclick="board_square_click(2,4,2)" />
-  <rect width="100" height="100" x="400" y="300" class="board_square_empty" id="board_square_2_4_3" onclick="board_square_click(2,4,3)" />
-  <rect width="100" height="100" x="400" y="400" class="board_square_empty" id="board_square_2_4_4" onclick="board_square_click(2,4,4)" />
-  <rect width="100" height="100" x="400" y="500" class="board_square_empty" id="board_square_2_4_5" onclick="board_square_click(2,4,5)" />
-  <rect width="100" height="100" x="400" y="600" class="board_square_wall" id="board_square_2_4_6" onclick="board_square_click(2,4,6)" />
-  <rect width="100" height="100" x="500" y="0" class="board_square_wall" id="board_square_2_5_0" onclick="board_square_click(2,5,0)" />
-  <rect width="100" height="100" x="500" y="100" class="board_square_empty" id="board_square_2_5_1" onclick="board_square_click(2,5,1)" />
-  <rect width="100" height="100" x="500" y="200" class="board_square_empty" id="board_square_2_5_2" onclick="board_square_click(2,5,2)" />
-  <rect width="100" height="100" x="500" y="300" class="board_square_empty" id="board_square_2_5_3" onclick="board_square_click(2,5,3)" />
-  <rect width="100" height="100" x="500" y="400" class="board_square_empty" id="board_square_2_5_4" onclick="board_square_click(2,5,4)" />
-  <rect width="100" height="100" x="500" y="500" class="board_square_empty" id="board_square_2_5_5" onclick="board_square_click(2,5,5)" />
-  <rect width="100" height="100" x="500" y="600" class="board_square_wall" id="board_square_2_5_6" onclick="board_square_click(2,5,6)" />
-  <rect width="100" height="100" x="600" y="0" class="board_square_wall" id="board_square_2_6_0" onclick="board_square_click(2,6,0)" />
-  <rect width="100" height="100" x="600" y="100" class="board_square_wall" id="board_square_2_6_1" onclick="board_square_click(2,6,1)" />
-  <rect width="100" height="100" x="600" y="200" class="board_square_wall" id="board_square_2_6_2" onclick="board_square_click(2,6,2)" />
-  <rect width="100" height="100" x="600" y="300" class="board_square_wall" id="board_square_2_6_3" onclick="board_square_click(2,6,3)" />
-  <rect width="100" height="100" x="600" y="400" class="board_square_wall" id="board_square_2_6_4" onclick="board_square_click(2,6,4)" />
-  <rect width="100" height="100" x="600" y="500" class="board_square_wall" id="board_square_2_6_5" onclick="board_square_click(2,6,5)" />
-  <rect width="100" height="100" x="600" y="600" class="board_square_wall" id="board_square_2_6_6" onclick="board_square_click(2,6,6)" />
+<g class="board_layer" id="board_layer_2">
 </g>
-<g id="timeslice_3" class="timeslice_group">
-  <rect width="100" height="100" x="0" y="0" class="board_square_wall" id="board_square_3_0_0" onclick="board_square_click(3,0,0)" />
-  <rect width="100" height="100" x="0" y="100" class="board_square_wall" id="board_square_3_0_1" onclick="board_square_click(3,0,1)" />
-  <rect width="100" height="100" x="0" y="200" class="board_square_wall" id="board_square_3_0_2" onclick="board_square_click(3,0,2)" />
-  <rect width="100" height="100" x="0" y="300" class="board_square_wall" id="board_square_3_0_3" onclick="board_square_click(3,0,3)" />
-  <rect width="100" height="100" x="0" y="400" class="board_square_wall" id="board_square_3_0_4" onclick="board_square_click(3,0,4)" />
-  <rect width="100" height="100" x="0" y="500" class="board_square_wall" id="board_square_3_0_5" onclick="board_square_click(3,0,5)" />
-  <rect width="100" height="100" x="0" y="600" class="board_square_wall" id="board_square_3_0_6" onclick="board_square_click(3,0,6)" />
-  <rect width="100" height="100" x="100" y="0" class="board_square_wall" id="board_square_3_1_0" onclick="board_square_click(3,1,0)" />
-  <rect width="100" height="100" x="100" y="100" class="board_square_empty" id="board_square_3_1_1" onclick="board_square_click(3,1,1)" />
-  <rect width="100" height="100" x="100" y="200" class="board_square_empty" id="board_square_3_1_2" onclick="board_square_click(3,1,2)" />
-  <rect width="100" height="100" x="100" y="300" class="board_square_empty" id="board_square_3_1_3" onclick="board_square_click(3,1,3)" />
-  <rect width="100" height="100" x="100" y="400" class="board_square_empty" id="board_square_3_1_4" onclick="board_square_click(3,1,4)" />
-  <rect width="100" height="100" x="100" y="500" class="board_square_empty" id="board_square_3_1_5" onclick="board_square_click(3,1,5)" />
-  <rect width="100" height="100" x="100" y="600" class="board_square_wall" id="board_square_3_1_6" onclick="board_square_click(3,1,6)" />
-  <rect width="100" height="100" x="200" y="0" class="board_square_wall" id="board_square_3_2_0" onclick="board_square_click(3,2,0)" />
-  <rect width="100" height="100" x="200" y="100" class="board_square_empty" id="board_square_3_2_1" onclick="board_square_click(3,2,1)" />
-  <rect width="100" height="100" x="200" y="200" class="board_square_empty" id="board_square_3_2_2" onclick="board_square_click(3,2,2)" />
-  <rect width="100" height="100" x="200" y="300" class="board_square_empty" id="board_square_3_2_3" onclick="board_square_click(3,2,3)" />
-  <rect width="100" height="100" x="200" y="400" class="board_square_empty" id="board_square_3_2_4" onclick="board_square_click(3,2,4)" />
-  <rect width="100" height="100" x="200" y="500" class="board_square_empty" id="board_square_3_2_5" onclick="board_square_click(3,2,5)" />
-  <rect width="100" height="100" x="200" y="600" class="board_square_wall" id="board_square_3_2_6" onclick="board_square_click(3,2,6)" />
-  <rect width="100" height="100" x="300" y="0" class="board_square_wall" id="board_square_3_3_0" onclick="board_square_click(3,3,0)" />
-  <rect width="100" height="100" x="300" y="100" class="board_square_empty" id="board_square_3_3_1" onclick="board_square_click(3,3,1)" />
-  <rect width="100" height="100" x="300" y="200" class="board_square_empty" id="board_square_3_3_2" onclick="board_square_click(3,3,2)" />
-  <rect width="100" height="100" x="300" y="300" class="board_square_wall" id="board_square_3_3_3" onclick="board_square_click(3,3,3)" />
-  <rect width="100" height="100" x="300" y="400" class="board_square_empty" id="board_square_3_3_4" onclick="board_square_click(3,3,4)" />
-  <rect width="100" height="100" x="300" y="500" class="board_square_empty" id="board_square_3_3_5" onclick="board_square_click(3,3,5)" />
-  <rect width="100" height="100" x="300" y="600" class="board_square_wall" id="board_square_3_3_6" onclick="board_square_click(3,3,6)" />
-  <rect width="100" height="100" x="400" y="0" class="board_square_wall" id="board_square_3_4_0" onclick="board_square_click(3,4,0)" />
-  <rect width="100" height="100" x="400" y="100" class="board_square_empty" id="board_square_3_4_1" onclick="board_square_click(3,4,1)" />
-  <rect width="100" height="100" x="400" y="200" class="board_square_empty" id="board_square_3_4_2" onclick="board_square_click(3,4,2)" />
-  <rect width="100" height="100" x="400" y="300" class="board_square_empty" id="board_square_3_4_3" onclick="board_square_click(3,4,3)" />
-  <rect width="100" height="100" x="400" y="400" class="board_square_empty" id="board_square_3_4_4" onclick="board_square_click(3,4,4)" />
-  <rect width="100" height="100" x="400" y="500" class="board_square_empty" id="board_square_3_4_5" onclick="board_square_click(3,4,5)" />
-  <rect width="100" height="100" x="400" y="600" class="board_square_wall" id="board_square_3_4_6" onclick="board_square_click(3,4,6)" />
-  <rect width="100" height="100" x="500" y="0" class="board_square_wall" id="board_square_3_5_0" onclick="board_square_click(3,5,0)" />
-  <rect width="100" height="100" x="500" y="100" class="board_square_empty" id="board_square_3_5_1" onclick="board_square_click(3,5,1)" />
-  <rect width="100" height="100" x="500" y="200" class="board_square_empty" id="board_square_3_5_2" onclick="board_square_click(3,5,2)" />
-  <rect width="100" height="100" x="500" y="300" class="board_square_empty" id="board_square_3_5_3" onclick="board_square_click(3,5,3)" />
-  <rect width="100" height="100" x="500" y="400" class="board_square_empty" id="board_square_3_5_4" onclick="board_square_click(3,5,4)" />
-  <rect width="100" height="100" x="500" y="500" class="board_square_empty" id="board_square_3_5_5" onclick="board_square_click(3,5,5)" />
-  <rect width="100" height="100" x="500" y="600" class="board_square_wall" id="board_square_3_5_6" onclick="board_square_click(3,5,6)" />
-  <rect width="100" height="100" x="600" y="0" class="board_square_wall" id="board_square_3_6_0" onclick="board_square_click(3,6,0)" />
-  <rect width="100" height="100" x="600" y="100" class="board_square_wall" id="board_square_3_6_1" onclick="board_square_click(3,6,1)" />
-  <rect width="100" height="100" x="600" y="200" class="board_square_wall" id="board_square_3_6_2" onclick="board_square_click(3,6,2)" />
-  <rect width="100" height="100" x="600" y="300" class="board_square_wall" id="board_square_3_6_3" onclick="board_square_click(3,6,3)" />
-  <rect width="100" height="100" x="600" y="400" class="board_square_wall" id="board_square_3_6_4" onclick="board_square_click(3,6,4)" />
-  <rect width="100" height="100" x="600" y="500" class="board_square_wall" id="board_square_3_6_5" onclick="board_square_click(3,6,5)" />
-  <rect width="100" height="100" x="600" y="600" class="board_square_wall" id="board_square_3_6_6" onclick="board_square_click(3,6,6)" />
+<g class="board_layer" id="board_layer_3">
+  <rect width="100" height="100" x="0" y="0" class="board_square_wall" id="board_square_0_0" onclick="board_square_click(0,0)" />
+  <rect width="100" height="100" x="0" y="100" class="board_square_wall" id="board_square_0_1" onclick="board_square_click(0,1)" />
+  <rect width="100" height="100" x="0" y="200" class="board_square_wall" id="board_square_0_2" onclick="board_square_click(0,2)" />
+  <rect width="100" height="100" x="0" y="300" class="board_square_wall" id="board_square_0_3" onclick="board_square_click(0,3)" />
+  <rect width="100" height="100" x="0" y="400" class="board_square_wall" id="board_square_0_4" onclick="board_square_click(0,4)" />
+  <rect width="100" height="100" x="0" y="500" class="board_square_wall" id="board_square_0_5" onclick="board_square_click(0,5)" />
+  <rect width="100" height="100" x="0" y="600" class="board_square_wall" id="board_square_0_6" onclick="board_square_click(0,6)" />
+  <rect width="100" height="100" x="100" y="0" class="board_square_wall" id="board_square_1_0" onclick="board_square_click(1,0)" />
+  <rect width="100" height="100" x="100" y="600" class="board_square_wall" id="board_square_1_6" onclick="board_square_click(1,6)" />
+  <rect width="100" height="100" x="200" y="0" class="board_square_wall" id="board_square_2_0" onclick="board_square_click(2,0)" />
+  <rect width="100" height="100" x="200" y="600" class="board_square_wall" id="board_square_2_6" onclick="board_square_click(2,6)" />
+  <rect width="100" height="100" x="300" y="0" class="board_square_wall" id="board_square_3_0" onclick="board_square_click(3,0)" />
+  <rect width="100" height="100" x="300" y="300" class="board_square_wall" id="board_square_3_3" onclick="board_square_click(3,3)" />
+  <rect width="100" height="100" x="300" y="600" class="board_square_wall" id="board_square_3_6" onclick="board_square_click(3,6)" />
+  <rect width="100" height="100" x="400" y="0" class="board_square_wall" id="board_square_4_0" onclick="board_square_click(4,0)" />
+  <rect width="100" height="100" x="400" y="600" class="board_square_wall" id="board_square_4_6" onclick="board_square_click(4,6)" />
+  <rect width="100" height="100" x="500" y="0" class="board_square_wall" id="board_square_5_0" onclick="board_square_click(5,0)" />
+  <rect width="100" height="100" x="500" y="600" class="board_square_wall" id="board_square_5_6" onclick="board_square_click(5,6)" />
+  <rect width="100" height="100" x="600" y="0" class="board_square_wall" id="board_square_6_0" onclick="board_square_click(6,0)" />
+  <rect width="100" height="100" x="600" y="100" class="board_square_wall" id="board_square_6_1" onclick="board_square_click(6,1)" />
+  <rect width="100" height="100" x="600" y="200" class="board_square_wall" id="board_square_6_2" onclick="board_square_click(6,2)" />
+  <rect width="100" height="100" x="600" y="300" class="board_square_wall" id="board_square_6_3" onclick="board_square_click(6,3)" />
+  <rect width="100" height="100" x="600" y="400" class="board_square_wall" id="board_square_6_4" onclick="board_square_click(6,4)" />
+  <rect width="100" height="100" x="600" y="500" class="board_square_wall" id="board_square_6_5" onclick="board_square_click(6,5)" />
+  <rect width="100" height="100" x="600" y="600" class="board_square_wall" id="board_square_6_6" onclick="board_square_click(6,6)" />
 </g>
-<g id="timeslice_4" class="timeslice_group">
-  <rect width="100" height="100" x="0" y="0" class="board_square_wall" id="board_square_4_0_0" onclick="board_square_click(4,0,0)" />
-  <rect width="100" height="100" x="0" y="100" class="board_square_wall" id="board_square_4_0_1" onclick="board_square_click(4,0,1)" />
-  <rect width="100" height="100" x="0" y="200" class="board_square_wall" id="board_square_4_0_2" onclick="board_square_click(4,0,2)" />
-  <rect width="100" height="100" x="0" y="300" class="board_square_wall" id="board_square_4_0_3" onclick="board_square_click(4,0,3)" />
-  <rect width="100" height="100" x="0" y="400" class="board_square_wall" id="board_square_4_0_4" onclick="board_square_click(4,0,4)" />
-  <rect width="100" height="100" x="0" y="500" class="board_square_wall" id="board_square_4_0_5" onclick="board_square_click(4,0,5)" />
-  <rect width="100" height="100" x="0" y="600" class="board_square_wall" id="board_square_4_0_6" onclick="board_square_click(4,0,6)" />
-  <rect width="100" height="100" x="100" y="0" class="board_square_wall" id="board_square_4_1_0" onclick="board_square_click(4,1,0)" />
-  <rect width="100" height="100" x="100" y="100" class="board_square_empty" id="board_square_4_1_1" onclick="board_square_click(4,1,1)" />
-  <rect width="100" height="100" x="100" y="200" class="board_square_empty" id="board_square_4_1_2" onclick="board_square_click(4,1,2)" />
-  <rect width="100" height="100" x="100" y="300" class="board_square_empty" id="board_square_4_1_3" onclick="board_square_click(4,1,3)" />
-  <rect width="100" height="100" x="100" y="400" class="board_square_empty" id="board_square_4_1_4" onclick="board_square_click(4,1,4)" />
-  <rect width="100" height="100" x="100" y="500" class="board_square_empty" id="board_square_4_1_5" onclick="board_square_click(4,1,5)" />
-  <rect width="100" height="100" x="100" y="600" class="board_square_wall" id="board_square_4_1_6" onclick="board_square_click(4,1,6)" />
-  <rect width="100" height="100" x="200" y="0" class="board_square_wall" id="board_square_4_2_0" onclick="board_square_click(4,2,0)" />
-  <rect width="100" height="100" x="200" y="100" class="board_square_empty" id="board_square_4_2_1" onclick="board_square_click(4,2,1)" />
-  <rect width="100" height="100" x="200" y="200" class="board_square_empty" id="board_square_4_2_2" onclick="board_square_click(4,2,2)" />
-  <rect width="100" height="100" x="200" y="300" class="board_square_empty" id="board_square_4_2_3" onclick="board_square_click(4,2,3)" />
-  <rect width="100" height="100" x="200" y="400" class="board_square_empty" id="board_square_4_2_4" onclick="board_square_click(4,2,4)" />
-  <rect width="100" height="100" x="200" y="500" class="board_square_empty" id="board_square_4_2_5" onclick="board_square_click(4,2,5)" />
-  <rect width="100" height="100" x="200" y="600" class="board_square_wall" id="board_square_4_2_6" onclick="board_square_click(4,2,6)" />
-  <rect width="100" height="100" x="300" y="0" class="board_square_wall" id="board_square_4_3_0" onclick="board_square_click(4,3,0)" />
-  <rect width="100" height="100" x="300" y="100" class="board_square_empty" id="board_square_4_3_1" onclick="board_square_click(4,3,1)" />
-  <rect width="100" height="100" x="300" y="200" class="board_square_empty" id="board_square_4_3_2" onclick="board_square_click(4,3,2)" />
-  <rect width="100" height="100" x="300" y="300" class="board_square_wall" id="board_square_4_3_3" onclick="board_square_click(4,3,3)" />
-  <rect width="100" height="100" x="300" y="400" class="board_square_empty" id="board_square_4_3_4" onclick="board_square_click(4,3,4)" />
-  <rect width="100" height="100" x="300" y="500" class="board_square_empty" id="board_square_4_3_5" onclick="board_square_click(4,3,5)" />
-  <rect width="100" height="100" x="300" y="600" class="board_square_wall" id="board_square_4_3_6" onclick="board_square_click(4,3,6)" />
-  <rect width="100" height="100" x="400" y="0" class="board_square_wall" id="board_square_4_4_0" onclick="board_square_click(4,4,0)" />
-  <rect width="100" height="100" x="400" y="100" class="board_square_empty" id="board_square_4_4_1" onclick="board_square_click(4,4,1)" />
-  <rect width="100" height="100" x="400" y="200" class="board_square_empty" id="board_square_4_4_2" onclick="board_square_click(4,4,2)" />
-  <rect width="100" height="100" x="400" y="300" class="board_square_empty" id="board_square_4_4_3" onclick="board_square_click(4,4,3)" />
-  <rect width="100" height="100" x="400" y="400" class="board_square_empty" id="board_square_4_4_4" onclick="board_square_click(4,4,4)" />
-  <rect width="100" height="100" x="400" y="500" class="board_square_empty" id="board_square_4_4_5" onclick="board_square_click(4,4,5)" />
-  <rect width="100" height="100" x="400" y="600" class="board_square_wall" id="board_square_4_4_6" onclick="board_square_click(4,4,6)" />
-  <rect width="100" height="100" x="500" y="0" class="board_square_wall" id="board_square_4_5_0" onclick="board_square_click(4,5,0)" />
-  <rect width="100" height="100" x="500" y="100" class="board_square_empty" id="board_square_4_5_1" onclick="board_square_click(4,5,1)" />
-  <rect width="100" height="100" x="500" y="200" class="board_square_empty" id="board_square_4_5_2" onclick="board_square_click(4,5,2)" />
-  <rect width="100" height="100" x="500" y="300" class="board_square_empty" id="board_square_4_5_3" onclick="board_square_click(4,5,3)" />
-  <rect width="100" height="100" x="500" y="400" class="board_square_empty" id="board_square_4_5_4" onclick="board_square_click(4,5,4)" />
-  <rect width="100" height="100" x="500" y="500" class="board_square_empty" id="board_square_4_5_5" onclick="board_square_click(4,5,5)" />
-  <rect width="100" height="100" x="500" y="600" class="board_square_wall" id="board_square_4_5_6" onclick="board_square_click(4,5,6)" />
-  <rect width="100" height="100" x="600" y="0" class="board_square_wall" id="board_square_4_6_0" onclick="board_square_click(4,6,0)" />
-  <rect width="100" height="100" x="600" y="100" class="board_square_wall" id="board_square_4_6_1" onclick="board_square_click(4,6,1)" />
-  <rect width="100" height="100" x="600" y="200" class="board_square_wall" id="board_square_4_6_2" onclick="board_square_click(4,6,2)" />
-  <rect width="100" height="100" x="600" y="300" class="board_square_wall" id="board_square_4_6_3" onclick="board_square_click(4,6,3)" />
-  <rect width="100" height="100" x="600" y="400" class="board_square_wall" id="board_square_4_6_4" onclick="board_square_click(4,6,4)" />
-  <rect width="100" height="100" x="600" y="500" class="board_square_wall" id="board_square_4_6_5" onclick="board_square_click(4,6,5)" />
-  <rect width="100" height="100" x="600" y="600" class="board_square_wall" id="board_square_4_6_6" onclick="board_square_click(4,6,6)" />
-</g>
-<g id="timeslice_5" class="timeslice_group">
-  <rect width="100" height="100" x="0" y="0" class="board_square_wall" id="board_square_5_0_0" onclick="board_square_click(5,0,0)" />
-  <rect width="100" height="100" x="0" y="100" class="board_square_wall" id="board_square_5_0_1" onclick="board_square_click(5,0,1)" />
-  <rect width="100" height="100" x="0" y="200" class="board_square_wall" id="board_square_5_0_2" onclick="board_square_click(5,0,2)" />
-  <rect width="100" height="100" x="0" y="300" class="board_square_wall" id="board_square_5_0_3" onclick="board_square_click(5,0,3)" />
-  <rect width="100" height="100" x="0" y="400" class="board_square_wall" id="board_square_5_0_4" onclick="board_square_click(5,0,4)" />
-  <rect width="100" height="100" x="0" y="500" class="board_square_wall" id="board_square_5_0_5" onclick="board_square_click(5,0,5)" />
-  <rect width="100" height="100" x="0" y="600" class="board_square_wall" id="board_square_5_0_6" onclick="board_square_click(5,0,6)" />
-  <rect width="100" height="100" x="100" y="0" class="board_square_wall" id="board_square_5_1_0" onclick="board_square_click(5,1,0)" />
-  <rect width="100" height="100" x="100" y="100" class="board_square_empty" id="board_square_5_1_1" onclick="board_square_click(5,1,1)" />
-  <rect width="100" height="100" x="100" y="200" class="board_square_empty" id="board_square_5_1_2" onclick="board_square_click(5,1,2)" />
-  <rect width="100" height="100" x="100" y="300" class="board_square_empty" id="board_square_5_1_3" onclick="board_square_click(5,1,3)" />
-  <rect width="100" height="100" x="100" y="400" class="board_square_empty" id="board_square_5_1_4" onclick="board_square_click(5,1,4)" />
-  <rect width="100" height="100" x="100" y="500" class="board_square_empty" id="board_square_5_1_5" onclick="board_square_click(5,1,5)" />
-  <rect width="100" height="100" x="100" y="600" class="board_square_wall" id="board_square_5_1_6" onclick="board_square_click(5,1,6)" />
-  <rect width="100" height="100" x="200" y="0" class="board_square_wall" id="board_square_5_2_0" onclick="board_square_click(5,2,0)" />
-  <rect width="100" height="100" x="200" y="100" class="board_square_empty" id="board_square_5_2_1" onclick="board_square_click(5,2,1)" />
-  <rect width="100" height="100" x="200" y="200" class="board_square_empty" id="board_square_5_2_2" onclick="board_square_click(5,2,2)" />
-  <rect width="100" height="100" x="200" y="300" class="board_square_empty" id="board_square_5_2_3" onclick="board_square_click(5,2,3)" />
-  <rect width="100" height="100" x="200" y="400" class="board_square_empty" id="board_square_5_2_4" onclick="board_square_click(5,2,4)" />
-  <rect width="100" height="100" x="200" y="500" class="board_square_empty" id="board_square_5_2_5" onclick="board_square_click(5,2,5)" />
-  <rect width="100" height="100" x="200" y="600" class="board_square_wall" id="board_square_5_2_6" onclick="board_square_click(5,2,6)" />
-  <rect width="100" height="100" x="300" y="0" class="board_square_wall" id="board_square_5_3_0" onclick="board_square_click(5,3,0)" />
-  <rect width="100" height="100" x="300" y="100" class="board_square_empty" id="board_square_5_3_1" onclick="board_square_click(5,3,1)" />
-  <rect width="100" height="100" x="300" y="200" class="board_square_empty" id="board_square_5_3_2" onclick="board_square_click(5,3,2)" />
-  <rect width="100" height="100" x="300" y="300" class="board_square_wall" id="board_square_5_3_3" onclick="board_square_click(5,3,3)" />
-  <rect width="100" height="100" x="300" y="400" class="board_square_empty" id="board_square_5_3_4" onclick="board_square_click(5,3,4)" />
-  <rect width="100" height="100" x="300" y="500" class="board_square_empty" id="board_square_5_3_5" onclick="board_square_click(5,3,5)" />
-  <rect width="100" height="100" x="300" y="600" class="board_square_wall" id="board_square_5_3_6" onclick="board_square_click(5,3,6)" />
-  <rect width="100" height="100" x="400" y="0" class="board_square_wall" id="board_square_5_4_0" onclick="board_square_click(5,4,0)" />
-  <rect width="100" height="100" x="400" y="100" class="board_square_empty" id="board_square_5_4_1" onclick="board_square_click(5,4,1)" />
-  <rect width="100" height="100" x="400" y="200" class="board_square_empty" id="board_square_5_4_2" onclick="board_square_click(5,4,2)" />
-  <rect width="100" height="100" x="400" y="300" class="board_square_empty" id="board_square_5_4_3" onclick="board_square_click(5,4,3)" />
-  <rect width="100" height="100" x="400" y="400" class="board_square_empty" id="board_square_5_4_4" onclick="board_square_click(5,4,4)" />
-  <rect width="100" height="100" x="400" y="500" class="board_square_empty" id="board_square_5_4_5" onclick="board_square_click(5,4,5)" />
-  <rect width="100" height="100" x="400" y="600" class="board_square_wall" id="board_square_5_4_6" onclick="board_square_click(5,4,6)" />
-  <rect width="100" height="100" x="500" y="0" class="board_square_wall" id="board_square_5_5_0" onclick="board_square_click(5,5,0)" />
-  <rect width="100" height="100" x="500" y="100" class="board_square_empty" id="board_square_5_5_1" onclick="board_square_click(5,5,1)" />
-  <rect width="100" height="100" x="500" y="200" class="board_square_empty" id="board_square_5_5_2" onclick="board_square_click(5,5,2)" />
-  <rect width="100" height="100" x="500" y="300" class="board_square_empty" id="board_square_5_5_3" onclick="board_square_click(5,5,3)" />
-  <rect width="100" height="100" x="500" y="400" class="board_square_empty" id="board_square_5_5_4" onclick="board_square_click(5,5,4)" />
-  <rect width="100" height="100" x="500" y="500" class="board_square_empty" id="board_square_5_5_5" onclick="board_square_click(5,5,5)" />
-  <rect width="100" height="100" x="500" y="600" class="board_square_wall" id="board_square_5_5_6" onclick="board_square_click(5,5,6)" />
-  <rect width="100" height="100" x="600" y="0" class="board_square_wall" id="board_square_5_6_0" onclick="board_square_click(5,6,0)" />
-  <rect width="100" height="100" x="600" y="100" class="board_square_wall" id="board_square_5_6_1" onclick="board_square_click(5,6,1)" />
-  <rect width="100" height="100" x="600" y="200" class="board_square_wall" id="board_square_5_6_2" onclick="board_square_click(5,6,2)" />
-  <rect width="100" height="100" x="600" y="300" class="board_square_wall" id="board_square_5_6_3" onclick="board_square_click(5,6,3)" />
-  <rect width="100" height="100" x="600" y="400" class="board_square_wall" id="board_square_5_6_4" onclick="board_square_click(5,6,4)" />
-  <rect width="100" height="100" x="600" y="500" class="board_square_wall" id="board_square_5_6_5" onclick="board_square_click(5,6,5)" />
-  <rect width="100" height="100" x="600" y="600" class="board_square_wall" id="board_square_5_6_6" onclick="board_square_click(5,6,6)" />
-</g>
+<g class="board_layer" id="board_layer_4">
 <g x="0" y="0" width="100" height="100" class="A_tank" id="stone_0" transform-origin="50px 50px">
-  <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
-  <rect x="45" y="10" width="10" height="30" class="A_tank_barrel" />
-  <circle cx="50" cy="50" r="20" class="A_tank_body" />
+  <g x="0" y="0" width="100" height="100" class="A_tank_animation_effects" id="stone_0_animation_effects" transform-origin="50px 50px">
+    <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
+    <rect x="45" y="10" width="10" height="30" class="A_tank_barrel" />
+    <circle cx="50" cy="50" r="20" class="A_tank_body" />
+  </g>
 </g>
 <g x="0" y="0" width="100" height="100" class="A_tank" id="stone_1" transform-origin="50px 50px">
-  <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
-  <rect x="45" y="10" width="10" height="30" class="A_tank_barrel" />
-  <circle cx="50" cy="50" r="20" class="A_tank_body" />
+  <g x="0" y="0" width="100" height="100" class="A_tank_animation_effects" id="stone_1_animation_effects" transform-origin="50px 50px">
+    <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
+    <rect x="45" y="10" width="10" height="30" class="A_tank_barrel" />
+    <circle cx="50" cy="50" r="20" class="A_tank_body" />
+  </g>
+</g>
+<g x="0" y="0" width="100" height="100" class="A_tank" id="stone_4" transform-origin="50px 50px">
+  <g x="0" y="0" width="100" height="100" class="A_tank_animation_effects" id="stone_4_animation_effects" transform-origin="50px 50px">
+    <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
+    <rect x="45" y="10" width="10" height="30" class="A_tank_barrel" />
+    <circle cx="50" cy="50" r="20" class="A_tank_body" />
+  </g>
 </g>
 <g x="0" y="0" width="100" height="100" class="B_tank" id="stone_2" transform-origin="50px 50px">
-  <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
-  <rect x="45" y="10" width="10" height="30" class="B_tank_barrel" />
-  <circle cx="50" cy="50" r="20" class="B_tank_body" />
+  <g x="0" y="0" width="100" height="100" class="B_tank_animation_effects" id="stone_2_animation_effects" transform-origin="50px 50px">
+    <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
+    <rect x="45" y="10" width="10" height="30" class="B_tank_barrel" />
+    <circle cx="50" cy="50" r="20" class="B_tank_body" />
+  </g>
 </g>
 <g x="0" y="0" width="100" height="100" class="B_tank" id="stone_3" transform-origin="50px 50px">
-  <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
-  <rect x="45" y="10" width="10" height="30" class="B_tank_barrel" />
-  <circle cx="50" cy="50" r="20" class="B_tank_body" />
+  <g x="0" y="0" width="100" height="100" class="B_tank_animation_effects" id="stone_3_animation_effects" transform-origin="50px 50px">
+    <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
+    <rect x="45" y="10" width="10" height="30" class="B_tank_barrel" />
+    <circle cx="50" cy="50" r="20" class="B_tank_body" />
+  </g>
+</g>
+</g>
+<g id="board_animation_overlay" width="800" height="700" visibility="hidden">
+  <rect id="board_animation_overlay_bg" x="0" y="0" width="800" height="700" />
+  <text id="board_animation_overlay_text"  x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" >changeme</text>
 </g>
 </svg>
 </div>
 </div>
 <div id="gameside">
-<div width="400" height="200" id="game_log">
+<div id="game_control_panel">
+<svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" id="board_control_panel_svg">
+<polygon points="140,20 60,20 60,0 10,50 60,100 60,80 140,80" class="game_control_panel_button" id="prev_turn_button" onclick="show_prev_turn()" />
+<text x=50 y=55 class="button_label" id="prev_turn_button_label">Prev turn</text>
+<rect x="150" y="20" width="110" height="60" rx="5" ry="5" class="game_control_panel_button" id="current_turn_button" onclick="show_current_turn()" />
+<text x="170" y="27" class="button_label" id="current_turn_button_label"><tspan x="175" dy="1.2em">Current</tspan><tspan x="190" dy="1.2em">turn</tspan></text>
+<polygon points="270,20 350,20 350,0 400,50 350,100 350,80 270,80" class="game_control_panel_button" id="next_turn_button" onclick="show_next_turn()" />
+<text x="289" y="55" class="button_label" id="next_turn_button_label">Next turn</text>
+</svg>
+</div>
+<div width="400px" height="200px" id="game_log">
 <p id="navigation_label"></p>
 </div>
 </div>

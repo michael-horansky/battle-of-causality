@@ -228,7 +228,7 @@ class Tank(Stone):
         los_pos.step(cur_a)
 
         while(gm.is_valid_position(los_pos.x, los_pos.y)):
-            if gm.board_dynamic[t][los_pos.x][los_pos.y].occupied:
+            if gm.board_dynamic[t][los_pos.x][los_pos.y].occupied or (not gm.is_square_available(los_pos.x, los_pos.y)):
                 return(Message("destruction", los_pos))
             los_pos.step(cur_a)
         return(Message("pass"))

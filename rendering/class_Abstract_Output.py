@@ -35,6 +35,12 @@ class Abstract_Output():
         self.canonised_stone_trajectories = [] # [round_number][t]["process"][stone_ID] = state; this is used for the omit-ante-effects scenes which are found at the end of each round.
         self.canonised_stone_endpoints = []
 
+        self.stone_actions = [] # [turn][t][action index] = [stone_type, action_type, stone_x, stone_y, param1, param2...]
+        self.canonised_stone_actions = [] # [round_number][t][action index] = [stone_type, action_type, stone_x, stone_y, param1, param2...]
+
+        self.time_jumps = [] # [turn]["t"]["x"]["y"]["used"/"unused"] = "TJI"/"TJO"/"conflict" if present
+        self.canonised_time_jumps = [] # [canonised_round]["t"]["x"]["y"]["used"/"unused"] = "TJI"/"TJO"/"conflict" if present
+
         self.active_turn = None
 
 
@@ -88,8 +94,28 @@ class Abstract_Output():
             while(len(self.stone_endpoints) <= turn):
                 self.stone_endpoints.append({})
 
+        if len(self.stone_actions) > turn:
+            # key exists
+            self.stone_actions[turn] = []
+            for t in range(self.t_dim):
+                self.stone_actions[turn].append([])
+        else:
+            # We keep appending empty turns until key exists
+            while(len(self.stone_actions) <= turn):
+                self.stone_actions.append([])
+                for t in range(self.t_dim):
+                    self.stone_actions[-1].append([])
+
+        if len(self.time_jumps) > turn:
+            # key exists
+            self.time_jumps[turn] = {}
+        else:
+            # We keep appending empty turns until key exists
+            while(len(self.time_jumps) <= turn):
+                self.time_jumps.append({})
+
     def reset_canonised_round(self, canonised_round):
-        # Prepares all variables to contain turn key
+        # Prepares all variables to contain canonised_round key
         if len(self.canonised_stone_trajectories) > canonised_round:
             # key exists
             self.canonised_stone_trajectories[canonised_round] = []
@@ -112,6 +138,26 @@ class Abstract_Output():
         else:
             while(len(self.canonised_stone_endpoints) <= canonised_round):
                 self.canonised_stone_endpoints.append({})
+
+        if len(self.canonised_stone_actions) > canonised_round:
+            # key exists
+            self.canonised_stone_actions[canonised_round] = []
+            for t in range(self.t_dim):
+                self.canonised_stone_actions[canonised_round].append([])
+        else:
+            # We keep appending empty turns until key exists
+            while(len(self.canonised_stone_actions) <= canonised_round):
+                self.canonised_stone_actions.append([])
+                for t in range(self.t_dim):
+                    self.canonised_stone_actions[-1].append([])
+
+        if len(self.canonised_time_jumps) > canonised_round:
+            # key exists
+            self.canonised_time_jumps[canonised_round] = {}
+        else:
+            # We keep appending empty turns until key exists
+            while(len(self.canonised_time_jumps) <= canonised_round):
+                self.canonised_time_jumps.append({})
 
     # --------------------------- Value assignment ----------------------------
 
@@ -138,6 +184,37 @@ class Abstract_Output():
             self.canonised_stone_endpoints[canonised_round][stone_ID] = {endpoint_key : endpoint_value}
         else:
             self.canonised_stone_endpoints[canonised_round][stone_ID][endpoint_key] = endpoint_value
+
+    def add_stone_action(self, turn, t, action_array):
+        self.stone_actions[turn][t].append(action_array.copy())
+
+    def add_canonised_stone_action(self, canonised_round, t, action_array):
+        self.canonised_stone_actions[canonised_round][t].append(action_array.copy())
+
+    def add_time_jump(self, turn, t, x, y, is_used, time_jump_type):
+        if t not in self.time_jumps[turn].keys():
+            self.time_jumps[turn][t] = {"present" : True}
+        if x not in self.time_jumps[turn][t].keys():
+            self.time_jumps[turn][t][x] = {}
+        if y not in self.time_jumps[turn][t][x].keys():
+            self.time_jumps[turn][t][x][y] = {}
+        if is_used not in self.time_jumps[turn][t][x][y].keys():
+            self.time_jumps[turn][t][x][y][is_used] = time_jump_type
+        elif self.time_jumps[turn][t][x][y][is_used] not in [time_jump_type, "conflict"]:
+            self.time_jumps[turn][t][x][y][is_used] = "conflict"
+
+    def add_canonised_time_jump(self, canonised_round, t, x, y, is_used, time_jump_type):
+        if t not in self.canonised_time_jumps[canonised_round].keys():
+            self.canonised_time_jumps[canonised_round][t] = {"present" : True}
+        if x not in self.canonised_time_jumps[canonised_round][t].keys():
+            self.canonised_time_jumps[canonised_round][t][x] = {}
+        if y not in self.canonised_time_jumps[canonised_round][t][x].keys():
+            self.canonised_time_jumps[canonised_round][t][x][y] = {}
+        if is_used not in self.canonised_time_jumps[canonised_round][t][x][y].keys():
+            self.canonised_time_jumps[canonised_round][t][x][y][is_used] = time_jump_type
+        elif self.canonised_time_jumps[canonised_round][t][x][y][is_used] not in [time_jump_type, "conflict"]:
+            self.canonised_time_jumps[canonised_round][t][x][y][is_used] = "conflict"
+
 
 
     def set_active_turn(self, active_turn):
