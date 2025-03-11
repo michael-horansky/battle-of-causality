@@ -65,6 +65,8 @@ elif cur_client_player in ["A", "B"]:
     full_static, full_dynamic = load_full_data_from_file()
     lol.load_from_database(full_static, full_dynamic, ruleset_rep)
     lol.open_game(cur_client_player)
+    silly_renderer = HTMLRenderer(lol.rendering_output)
+    silly_renderer.render_game("html_render_test")
 else:
     print("Client argument not recognized. Aborting...")
     quit()

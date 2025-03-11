@@ -165,25 +165,24 @@ function inds(obj, inds, to_str = true) {
 
 function select_timeslice(new_timeslice) {
     selected_timeslice = new_timeslice;
-    document.getElementById("navigation_label").innerText = `Selected timeslice ${selected_timeslice}, selected turn ${selected_turn}`;
+    document.getElementById("navigation_label").innerText = `Selected timeslice ${selected_timeslice}, selected round ${selected_round}`;
 }
 
-function select_turn(new_turn, new_timeslice = null) {
-    selected_turn = new_turn;
+function select_round(new_round_n, new_timeslice = null) {
+    selected_round = new_round_n;
     if (new_timeslice == null) {
-        let turn_props = round_from_turn(selected_turn);
-        selected_timeslice = turn_props[1];
+        selected_timeslice = 0;
     } else {
         selected_timeslice = new_timeslice;
     }
-    document.getElementById("navigation_label").innerText = `Selected timeslice ${selected_timeslice}, selected turn ${selected_turn}`;
+    document.getElementById("navigation_label").innerText = `Selected timeslice ${selected_timeslice}, selected round ${selected_round}`;
 }
 
-function show_canon_board_slice(turn, timeslice){
-    visible_turn = turn;
+function show_canon_board_slice(round_n, timeslice){
+    visible_round = round_n;
     visible_timeslice = timeslice;
-    show_stones_at_process(turn, timeslice, "canon");
-    show_time_jumps_at_time(turn, timeslice);
+    show_stones_at_process(round_n, timeslice, "canon");
+    show_time_jumps_at_time(round_n, timeslice);
 }
 
 function hide_all_stones(){
@@ -194,14 +193,14 @@ function hide_all_stones(){
     });
 }
 
-function show_time_jumps_at_time(turn, time) {
+function show_time_jumps_at_time(round_n, time) {
     for (let x = 0; x < x_dim; x++) {
         for (let y = 0; y < y_dim; y++) {
             let current_used_time_jump_marker = document.getElementById(`used_time_jump_marker_${x}_${y}`);
             let current_unused_time_jump_marker = document.getElementById(`unused_time_jump_marker_${x}_${y}`);
             if (current_used_time_jump_marker != undefined) {
-                let used_tj_marker = inds(time_jumps[turn], [time, x, y, "used"]);
-                let unused_tj_marker = inds(time_jumps[turn], [time, x, y, "unused"]);
+                let used_tj_marker = inds(time_jumps[round_n], [time, x, y, "used"]);
+                let unused_tj_marker = inds(time_jumps[round_n], [time, x, y, "unused"]);
                 if (used_tj_marker != undefined) {
                     current_used_time_jump_marker.style.fill = `url(#grad_used_${used_tj_marker})`;
                     current_used_time_jump_marker.style.opacity = "1";
@@ -214,14 +213,13 @@ function show_time_jumps_at_time(turn, time) {
     }
 }
 
-function show_stones_at_process(turn, time, process_key){
+function show_stones_at_process(round_n, time, process_key){
     // NOT animated
     // This resets the animation properties (opacity, scale)
     visible_timeslice = time;
-    //alert(`Showing turn ${turn}, timeslice ${time}, process ${process_key}`);
     all_factions.forEach(function(faction, faction_index) {
         faction_armies[faction].forEach(function(stone_ID, stone_index){
-            let stone_state = stone_trajectories[turn][time][process_key][`${stone_ID}`];
+            let stone_state = stone_trajectories[round_n][time][process_key][`${stone_ID}`];
             //alert(`stone ${stone_ID} is in state ${stone_state}`);
             if (stone_state == null) {
                 document.getElementById(`stone_${stone_ID}`).style.display = "none";
@@ -294,7 +292,7 @@ function show_ids_at_state(list_of_ids, scale = null, opacity = null) {
 // ----------------------------------------------------------------------------
 
 const animation_manager = new Object();
-animation_manager.animation_queue = []; //[index] = [turn, s_time, s_process, play_backwards]
+animation_manager.animation_queue = [];
 animation_manager.animation_daemon = null;
 animation_manager.temporary_element_classes = [];
 animation_manager.is_playing = false;
@@ -412,102 +410,102 @@ animation_manager.clear_queue = function() {
 
 // change_process
 animation_manager.change_process_preparation = function(animation_args) {
-    let turn = animation_args[0];
+    let round_n = animation_args[0];
     let s_time = animation_args[1];
     let s_process = animation_args[2];
     let play_backwards = animation_args[3];
     // Create causal-freedom-signifiers for all stones destroyed when s_process = canon
     if (s_process == "canon") {
-        if (inbetweens[turn][s_time][s_process]["dest_stones"].length > 0) {
+        if (inbetweens[round_n][s_time][s_process]["dest_stones"].length > 0) {
             animation_manager.add_TAE_class("TAE_causal_freedom_marker");
-            for (let stone_index = 0; stone_index < inbetweens[turn][s_time][s_process]["dest_stones"].length; stone_index++) {
-                animation_manager.create_causal_freedom_marker(inbetweens[turn][s_time][s_process]["dest_stones_states"][stone_index][0], inbetweens[turn][s_time][s_process]["dest_stones_states"][stone_index][1]);
+            for (let stone_index = 0; stone_index < inbetweens[round_n][s_time][s_process]["dest_stones"].length; stone_index++) {
+                animation_manager.create_causal_freedom_marker(inbetweens[round_n][s_time][s_process]["dest_stones_states"][stone_index][0], inbetweens[round_n][s_time][s_process]["dest_stones_states"][stone_index][1]);
             }
         }
     }
 
     // Create various markers for stone and board actions when s_process = "tagscreens"
     if (s_process == "tagscreens") {
-        for (let stone_action_index = 0; stone_action_index < stone_actions[turn][s_time].length; stone_action_index++) {
-            let cur_action = stone_actions[turn][s_time][stone_action_index];
+        for (let stone_action_index = 0; stone_action_index < stone_actions[round_n][s_time].length; stone_action_index++) {
+            let cur_action = stone_actions[round_n][s_time][stone_action_index];
             animation_manager.add_TAE_class(`TAE_${cur_action[0]}_${cur_action[1]}`);
             animation_manager.create_stone_action_marker(cur_action);
         }
     }
 
     // Prepare time jump markers
-    inbetweens[turn][s_time][s_process]["new_time_jumps"][0].forEach(function(time_jump_mark, index) {
+    inbetweens[round_n][s_time][s_process]["new_time_jumps"][0].forEach(function(time_jump_mark, index) {
         time_jump_element = document.getElementById(time_jump_mark);
         if (play_backwards) {
             time_jump_element.style.opacity = "1";
         } else {
             time_jump_element.style.opacity = "0";
         }
-        time_jump_element.style.fill = `url(#grad_used_${inbetweens[turn][s_time][s_process]["new_time_jumps"][1][index]})`;
+        time_jump_element.style.fill = `url(#grad_used_${inbetweens[round_n][s_time][s_process]["new_time_jumps"][1][index]})`;
         time_jump_element.style.visibility = "visible";
     });
-    inbetweens[turn][s_time][s_process]["old_time_jumps"][0].forEach(function(time_jump_mark, index) {
+    inbetweens[round_n][s_time][s_process]["old_time_jumps"][0].forEach(function(time_jump_mark, index) {
         time_jump_element = document.getElementById(time_jump_mark);
         if (play_backwards) {
             time_jump_element.style.opacity = "0";
         } else {
             time_jump_element.style.opacity = "1";
         }
-        time_jump_element.style.fill = `url(#grad_used_${inbetweens[turn][s_time][s_process]["old_time_jumps"][1][index]})`;
+        time_jump_element.style.fill = `url(#grad_used_${inbetweens[round_n][s_time][s_process]["old_time_jumps"][1][index]})`;
         time_jump_element.style.visibility = "visible";
     });
 
 }
 animation_manager.change_process_get_frame = function(animation_args) {
-    let turn = animation_args[0];
+    let round_n = animation_args[0];
     let s_time = animation_args[1];
     let s_process = animation_args[2];
     let play_backwards = animation_args[3];
     let contextual_frame_key = (play_backwards ? animation_manager.total_frames - animation_manager.current_frame_key : animation_manager.current_frame_key);
-    //alert(animated_matrix_transformation(inbetweens[turn][start_time][start_process]["cont_stones_states"][0], inbetweens[turn][start_time][start_process]["cont_stones_states"][1], total_frames, cur_frame_key));
-    show_stones_at_state(inbetweens[turn][s_time][s_process]["cont_stones"], animated_matrix_transformation(inbetweens[turn][s_time][s_process]["cont_stones_states"][0], inbetweens[turn][s_time][s_process]["cont_stones_states"][1], animation_manager.total_frames, contextual_frame_key));
+    //alert(animated_matrix_transformation(inbetweens[round_n][start_time][start_process]["cont_stones_states"][0], inbetweens[round_n][start_time][start_process]["cont_stones_states"][1], total_frames, cur_frame_key));
+    show_stones_at_state(inbetweens[round_n][s_time][s_process]["cont_stones"], animated_matrix_transformation(inbetweens[round_n][s_time][s_process]["cont_stones_states"][0], inbetweens[round_n][s_time][s_process]["cont_stones_states"][1], animation_manager.total_frames, contextual_frame_key));
     // Dest stones: if s_process = "canon", the stones will not be placed on "flags", which means they weren't destroyed, but are causally free.
     if (s_process != "canon") {
-        show_stones_at_state(inbetweens[turn][s_time][s_process]["dest_stones"], inbetweens[turn][s_time][s_process]["dest_stones_states"], animated_scalar_transformation(1, 2, animation_manager.total_frames, contextual_frame_key), animated_scalar_transformation(1.0, 0.0, animation_manager.total_frames, contextual_frame_key));
+        show_stones_at_state(inbetweens[round_n][s_time][s_process]["dest_stones"], inbetweens[round_n][s_time][s_process]["dest_stones_states"], animated_scalar_transformation(1, 2, animation_manager.total_frames, contextual_frame_key), animated_scalar_transformation(1.0, 0.0, animation_manager.total_frames, contextual_frame_key));
     } else {
-        show_stones_at_state(inbetweens[turn][s_time][s_process]["dest_stones"], inbetweens[turn][s_time][s_process]["dest_stones_states"], null, animated_scalar_transformation(1.0, 0.0, animation_manager.total_frames, contextual_frame_key));
+        show_stones_at_state(inbetweens[round_n][s_time][s_process]["dest_stones"], inbetweens[round_n][s_time][s_process]["dest_stones_states"], null, animated_scalar_transformation(1.0, 0.0, animation_manager.total_frames, contextual_frame_key));
         show_class_at_state("TAE_causal_freedom_marker", null, animated_scalar_transformation(0.0, 1.0, animation_manager.total_frames, contextual_frame_key, "boomerang"));
     }
-    show_stones_at_state(inbetweens[turn][s_time][s_process]["new_stones"], inbetweens[turn][s_time][s_process]["new_stones_states"], 1, animated_scalar_transformation(0.0, 1.0, animation_manager.total_frames, contextual_frame_key));
-    show_ids_at_state(inbetweens[turn][s_time][s_process]["new_time_jumps"][0], null, animated_scalar_transformation(0.0, 1.0, animation_manager.total_frames, contextual_frame_key));
-    show_ids_at_state(inbetweens[turn][s_time][s_process]["old_time_jumps"][0], null, animated_scalar_transformation(1.0, 0.0, animation_manager.total_frames, contextual_frame_key));
+    show_stones_at_state(inbetweens[round_n][s_time][s_process]["new_stones"], inbetweens[round_n][s_time][s_process]["new_stones_states"], 1, animated_scalar_transformation(0.0, 1.0, animation_manager.total_frames, contextual_frame_key));
+    show_ids_at_state(inbetweens[round_n][s_time][s_process]["new_time_jumps"][0], null, animated_scalar_transformation(0.0, 1.0, animation_manager.total_frames, contextual_frame_key));
+    show_ids_at_state(inbetweens[round_n][s_time][s_process]["old_time_jumps"][0], null, animated_scalar_transformation(1.0, 0.0, animation_manager.total_frames, contextual_frame_key));
 }
 animation_manager.change_process_cleanup = function(animation_args) {
-    let turn = animation_args[0];
+    let round_n = animation_args[0];
     let s_time = animation_args[1];
     let s_process = animation_args[2];
     let play_backwards = animation_args[3];
     if (play_backwards) {
-        show_stones_at_process(turn, s_time, s_process);
-        show_time_jumps_at_time(turn, s_time);
+        show_stones_at_process(round_n, s_time, s_process);
+        show_time_jumps_at_time(round_n, s_time);
     } else {
         if (s_process == "canon") {
-            show_stones_at_process(turn, s_time + 1, process_keys[0]);
-            show_time_jumps_at_time(turn, s_time + 1);
+            show_stones_at_process(round_n, s_time + 1, process_keys[0]);
+            show_time_jumps_at_time(round_n, s_time + 1);
         } else {
-            show_stones_at_process(turn, s_time, process_keys[process_keys.indexOf(s_process) + 1]);
-            show_time_jumps_at_time(turn, s_time);
+            show_stones_at_process(round_n, s_time, process_keys[process_keys.indexOf(s_process) + 1]);
+            show_time_jumps_at_time(round_n, s_time);
         }
     }
     // Hide time jump markers
     if (play_backwards) {
-        inbetweens[turn][s_time][s_process]["new_time_jumps"][0].forEach(function(new_time_jump_id, index) {
+        inbetweens[round_n][s_time][s_process]["new_time_jumps"][0].forEach(function(new_time_jump_id, index) {
             document.getElementById(new_time_jump_id).style.visibility = "hidden";
         });
     } else {
-        inbetweens[turn][s_time][s_process]["old_time_jumps"][0].forEach(function(new_time_jump_id, index) {
+        inbetweens[round_n][s_time][s_process]["old_time_jumps"][0].forEach(function(new_time_jump_id, index) {
             document.getElementById(new_time_jump_id).style.visibility = "hidden";
         });
     }
 }
 
-// change_turn
-animation_manager.change_turn_preparation = function(animation_args) {
+// change_round
+animation_manager.change_round_preparation = function(animation_args) {
     let animation_overlay_msg = animation_args[2];
     let transition_direction = animation_args[3];
     // disable timeslice navigation
@@ -531,8 +529,8 @@ animation_manager.change_turn_preparation = function(animation_args) {
     }
     document.getElementById("board_animation_overlay").style.visibility = "visible";
 }
-animation_manager.change_turn_get_frame = function(animation_args) {
-    let new_turn = animation_args[0];
+animation_manager.change_round_get_frame = function(animation_args) {
+    let new_round = animation_args[0];
     let new_timeslice = animation_args[1];
     let transition_direction = animation_args[3];
 
@@ -553,15 +551,13 @@ animation_manager.change_turn_get_frame = function(animation_args) {
             break;
     }
 
-    // If we're halfway done, show the new turn
-    if (animation_manager.current_frame_key / animation_manager.total_frames > 0.5 && (visible_turn != new_turn || visible_timeslice != new_timeslice)) {
-        show_canon_board_slice(new_turn, new_timeslice);
+    // If we're halfway done, show the new round
+    if (animation_manager.current_frame_key / animation_manager.total_frames > 0.5 && (visible_round != new_round || visible_timeslice != new_timeslice)) {
+        show_canon_board_slice(new_round, new_timeslice);
     }
 
 }
-animation_manager.change_turn_cleanup = function(animation_args) {
-    let new_turn = animation_args[0];
-    let new_timeslice = animation_args[1];
+animation_manager.change_round_cleanup = function(animation_args) {
     // Hide the animation overlay
     document.getElementById("board_animation_overlay").style.visibility = "hidden";
     document.getElementById("board_animation_overlay").style.transform = "";
@@ -576,11 +572,11 @@ animation_manager.change_turn_cleanup = function(animation_args) {
 
 animation_manager.shift_frame_dictionary = new Object();
 animation_manager.shift_frame_dictionary["change_process"] = [animation_manager.change_process_preparation, animation_manager.change_process_get_frame, animation_manager.change_process_cleanup];
-animation_manager.shift_frame_dictionary["change_turn"] = [animation_manager.change_turn_preparation, animation_manager.change_turn_get_frame, animation_manager.change_turn_cleanup];
+animation_manager.shift_frame_dictionary["change_round"] = [animation_manager.change_round_preparation, animation_manager.change_round_get_frame, animation_manager.change_round_cleanup];
 
 animation_manager.animation_specs_dictionary = new Object();
 animation_manager.animation_specs_dictionary["change_process"] = [40, 5];
-animation_manager.animation_specs_dictionary["change_turn"] = [100, 2];
+animation_manager.animation_specs_dictionary["change_round"] = [100, 2];
 
 // ----------------------------------------------------------------------------
 // ---------------------------------- Events ----------------------------------
@@ -599,13 +595,13 @@ function parse_keydown_event(event) {
             show_next_timeslice();
             break;
         case "ArrowRight":
-            show_next_turn();
+            show_next_round();
             break
         case "ArrowLeft":
-            show_prev_turn();
+            show_prev_round();
             break
         case "ArrowUp":
-            show_current_turn();
+            show_active_round();
             break
         case "ArrowDown":
             //show_canonised_round();
@@ -618,9 +614,9 @@ function parse_keydown_event(event) {
 function show_next_timeslice(){
     if (timeslice_navigation_enabled && (selected_timeslice < t_dim - 1)) {
         select_timeslice(selected_timeslice += 1);
-        animation_manager.add_to_queue([["change_process", selected_turn, selected_timeslice - 1, "canon", false]]);
+        animation_manager.add_to_queue([["change_process", selected_round, selected_timeslice - 1, "canon", false]]);
         for (let process_key_index = 0; process_key_index < process_keys.length - 1; process_key_index++) {
-            animation_manager.add_to_queue([["change_process", selected_turn, selected_timeslice, process_keys[process_key_index], false]]);
+            animation_manager.add_to_queue([["change_process", selected_round, selected_timeslice, process_keys[process_key_index], false]]);
         }
     }
 }
@@ -629,39 +625,39 @@ function show_prev_timeslice(){
     if (timeslice_navigation_enabled && (selected_timeslice > 0)) {
         select_timeslice(selected_timeslice -= 1);
         for (let process_key_index = process_keys.length - 2; process_key_index >= 0; process_key_index--) {
-            animation_manager.add_to_queue([["change_process", selected_turn, selected_timeslice + 1, process_keys[process_key_index], true]]);
+            animation_manager.add_to_queue([["change_process", selected_round, selected_timeslice + 1, process_keys[process_key_index], true]]);
         }
-        animation_manager.add_to_queue([["change_process", selected_turn, selected_timeslice, "canon", true]]);
+        animation_manager.add_to_queue([["change_process", selected_round, selected_timeslice, "canon", true]]);
     }
 }
 
 function show_active_timeslice(){
+    // Always shows the timeslice corresponding to current_turn
     if (timeslice_navigation_enabled) {
         animation_manager.clear_queue();
-        let turn_props = round_from_turn(selected_turn);
-        select_timeslice(turn_props[1]);
-        show_canon_board_slice(selected_turn, selected_timeslice);
+        select_timeslice(active_timeslice);
+        show_canon_board_slice(selected_round, selected_timeslice);
     }
 }
 
-function show_next_turn() {
-    if (turn_navigation_enabled && (selected_turn < active_turn)) {
-        select_turn(selected_turn += 1);
-        animation_manager.add_to_queue([["change_turn", selected_turn, selected_timeslice, ">>", "up"]]);
+function show_next_round() {
+    if (round_navigation_enabled && (selected_round < active_round)) {
+        select_round(selected_round += 1);
+        animation_manager.add_to_queue([["change_round", selected_round, selected_timeslice, ">>", "up"]]);
     }
 }
 
-function show_prev_turn() {
-    if (turn_navigation_enabled && (selected_turn > 1)) {
-        select_turn(selected_turn -= 1);
-        animation_manager.add_to_queue([["change_turn", selected_turn, selected_timeslice, "<<", "down"]]);
+function show_prev_round() {
+    if (round_navigation_enabled && (selected_round > 0)) {
+        select_round(selected_round -= 1);
+        animation_manager.add_to_queue([["change_round", selected_round, selected_timeslice, "<<", "down"]]);
     }
 }
 
-function show_current_turn() {
-    if (turn_navigation_enabled && (selected_turn != active_turn)) {
-        select_turn(active_turn);
-        animation_manager.add_to_queue([["change_turn", selected_turn, selected_timeslice, ">|", "up"]]);
+function show_active_round() {
+    if (round_navigation_enabled && (selected_round != active_round)) {
+        select_round(active_round);
+        animation_manager.add_to_queue([["change_round", selected_round, selected_timeslice, ">|", "up"]]);
     }
 }
 
@@ -676,6 +672,17 @@ function board_square_click(x, y){
 
 var all_factions = ["GM"].concat(factions)
 
+var timeslice_navigation_enabled = true;
+var round_navigation_enabled = true;
+
+var selected_timeslice = 0; // this is the timeslice queued up to be displayed. The gameside label shows this number. Logic happens according to this number.
+var visible_timeslice = 0; // this is the timeslice currently displayed by the animation. It is dragged by the animation and may not correspond to selected_timeslice.
+
+let current_turn_props = round_from_turn(current_turn);
+
+const active_round = current_turn_props[0];
+const active_timeslice = current_turn_props[1];
+
 // --------------------------- Fast animation setup ---------------------------
 
 // initialise flat stone ID list for quick animations
@@ -687,7 +694,7 @@ all_factions.forEach(function(faction, faction_index) {
 });
 
 // initialise inbetweens
-// inbetweens[turn][t][process] = {
+// inbetweens[round][t][process] = {
 //     "redundant" : true if start state and end state are equal
 //     "cont_stones" : [list of stone IDs of stones existing at this process and next process],
 //     "cont_stones_states" : [start_state_matrix, end_state_matrix],
@@ -701,22 +708,22 @@ all_factions.forEach(function(faction, faction_index) {
 // }
 const process_keys = ["flags", "pushes", "destructions", "tagscreens", "canon"];
 const inbetweens = [];
-for (let inbetween_turn_index = 0; inbetween_turn_index <= active_turn; inbetween_turn_index++) {
+for (let inbetween_round_index = 0; inbetween_round_index <= active_round; inbetween_round_index++) {
     inbetweens.push([]);
     for (let inbetween_time = 0; inbetween_time < t_dim; inbetween_time++) {
-        inbetweens[inbetween_turn_index].push(new Object());
+        inbetweens[inbetween_round_index].push(new Object());
         for (let inbetween_process_index = 0; inbetween_process_index < process_keys.length; inbetween_process_index++) {
             let start_process = process_keys[inbetween_process_index];
-            inbetweens[inbetween_turn_index][inbetween_time][start_process] = new Object();
-            inbetweens[inbetween_turn_index][inbetween_time][start_process]["cont_stones"] = [];
-            inbetweens[inbetween_turn_index][inbetween_time][start_process]["cont_stones_states"] = [[], []];
-            inbetweens[inbetween_turn_index][inbetween_time][start_process]["dest_stones"] = [];
-            inbetweens[inbetween_turn_index][inbetween_time][start_process]["dest_stones_states"] = [];
-            inbetweens[inbetween_turn_index][inbetween_time][start_process]["new_stones"] = [];
-            inbetweens[inbetween_turn_index][inbetween_time][start_process]["new_stones_states"] = [];
-            inbetweens[inbetween_turn_index][inbetween_time][start_process]["hide_stones"] = [];
-            inbetweens[inbetween_turn_index][inbetween_time][start_process]["new_time_jumps"] = [[], []];
-            inbetweens[inbetween_turn_index][inbetween_time][start_process]["old_time_jumps"] = [[], []];
+            inbetweens[inbetween_round_index][inbetween_time][start_process] = new Object();
+            inbetweens[inbetween_round_index][inbetween_time][start_process]["cont_stones"] = [];
+            inbetweens[inbetween_round_index][inbetween_time][start_process]["cont_stones_states"] = [[], []];
+            inbetweens[inbetween_round_index][inbetween_time][start_process]["dest_stones"] = [];
+            inbetweens[inbetween_round_index][inbetween_time][start_process]["dest_stones_states"] = [];
+            inbetweens[inbetween_round_index][inbetween_time][start_process]["new_stones"] = [];
+            inbetweens[inbetween_round_index][inbetween_time][start_process]["new_stones_states"] = [];
+            inbetweens[inbetween_round_index][inbetween_time][start_process]["hide_stones"] = [];
+            inbetweens[inbetween_round_index][inbetween_time][start_process]["new_time_jumps"] = [[], []];
+            inbetweens[inbetween_round_index][inbetween_time][start_process]["old_time_jumps"] = [[], []];
             // We initialise the current inbetween
             if (inbetween_time == t_dim - 1 && start_process == "canon") {
                 // This is the final state of the final timeslice, and therefore cannot be animated into a "next" state.
@@ -735,29 +742,29 @@ for (let inbetween_turn_index = 0; inbetween_turn_index <= active_turn; inbetwee
                 }
                 // If start process is "tagscreens", then the animation shows stone and board actions. Therefore if any such actions exist, this animation is not redundant, even if no stone state changes.
                 if (start_process == "tagscreens") {
-                    if (stone_actions[inbetween_turn_index][inbetween_time].length > 0) {
+                    if (stone_actions[inbetween_round_index][inbetween_time].length > 0) {
                         is_redundant = false;
                     }
                 }
 
                 for (let stone_ID_index = 0; stone_ID_index < flat_stone_IDs.length; stone_ID_index++) {
-                    let start_state = stone_trajectories[inbetween_turn_index][inbetween_time][start_process][flat_stone_IDs[stone_ID_index]];
-                    let end_state = stone_trajectories[inbetween_turn_index][end_time][end_process][flat_stone_IDs[stone_ID_index]];
+                    let start_state = stone_trajectories[inbetween_round_index][inbetween_time][start_process][flat_stone_IDs[stone_ID_index]];
+                    let end_state = stone_trajectories[inbetween_round_index][end_time][end_process][flat_stone_IDs[stone_ID_index]];
                     if (start_state == null) {
                         if (end_state == null) {
-                            inbetweens[inbetween_turn_index][inbetween_time][start_process]["hide_stones"].push(flat_stone_IDs[stone_ID_index]);
+                            inbetweens[inbetween_round_index][inbetween_time][start_process]["hide_stones"].push(flat_stone_IDs[stone_ID_index]);
                         } else {
-                            inbetweens[inbetween_turn_index][inbetween_time][start_process]["new_stones"].push(flat_stone_IDs[stone_ID_index]);
-                            inbetweens[inbetween_turn_index][inbetween_time][start_process]["new_stones_states"].push(end_state.slice());
+                            inbetweens[inbetween_round_index][inbetween_time][start_process]["new_stones"].push(flat_stone_IDs[stone_ID_index]);
+                            inbetweens[inbetween_round_index][inbetween_time][start_process]["new_stones_states"].push(end_state.slice());
                             is_redundant = false;
                         }
                     } else {
                         if (end_state == null) {
-                            inbetweens[inbetween_turn_index][inbetween_time][start_process]["dest_stones"].push(flat_stone_IDs[stone_ID_index]);
-                            inbetweens[inbetween_turn_index][inbetween_time][start_process]["dest_stones_states"].push(start_state.slice());
+                            inbetweens[inbetween_round_index][inbetween_time][start_process]["dest_stones"].push(flat_stone_IDs[stone_ID_index]);
+                            inbetweens[inbetween_round_index][inbetween_time][start_process]["dest_stones_states"].push(start_state.slice());
                             is_redundant = false;
                         } else {
-                            inbetweens[inbetween_turn_index][inbetween_time][start_process]["cont_stones"].push(flat_stone_IDs[stone_ID_index]);
+                            inbetweens[inbetween_round_index][inbetween_time][start_process]["cont_stones"].push(flat_stone_IDs[stone_ID_index]);
                             let start_state_copy = start_state.slice();
                             let end_state_copy = end_state.slice();
                             if (!(arrays_equal(start_state, end_state))) {
@@ -770,8 +777,8 @@ for (let inbetween_turn_index = 0; inbetween_turn_index <= active_turn; inbetwee
                             if (end_state_copy[2] - start_state_copy[2] < -2) {
                                 end_state_copy[2] += 4;
                             }
-                            inbetweens[inbetween_turn_index][inbetween_time][start_process]["cont_stones_states"][0].push(start_state_copy);
-                            inbetweens[inbetween_turn_index][inbetween_time][start_process]["cont_stones_states"][1].push(end_state_copy);
+                            inbetweens[inbetween_round_index][inbetween_time][start_process]["cont_stones_states"][0].push(start_state_copy);
+                            inbetweens[inbetween_round_index][inbetween_time][start_process]["cont_stones_states"][1].push(end_state_copy);
 
                         }
                     }
@@ -784,16 +791,16 @@ for (let inbetween_turn_index = 0; inbetween_turn_index <= active_turn; inbetwee
                 if (end_process == process_keys[0]) {
                     for (let x = 0; x < x_dim; x++) {
                         for (let y = 0; y < y_dim; y++) {
-                            let used_tj_marker = inds(time_jumps[inbetween_turn_index], [end_time, x, y, "used"]);
-                            let unused_tj_marker = inds(time_jumps[inbetween_turn_index], [end_time, x, y, "unused"]);
+                            let used_tj_marker = inds(time_jumps[inbetween_round_index], [end_time, x, y, "used"]);
+                            let unused_tj_marker = inds(time_jumps[inbetween_round_index], [end_time, x, y, "unused"]);
                             if (used_tj_marker != undefined) {
-                                inbetweens[inbetween_turn_index][inbetween_time][start_process]["new_time_jumps"][0].push(`used_time_jump_marker_${x}_${y}`);
-                                inbetweens[inbetween_turn_index][inbetween_time][start_process]["new_time_jumps"][1].push(used_tj_marker);
+                                inbetweens[inbetween_round_index][inbetween_time][start_process]["new_time_jumps"][0].push(`used_time_jump_marker_${x}_${y}`);
+                                inbetweens[inbetween_round_index][inbetween_time][start_process]["new_time_jumps"][1].push(used_tj_marker);
                                 is_redundant = false;
                             }
                             if (unused_tj_marker != undefined) {
-                                inbetweens[inbetween_turn_index][inbetween_time][start_process]["new_time_jumps"][0].push(`unused_time_jump_marker_${x}_${y}`);
-                                inbetweens[inbetween_turn_index][inbetween_time][start_process]["new_time_jumps"][1].push(unused_tj_marker);
+                                inbetweens[inbetween_round_index][inbetween_time][start_process]["new_time_jumps"][0].push(`unused_time_jump_marker_${x}_${y}`);
+                                inbetweens[inbetween_round_index][inbetween_time][start_process]["new_time_jumps"][1].push(unused_tj_marker);
                                 is_redundant = false;
                             }
                         }
@@ -802,36 +809,31 @@ for (let inbetween_turn_index = 0; inbetween_turn_index <= active_turn; inbetwee
                 if (start_process == "canon") {
                     for (let x = 0; x < x_dim; x++) {
                         for (let y = 0; y < y_dim; y++) {
-                            let used_tj_marker = inds(time_jumps[inbetween_turn_index], [inbetween_time, x, y, "used"]);
-                            let unused_tj_marker = inds(time_jumps[inbetween_turn_index], [inbetween_time, x, y, "unused"]);
+                            let used_tj_marker = inds(time_jumps[inbetween_round_index], [inbetween_time, x, y, "used"]);
+                            let unused_tj_marker = inds(time_jumps[inbetween_round_index], [inbetween_time, x, y, "unused"]);
                             if (used_tj_marker != undefined) {
-                                inbetweens[inbetween_turn_index][inbetween_time][start_process]["old_time_jumps"][0].push(`used_time_jump_marker_${x}_${y}`);
-                                inbetweens[inbetween_turn_index][inbetween_time][start_process]["old_time_jumps"][1].push(used_tj_marker);
+                                inbetweens[inbetween_round_index][inbetween_time][start_process]["old_time_jumps"][0].push(`used_time_jump_marker_${x}_${y}`);
+                                inbetweens[inbetween_round_index][inbetween_time][start_process]["old_time_jumps"][1].push(used_tj_marker);
                                 is_redundant = false;
                             }
                             if (unused_tj_marker != undefined) {
-                                inbetweens[inbetween_turn_index][inbetween_time][start_process]["old_time_jumps"][0].push(`unused_time_jump_marker_${x}_${y}`);
-                                inbetweens[inbetween_turn_index][inbetween_time][start_process]["old_time_jumps"][1].push(unused_tj_marker);
+                                inbetweens[inbetween_round_index][inbetween_time][start_process]["old_time_jumps"][0].push(`unused_time_jump_marker_${x}_${y}`);
+                                inbetweens[inbetween_round_index][inbetween_time][start_process]["old_time_jumps"][1].push(unused_tj_marker);
                                 is_redundant = false;
                             }
                         }
                     }
                 }
 
-                inbetweens[inbetween_turn_index][inbetween_time][start_process]["redundant"] = is_redundant;
+                inbetweens[inbetween_round_index][inbetween_time][start_process]["redundant"] = is_redundant;
             }
         }
     }
 }
 
-// -------------------------- Initial display setup ---------------------------
-var timeslice_navigation_enabled = true;
-var turn_navigation_enabled = true;
-var canonised_round_navigation_enabled = false; // this is exclusive with turn_navigation_enabled, as both are navigated by the arrow keys, with down toggling them (changing position contextually) and up selecting the last one.
 
-var selected_timeslice = 0; // this is the timeslice queued up to be displayed. The gameside label shows this number. Logic happens according to this number.
-var visible_timeslice = 0; // this is the timeslice currently displayed by the animation. It is dragged by the animation and may not correspond to selected_timeslice.
-var selected_turn = active_turn;
-var visible_turn = selected_turn;
+// -------------------------- Initial display setup ---------------------------
+var selected_round = active_round; // Selected by GUI logic, not affected by animations
+var visible_round = selected_round; // Displayed by the GUI, affected by animations
 show_active_timeslice();
 

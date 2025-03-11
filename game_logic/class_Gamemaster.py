@@ -872,7 +872,7 @@ class Gamemaster():
 
     # ---------------------- Spatial conflict resolution
 
-    def resolve_conflicts(self, t, save_to_output = False, precanonisation = False, rendering_turn = None, rendering_round = None):
+    def resolve_conflicts(self, t, save_to_output = False, precanonisation = False, rendering_round = None):
         # Resolves conflicts in a specified time-slice
         # Assumes all previous time-slices are canonical (void of conflicts)
         # The paradigm here is as follows: 1 Sokoban; 2 Impasse; 3 Destruction
@@ -1033,10 +1033,7 @@ class Gamemaster():
                     self.conflicting_squares[t].remove(cur_pos)
 
         if save_to_output:
-            if precanonisation:
-                self.save_canonised_timeslice_to_output(rendering_round, t, "pushes")
-            else:
-                self.save_timeslice_to_output(rendering_turn, t, "pushes")
+            self.save_timeslice_to_output(rendering_round, t, "pushes")
 
         # Capture resolution
         squares_to_be_checked = squares_with_capture.copy()
@@ -1077,10 +1074,7 @@ class Gamemaster():
             self.board_dynamic[t][x][y].remove_stones()
 
         if save_to_output:
-            if precanonisation:
-                self.save_canonised_timeslice_to_output(rendering_round, t, "destructions")
-            else:
-                self.save_timeslice_to_output(rendering_turn, t, "destructions")
+            self.save_timeslice_to_output(rendering_round, t, "destructions")
 
     # --------------------- Temporal conflict resolution
 
@@ -1419,7 +1413,7 @@ class Gamemaster():
             self.stone_actions[t][stone_ID] = []
         self.stone_actions[t][stone_ID].append(flag_ID)
 
-    def resolve_stone_actions(self, t, precanonisation, save_to_output, rendering_turn, rendering_round):
+    def resolve_stone_actions(self, t, precanonisation, save_to_output, rendering_round):
         # Reads tracker and asks Stones to perform actions
         # Note: these actions ALWAYS have to be initiated AFTER their cause.
         for stone_ID in self.stone_actions[t].keys():
@@ -1434,22 +1428,13 @@ class Gamemaster():
                         if save_to_output:
                             cur_x, cur_y, cur_a = self.stones[stone_ID].history[t]
                             action_array = [self.stones[stone_ID].stone_type, "attack", cur_x, cur_y, stone_action_msg.msg.x, stone_action_msg.msg.y]
-                            if precanonisation:
-                                self.rendering_output.add_canonised_stone_action(rendering_round, t, action_array)
-                            else:
-                                self.rendering_output.add_stone_action(rendering_turn, t, action_array)
+                            self.rendering_output.add_stone_action(rendering_round, t, action_array)
 
-    def save_timeslice_to_output(self, output_turn, output_t, process_key):
+    def save_timeslice_to_output(self, output_round, output_t, process_key):
         for x in range(self.x_dim):
             for y in range(self.y_dim):
                 for stone_ID in self.board_dynamic[output_t][x][y].stones:
-                    self.rendering_output.stone_trajectories[output_turn][output_t][process_key][stone_ID] = [x, y] + self.board_dynamic[output_t][x][y].stone_properties[stone_ID]
-
-    def save_canonised_timeslice_to_output(self, output_round, output_t, process_key):
-        for x in range(self.x_dim):
-            for y in range(self.y_dim):
-                for stone_ID in self.board_dynamic[output_t][x][y].stones:
-                    self.rendering_output.canonised_stone_trajectories[output_round][output_t][process_key][stone_ID] = [x, y] + self.board_dynamic[output_t][x][y].stone_properties[stone_ID]
+                    self.rendering_output.stone_trajectories[output_round][output_t][process_key][stone_ID] = [x, y] + self.board_dynamic[output_t][x][y].stone_properties[stone_ID]
 
 
     def execute_moves(self, read_causality_trackers = False, max_turn_index = None, precanonisation = False, save_to_output = False):
@@ -1530,19 +1515,11 @@ class Gamemaster():
             self.stones[stone_ID].reset_temporary_trackers()
 
         # Rendering output properties
-        rendering_turn = None
-        rendering_round = None
+        rendering_round = max_round_number
         if save_to_output:
-            if precanonisation:
-                rendering_round = max_round_number
-                self.rendering_output.reset_canonised_round(rendering_round)
-                for stone_ID in self.stones.keys():
-                    self.rendering_output.add_empty_canonised_trajectory(rendering_round, stone_ID)
-            else:
-                rendering_turn = max_turn_index + 1
-                self.rendering_output.reset_turn(rendering_turn)
-                for stone_ID in self.stones.keys():
-                    self.rendering_output.add_empty_trajectory(rendering_turn, stone_ID)
+            self.rendering_output.reset_round(rendering_round)
+            for stone_ID in self.stones.keys():
+                self.rendering_output.add_empty_trajectory(rendering_round, stone_ID)
 
         # Then we prepare a flat list of all flag IDs to execute
         flags_to_execute = []
@@ -1570,30 +1547,20 @@ class Gamemaster():
                             self.place_stone_on_board(STPos(0, x, y), cur_flag.stone_ID, [cur_flag.flag_args[1]])
                             self.stone_causal_freedom[cur_flag.stone_ID] = 0
                             if save_to_output:
-                                if precanonisation:
-                                    self.rendering_output.add_canonised_stone_endpoint(rendering_round, cur_flag.stone_ID, "start", "setup")
-                                else:
-                                    self.rendering_output.add_stone_endpoint(rendering_turn, cur_flag.stone_ID, "start", "setup")
+                                self.rendering_output.add_stone_endpoint(rendering_round, cur_flag.stone_ID, "start", "setup")
                         if cur_flag.flag_type == "time_jump_in":
                             self.place_stone_on_board(STPos(0, x, y), cur_flag.stone_ID, [cur_flag.flag_args[1]])
                             self.stone_causal_freedom[cur_flag.stone_ID] = 0
                             if save_to_output:
-                                if precanonisation:
-                                    self.rendering_output.add_canonised_stone_endpoint(rendering_round, cur_flag.stone_ID, "start", "TJI")
-                                    self.rendering_output.add_canonised_time_jump(rendering_round, 0, x, y, "used", "TJI")
-                                else:
-                                    self.rendering_output.add_stone_endpoint(rendering_turn, cur_flag.stone_ID, "start", "TJI")
-                                    self.rendering_output.add_time_jump(rendering_turn, 0, x, y, "used", "TJI")
+                                self.rendering_output.add_stone_endpoint(rendering_round, cur_flag.stone_ID, "start", "TJI")
+                                self.rendering_output.add_time_jump(rendering_round, 0, x, y, "used", "TJI")
                         if cur_flag.flag_type == "spawn_bomb":
                             self.board_actions[0][x][y]["explosion"].append(cur_flag_ID)
 
                     elif save_to_output:
                         if cur_flag_ID in flags_to_execute:
                             if cur_flag.flag_type == "time_jump_in":
-                                if precanonisation:
-                                    self.rendering_output.add_canonised_time_jump(rendering_round, 0, x, y, "unused", "TJI")
-                                else:
-                                    self.rendering_output.add_time_jump(rendering_turn, 0, x, y, "unused", "TJI")
+                                self.rendering_output.add_time_jump(rendering_round, 0, x, y, "unused", "TJI")
 
         # Then, we execute flags for each time slice sequentially
         for t in range(self.t_dim):
@@ -1603,14 +1570,11 @@ class Gamemaster():
             # moves which result in conflict.
 
             if save_to_output:
-                if precanonisation:
-                    self.save_canonised_timeslice_to_output(rendering_round, t, "flags")
-                else:
-                    self.save_timeslice_to_output(rendering_turn, t, "flags")
+                self.save_timeslice_to_output(rendering_round, t, "flags")
 
 
             # -------------------- 1. Conflict resolution ---------------------
-            self.resolve_conflicts(t, save_to_output, precanonisation, rendering_turn, rendering_round)
+            self.resolve_conflicts(t, save_to_output, precanonisation, rendering_round)
 
 
             # -------------------- 2. Tagscreen resolution --------------------
@@ -1683,14 +1647,11 @@ class Gamemaster():
                             self.move_stone_forward_in_time(stone_ID, x, y, t, t + 1)
 
             if save_to_output:
-                if precanonisation:
-                    self.save_canonised_timeslice_to_output(rendering_round, t, "tagscreens")
-                else:
-                    self.save_timeslice_to_output(rendering_turn, t, "tagscreens")
+                self.save_timeslice_to_output(rendering_round, t, "tagscreens")
 
 
             # --------------- 3. Stone/board actions resolution ---------------
-            self.resolve_stone_actions(t, precanonisation, save_to_output, rendering_turn, rendering_round) # Translates stone actions into board actions
+            self.resolve_stone_actions(t, precanonisation, save_to_output, rendering_round) # Translates stone actions into board actions
             for x in range(self.x_dim):
                 for y in range(self.y_dim):
                     if len(self.board_actions[t][x][y]["destruction"]) != 0:
@@ -1703,10 +1664,7 @@ class Gamemaster():
 
 
             if save_to_output:
-                if precanonisation:
-                    self.save_canonised_timeslice_to_output(rendering_round, t, "canon")
-                else:
-                    self.save_timeslice_to_output(rendering_turn, t, "canon")
+                self.save_timeslice_to_output(rendering_round, t, "canon")
 
             # At this moment, the time-slice t is in its canonical state, and stone history may be recorded
             self.record_stones_at_time(t)
@@ -1767,19 +1725,14 @@ class Gamemaster():
                                 if cur_flag_ID in flags_to_execute and self.flags[cur_flag_ID].is_active and stone_latest_flag_ID[stone_ID] < cur_flag_ID:
                                     stone_latest_flag_ID[stone_ID] = cur_flag_ID
                                     local_flags_to_execute.append(cur_flag_ID)
-                                    break # only one Flag per stone
+                                    if not save_to_output:
+                                        break # only one Flag per stone
                                 elif save_to_output:
                                     if cur_flag_ID in flags_to_execute:
                                         if self.flags[cur_flag_ID].flag_type == "time_jump_in":
-                                            if precanonisation:
-                                                self.rendering_output.add_canonised_time_jump(rendering_round, t+1, x, y, "unused", "TJI")
-                                            else:
-                                                self.rendering_output.add_time_jump(rendering_turn, t+1, x, y, "unused", "TJI")
+                                            self.rendering_output.add_time_jump(rendering_round, t+1, x, y, "unused", "TJI")
                                         if self.flags[cur_flag_ID].flag_type == "time_jump_out":
-                                            if precanonisation:
-                                                self.rendering_output.add_canonised_time_jump(rendering_round, t, x, y, "unused", "TJO")
-                                            else:
-                                                self.rendering_output.add_time_jump(rendering_turn, t, x, y, "unused", "TJO")
+                                            self.rendering_output.add_time_jump(rendering_round, t, x, y, "unused", "TJO")
 
 
                     for cur_flag_ID in local_flags_to_execute:
@@ -1791,20 +1744,13 @@ class Gamemaster():
                                 self.place_stone_on_board(STPos(t+1, x, y), cur_flag.stone_ID, [cur_flag.flag_args[1]])
                                 self.stone_causal_freedom[cur_flag.stone_ID] = t+1
                                 if save_to_output:
-                                    if precanonisation:
-                                        self.rendering_output.add_canonised_stone_endpoint(rendering_round, cur_flag.stone_ID, "start", "setup")
-                                    else:
-                                        self.rendering_output.add_stone_endpoint(rendering_turn, cur_flag.stone_ID, "start", "setup")
+                                    self.rendering_output.add_stone_endpoint(rendering_round, cur_flag.stone_ID, "start", "setup")
                             if cur_flag.flag_type == "time_jump_in":
                                 self.place_stone_on_board(STPos(t+1, x, y), cur_flag.stone_ID, [cur_flag.flag_args[1]])
                                 self.stone_causal_freedom[cur_flag.stone_ID] = t+1
                                 if save_to_output:
-                                    if precanonisation:
-                                        self.rendering_output.add_canonised_stone_endpoint(rendering_round, cur_flag.stone_ID, "start", "TJI")
-                                        self.rendering_output.add_canonised_time_jump(rendering_round, t+1, x, y, "used", "TJI")
-                                    else:
-                                        self.rendering_output.add_stone_endpoint(rendering_turn, cur_flag.stone_ID, "start", "TJI")
-                                        self.rendering_output.add_time_jump(rendering_turn, t+1, x, y, "used", "TJI")
+                                    self.rendering_output.add_stone_endpoint(rendering_round, cur_flag.stone_ID, "start", "TJI")
+                                    self.rendering_output.add_time_jump(rendering_round, t+1, x, y, "used", "TJI")
                             # For the following flags, the stone has to be present in the current time-slice
                             if cur_flag.flag_type == "spatial_move":
                                 self.place_stone_on_board(STPos(t+1, cur_flag.flag_args[0], cur_flag.flag_args[1]), cur_flag.stone_ID, [cur_flag.flag_args[2]])
@@ -1828,12 +1774,8 @@ class Gamemaster():
                             # but not TJOs added together with new TJIs
                             self.stone_causal_freedom[cur_flag.stone_ID] = None
                             if save_to_output:
-                                if precanonisation:
-                                    self.rendering_output.add_canonised_stone_endpoint(rendering_round, cur_flag.stone_ID, "end", "TJO")
-                                    self.rendering_output.add_canonised_time_jump(rendering_round, t, x, y, "used", "TJO")
-                                else:
-                                    self.rendering_output.add_stone_endpoint(rendering_turn, cur_flag.stone_ID, "end", "TJO")
-                                    self.rendering_output.add_time_jump(rendering_turn, t, x, y, "used", "TJO")
+                                self.rendering_output.add_stone_endpoint(rendering_round, cur_flag.stone_ID, "end", "TJO")
+                                self.rendering_output.add_time_jump(rendering_round, t, x, y, "used", "TJO")
 
                         # If the flag effects a previous flag, we read it here. These can be any flags!
                         if read_causality_trackers and cur_flag.effect is not None:
@@ -1920,11 +1862,11 @@ class Gamemaster():
                 if move_msg.msg == "undo":
                     # We revert back to the previous stone
                     stone_index = max(stone_index-1, 0)
-                    # We delete the Flag we added to this stone if any
-                    if cur_stone in command_buffer.keys():
-                        del command_buffer[cur_stone]
-                    if cur_stone in stones_touch_order:
-                        stones_touch_order.remove(cur_stone)
+                    # We delete the Flag we added to the previous stone if any
+                    if currently_causally_free_stones[stone_index] in command_buffer.keys():
+                        del command_buffer[currently_causally_free_stones[stone_index]]
+                    if currently_causally_free_stones[stone_index] in stones_touch_order:
+                        stones_touch_order.remove(currently_causally_free_stones[stone_index])
                     continue
 
             if move_msg.header == "command":
@@ -1966,8 +1908,7 @@ class Gamemaster():
                 self.current_turn_index += 1
                 self.flags_by_turn.append({}) # NOTE  nahh
                 # First, we find the canonical state of the board
-                self.execute_moves(save_to_output = True)
-                self.rendering_output.set_active_turn(self.current_turn_index)
+                self.execute_moves()
 
                 # Second, we display the board state
                 #self.print_heading_message(f"Time = {self.current_time}", 1)
@@ -2072,7 +2013,7 @@ class Gamemaster():
 
                 # Win condition testing
                 self.realise_scenario(scenario_for_next_round)
-                self.execute_moves(read_causality_trackers = False, max_turn_index = self.current_turn_index, precanonisation = True)
+                self.execute_moves(read_causality_trackers = False, max_turn_index = self.current_turn_index, precanonisation = True, save_to_output = True)
                 self.print_heading_message(f"Canonized board for next round, omitting reverse-causality effects added this round.", 1)
                 self.print_board_horizontally(active_turn = self.current_turn_index, highlight_active_timeslice = False)
                 current_game_winner = self.game_winner()
@@ -2089,10 +2030,17 @@ class Gamemaster():
             self.current_turn_index += 1
             self.open_game(player)
 
+        self.exit_routine()
+
     def exit_routine(self):
         # This method is called right before the program quits. It performs a
         # cleanup, and finalises self.rendering_output.
 
+        # First, we save the unfinished round in which current_turn is set
+        self.execute_moves(save_to_output = True)
+        self.rendering_output.set_current_turn(self.current_turn_index)
+
+        # Now, we record all the finalised properties, such as stone lists
         self.rendering_output.record_faction_armies(self.factions, self.faction_armies)
         self.rendering_output.record_number_of_turns(len(self.flags_by_turn))
 
@@ -2270,7 +2218,6 @@ class Gamemaster():
         # Rendering properties
         self.rendering_output.set_board_dimensions(self.t_dim, self.x_dim, self.y_dim)
         self.rendering_output.set_board_static(self.board_static)
-        self.rendering_output.reset_turn(0) # The zeroth turn is always left empty, since it was never the current turn
 
     def load_board_representation(self, t_dim, x_dim, y_dim, board_representation):
         # Initializes everything from dimensions and a board representation string
@@ -2326,6 +2273,10 @@ class Gamemaster():
         # Calculate TUI parameters for printing
         self.single_board_width = self.x_dim * 2 + len(str(self.y_dim - 1))
         self.header_width = self.single_board_width * self.t_dim + len(self.board_delim) * (self.t_dim - 1)
+
+        # Rendering properties
+        self.rendering_output.set_board_dimensions(self.t_dim, self.x_dim, self.y_dim)
+        self.rendering_output.set_board_static(self.board_static)
 
         # Unlike the legacy method "load_board", this ignored setup moves
 
@@ -2397,7 +2348,9 @@ class Gamemaster():
             self.scenarios_by_round.append(round_canon_scenario)
             self.print_log(f"Effects added this round: {self.effects_by_round[round_number]}...", 2)
 
-
+        # We now save all the canonised rounds to output
+        for round_number in range(final_round_number):
+            self.execute_moves(read_causality_trackers = False, max_turn_index = (round_number + 1) * self.t_dim, precanonisation = True, save_to_output = True)
 
 
 

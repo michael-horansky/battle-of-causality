@@ -109,7 +109,7 @@ class HTMLRenderer(Renderer):
 
         self.deposit_object("time_jumps", self.render_object.time_jumps)
 
-        self.deposit_datum("active_turn", self.render_object.active_turn)
+        self.deposit_datum("current_turn", self.render_object.current_turn)
 
         self.commit_to_output("</script>")
 
@@ -284,26 +284,26 @@ class HTMLRenderer(Renderer):
     # ---------------------- Game control panel methods -----------------------
 
     def draw_game_control_panel(self):
-        # game control panel allows one to traverse turns, as well as change the game status (resign, offer draw, submit commands, request paradox viewing...).
+        # game control panel allows one to traverse rounds, as well as change the game status (resign, offer draw, submit commands, request paradox viewing...).
         enclosing_div = "<div id=\"game_control_panel\">"
         enclosing_svg = "<svg width=\"100%\" height=\"100%\" xmlns=\"http://www.w3.org/2000/svg\" id=\"board_control_panel_svg\">"
         self.commit_to_output([enclosing_div, enclosing_svg])
 
-        # Previous turn button
-        prev_turn_button_points = [[130, 20], [50, 20], [50, 0], [0, 50], [50, 100], [50, 80], [130, 80]]
-        prev_turn_button_polygon = f"<polygon points=\"{self.get_polygon_points(prev_turn_button_points, [10, 0])}\" class=\"game_control_panel_button\" id=\"prev_turn_button\" onclick=\"show_prev_turn()\" />"
-        prev_turn_button_text = "<text x=50 y=55 class=\"button_label\" id=\"prev_turn_button_label\">Prev turn</text>"
+        # Previous round button
+        prev_round_button_points = [[130, 20], [50, 20], [50, 0], [0, 50], [50, 100], [50, 80], [130, 80]]
+        prev_round_button_polygon = f"<polygon points=\"{self.get_polygon_points(prev_round_button_points, [10, 0])}\" class=\"game_control_panel_button\" id=\"prev_round_button\" onclick=\"show_prev_round()\" />"
+        prev_round_button_text = "<text x=40 y=55 class=\"button_label\" id=\"prev_round_button_label\">Prev round</text>"
 
-        # Active turn button
-        current_turn_button_object = f"<rect x=\"150\" y=\"20\" width=\"110\" height=\"60\" rx=\"5\" ry=\"5\" class=\"game_control_panel_button\" id=\"current_turn_button\" onclick=\"show_current_turn()\" />"
-        current_turn_button_text = "<text x=\"170\" y=\"27\" class=\"button_label\" id=\"current_turn_button_label\"><tspan x=\"175\" dy=\"1.2em\">Current</tspan><tspan x=\"190\" dy=\"1.2em\">turn</tspan></text>"
+        # Active round button
+        active_round_button_object = f"<rect x=\"150\" y=\"20\" width=\"110\" height=\"60\" rx=\"5\" ry=\"5\" class=\"game_control_panel_button\" id=\"active_round_button\" onclick=\"show_active_round()\" />"
+        active_round_button_text = "<text x=\"170\" y=\"27\" class=\"button_label\" id=\"active_round_button_label\"><tspan x=\"182\" dy=\"1.2em\">Active</tspan><tspan x=\"182\" dy=\"1.2em\">round</tspan></text>"
 
-        # Next turn button
-        next_turn_button_points = [[0, 20], [80, 20], [80, 0], [130, 50], [80, 100], [80, 80], [0, 80]]
-        next_turn_button_polygon = f"<polygon points=\"{self.get_polygon_points(next_turn_button_points, [270, 0])}\" class=\"game_control_panel_button\" id=\"next_turn_button\" onclick=\"show_next_turn()\" />"
-        next_turn_button_text = "<text x=\"289\" y=\"55\" class=\"button_label\" id=\"next_turn_button_label\">Next turn</text>"
+        # Next round button
+        next_round_button_points = [[0, 20], [80, 20], [80, 0], [130, 50], [80, 100], [80, 80], [0, 80]]
+        next_round_button_polygon = f"<polygon points=\"{self.get_polygon_points(next_round_button_points, [270, 0])}\" class=\"game_control_panel_button\" id=\"next_round_button\" onclick=\"show_next_round()\" />"
+        next_round_button_text = "<text x=\"287\" y=\"55\" class=\"button_label\" id=\"next_round_button_label\">Next round</text>"
 
-        self.commit_to_output([prev_turn_button_polygon, prev_turn_button_text, current_turn_button_object, current_turn_button_text, next_turn_button_polygon, next_turn_button_text])
+        self.commit_to_output([prev_round_button_polygon, prev_round_button_text, active_round_button_object, active_round_button_text, next_round_button_polygon, next_round_button_text])
 
         self.commit_to_output("</svg>\n</div>")
 
