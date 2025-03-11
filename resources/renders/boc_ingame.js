@@ -208,6 +208,13 @@ function show_time_jumps_at_time(round_n, time) {
                 } else {
                     current_used_time_jump_marker.style.visibility = "hidden";
                 }
+                if (unused_tj_marker != undefined) {
+                    current_unused_time_jump_marker.style.fill = `url(#grad_used_${unused_tj_marker})`;
+                    current_unused_time_jump_marker.style.opacity = "1";
+                    current_unused_time_jump_marker.style.visibility = "visible";
+                } else {
+                    current_unused_time_jump_marker.style.visibility = "hidden";
+                }
             }
         }
     }
@@ -297,8 +304,9 @@ animation_manager.animation_daemon = null;
 animation_manager.temporary_element_classes = [];
 animation_manager.is_playing = false;
 animation_manager.current_frame_key = 0;
-animation_manager.total_frames = 40;
-animation_manager.frame_latency = 5;
+animation_manager.default_total_frames = 40;
+animation_manager.default_frame_latency = 5;
+animation_manager.dictionary_of_animations = new Object();
 animation_manager.reset_animation = function() {
     animation_manager.animation_daemon = null;
     animation_manager.is_playing = false;
@@ -359,12 +367,12 @@ animation_manager.shift_frame_method = function(current_animation) {
     if (animation_manager.current_frame_key == animation_manager.total_frames) {
         clearInterval(animation_manager.animation_daemon);
         // animation cleanup
-        animation_manager.shift_frame_dictionary[current_animation[0]][2](current_animation.slice(1));
+        animation_manager.dictionary_of_animations[current_animation[0]]["cleanup"](current_animation.slice(1));
         animation_manager.reset_animation();
         animation_manager.play_if_available();
     } else {
         animation_manager.current_frame_key += 1;
-        animation_manager.shift_frame_dictionary[current_animation[0]][1](current_animation.slice(1));
+        animation_manager.dictionary_of_animations[current_animation[0]]["frame"](current_animation.slice(1));
     }
 }
 animation_manager.play_if_available = function() {
@@ -373,15 +381,15 @@ animation_manager.play_if_available = function() {
             let current_animation = animation_manager.animation_queue.shift();
             animation_manager.is_playing = true;
             // prepare contextual animation specifications
-            animation_manager.total_frames = animation_manager.animation_specs_dictionary[current_animation[0]][0];
-            animation_manager.frame_latency = animation_manager.animation_specs_dictionary[current_animation[0]][1];
-            animation_manager.shift_frame_dictionary[current_animation[0]][0](current_animation.slice(1));
+            animation_manager.total_frames = animation_manager.dictionary_of_animations[current_animation[0]]["total_frames"];
+            animation_manager.frame_latency = animation_manager.dictionary_of_animations[current_animation[0]]["frame_latency"];
+            animation_manager.dictionary_of_animations[current_animation[0]]["preparation"](current_animation.slice(1));
             animation_manager.animation_daemon = setInterval(animation_manager.shift_frame_method, animation_manager.frame_latency, current_animation);
         }
     }
 }
 animation_manager.add_to_queue = function(list_of_animations) {
-    // Each animation is a list, where the first element is a key in shift_frame_dictionary
+    // Each animation is a list, where the first element is a key in dictionary_of_animations
     list_of_animations.forEach(function(animation_args, index) {
         switch(animation_args[0]) {
             case "change_process":
@@ -404,6 +412,33 @@ animation_manager.clear_queue = function() {
     }
     animation_manager.reset_animation();
     animation_manager.animation_queue = [];
+}
+
+animation_manager.default_preparation = function(animation_args) {
+
+}
+animation_manager.default_cleanup = function(animation_args) {
+
+}
+
+animation_manager.add_animation = function(animation_name, animation_object) {
+    if (animation_object["frame"] == undefined) {
+        alert("Submitted animation object has to posses the 'frame' property!");
+        return null;
+    }
+    animation_manager.dictionary_of_animations[animation_name] = animation_object;
+    if (animation_manager.dictionary_of_animations[animation_name]["preparation"] == undefined) {
+        animation_manager.dictionary_of_animations[animation_name]["preparation"] = animation_manager.default_preparation;
+    }
+    if (animation_manager.dictionary_of_animations[animation_name]["cleanup"] == undefined) {
+        animation_manager.dictionary_of_animations[animation_name]["cleanup"] = animation_manager.default_cleanup;
+    }
+    if (animation_manager.dictionary_of_animations[animation_name]["total_frames"] == undefined) {
+        animation_manager.dictionary_of_animations[animation_name]["total_frames"] = animation_manager.default_total_frames;
+    }
+    if (animation_manager.dictionary_of_animations[animation_name]["frame_latency"] == undefined) {
+        animation_manager.dictionary_of_animations[animation_name]["frame_latency"] = animation_manager.default_frame_latency;
+    }
 }
 
 // --------------------------- shift_frame methods ----------------------------
@@ -570,13 +605,21 @@ animation_manager.change_round_cleanup = function(animation_args) {
 // shift_frame_dictionary["animation_type"] = [preparation_method, get_frame_method, cleanup_method]
 // animation_specs_dictionary["animation_type"] = [total_frames, frame_latency (in ms)]
 
-animation_manager.shift_frame_dictionary = new Object();
-animation_manager.shift_frame_dictionary["change_process"] = [animation_manager.change_process_preparation, animation_manager.change_process_get_frame, animation_manager.change_process_cleanup];
-animation_manager.shift_frame_dictionary["change_round"] = [animation_manager.change_round_preparation, animation_manager.change_round_get_frame, animation_manager.change_round_cleanup];
+animation_manager.add_animation("change_process", {
+    "preparation" : animation_manager.change_process_preparation,
+    "frame" : animation_manager.change_process_get_frame,
+    "cleanup" : animation_manager.change_process_cleanup,
+    "total_frames" : 40,
+    "frame_latency" : 5
+});
+animation_manager.add_animation("change_round", {
+    "preparation" : animation_manager.change_round_preparation,
+    "frame" : animation_manager.change_round_get_frame,
+    "cleanup" : animation_manager.change_round_cleanup,
+    "total_frames" : 100,
+    "frame_latency" : 2
+});
 
-animation_manager.animation_specs_dictionary = new Object();
-animation_manager.animation_specs_dictionary["change_process"] = [40, 5];
-animation_manager.animation_specs_dictionary["change_round"] = [100, 2];
 
 // ----------------------------------------------------------------------------
 // ---------------------------------- Events ----------------------------------

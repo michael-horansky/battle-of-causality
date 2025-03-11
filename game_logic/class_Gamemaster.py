@@ -1698,6 +1698,10 @@ class Gamemaster():
                     for cur_flag_ID in self.board_dynamic[t][x][y].flags[None]:
                         if cur_flag_ID in flags_to_execute and self.flags[cur_flag_ID].is_active:
                             local_flags_to_execute.append(cur_flag_ID)
+                        #elif save_to_output:
+                        #    if cur_flag_ID in flags_to_execute:
+                        #        if self.flags[cur_flag_ID].flag_type == "time_jump_in":
+                        #            self.rendering_output.add_time_jump(rendering_round, t+1, x, y, "unused", "TJI")
                     for stone_ID in self.board_dynamic[t][x][y].stones:
                         # If neutral stone, instead of asking for a Flag, we directly perform the default action
                         if self.stones[stone_ID].player_faction == "GM":
@@ -1725,14 +1729,21 @@ class Gamemaster():
                                 if cur_flag_ID in flags_to_execute and self.flags[cur_flag_ID].is_active and stone_latest_flag_ID[stone_ID] < cur_flag_ID:
                                     stone_latest_flag_ID[stone_ID] = cur_flag_ID
                                     local_flags_to_execute.append(cur_flag_ID)
-                                    if not save_to_output:
-                                        break # only one Flag per stone
-                                elif save_to_output:
-                                    if cur_flag_ID in flags_to_execute:
-                                        if self.flags[cur_flag_ID].flag_type == "time_jump_in":
-                                            self.rendering_output.add_time_jump(rendering_round, t+1, x, y, "unused", "TJI")
-                                        if self.flags[cur_flag_ID].flag_type == "time_jump_out":
+                                    break # only one Flag per stone
+                    if save_to_output:
+                        for stone_key, local_flags in self.board_dynamic[t][x][y].flags.items():
+                            for local_flag_ID in local_flags:
+                                if local_flag_ID in flags_to_execute:
+                                    if self.flags[local_flag_ID].flag_type == "time_jump_out":
+                                        if local_flag_ID in local_flags_to_execute:
+                                            self.rendering_output.add_time_jump(rendering_round, t, x, y, "used", "TJO")
+                                        else:
                                             self.rendering_output.add_time_jump(rendering_round, t, x, y, "unused", "TJO")
+                                    if self.flags[local_flag_ID].flag_type == "time_jump_in":
+                                        if local_flag_ID in local_flags_to_execute:
+                                            self.rendering_output.add_time_jump(rendering_round, t+1, x, y, "used", "TJI")
+                                        else:
+                                            self.rendering_output.add_time_jump(rendering_round, t+1, x, y, "unused", "TJI")
 
 
                     for cur_flag_ID in local_flags_to_execute:
@@ -1750,7 +1761,6 @@ class Gamemaster():
                                 self.stone_causal_freedom[cur_flag.stone_ID] = t+1
                                 if save_to_output:
                                     self.rendering_output.add_stone_endpoint(rendering_round, cur_flag.stone_ID, "start", "TJI")
-                                    self.rendering_output.add_time_jump(rendering_round, t+1, x, y, "used", "TJI")
                             # For the following flags, the stone has to be present in the current time-slice
                             if cur_flag.flag_type == "spatial_move":
                                 self.place_stone_on_board(STPos(t+1, cur_flag.flag_args[0], cur_flag.flag_args[1]), cur_flag.stone_ID, [cur_flag.flag_args[2]])
@@ -1775,7 +1785,6 @@ class Gamemaster():
                             self.stone_causal_freedom[cur_flag.stone_ID] = None
                             if save_to_output:
                                 self.rendering_output.add_stone_endpoint(rendering_round, cur_flag.stone_ID, "end", "TJO")
-                                self.rendering_output.add_time_jump(rendering_round, t, x, y, "used", "TJO")
 
                         # If the flag effects a previous flag, we read it here. These can be any flags!
                         if read_causality_trackers and cur_flag.effect is not None:

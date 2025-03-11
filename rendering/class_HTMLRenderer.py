@@ -102,7 +102,6 @@ class HTMLRenderer(Renderer):
         self.deposit_datum("y_dim", self.render_object.y_dim)
         self.deposit_list("factions", self.render_object.factions)
         self.deposit_list("faction_armies", self.render_object.faction_armies)
-        self.deposit_datum("number_of_turns", self.render_object.number_of_turns)
 
         self.deposit_object("stone_trajectories", self.render_object.stone_trajectories)
         self.deposit_list("stone_actions", self.render_object.stone_actions)
