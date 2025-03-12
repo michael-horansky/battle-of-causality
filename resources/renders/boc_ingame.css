@@ -79,13 +79,15 @@ margin: 0;
 /* ------ Board window style ------- */
 /* --------------------------------- */
 
+#board_window_background {
+    fill : black;
+}
 
 /* --------- Board squares --------- */
 
 .board_square_empty {
     position : absolute;
-    fill : blue;
-    fill-opacity : 0.1;
+    fill : #E5E5FF;
     stroke : azure;
 }
 

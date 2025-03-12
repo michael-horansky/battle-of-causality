@@ -209,7 +209,7 @@ function show_time_jumps_at_time(round_n, time) {
                     current_used_time_jump_marker.style.visibility = "hidden";
                 }
                 if (unused_tj_marker != undefined) {
-                    current_unused_time_jump_marker.style.fill = `url(#grad_used_${unused_tj_marker})`;
+                    current_unused_time_jump_marker.style.fill = `url(#grad_unused_${unused_tj_marker})`;
                     current_unused_time_jump_marker.style.opacity = "1";
                     current_unused_time_jump_marker.style.visibility = "visible";
                 } else {
@@ -476,7 +476,7 @@ animation_manager.change_process_preparation = function(animation_args) {
         } else {
             time_jump_element.style.opacity = "0";
         }
-        time_jump_element.style.fill = `url(#grad_used_${inbetweens[round_n][s_time][s_process]["new_time_jumps"][1][index]})`;
+        time_jump_element.style.fill = `url(#grad_${inbetweens[round_n][s_time][s_process]["new_time_jumps"][1][index]})`;
         time_jump_element.style.visibility = "visible";
     });
     inbetweens[round_n][s_time][s_process]["old_time_jumps"][0].forEach(function(time_jump_mark, index) {
@@ -486,7 +486,7 @@ animation_manager.change_process_preparation = function(animation_args) {
         } else {
             time_jump_element.style.opacity = "1";
         }
-        time_jump_element.style.fill = `url(#grad_used_${inbetweens[round_n][s_time][s_process]["old_time_jumps"][1][index]})`;
+        time_jump_element.style.fill = `url(#grad_${inbetweens[round_n][s_time][s_process]["old_time_jumps"][1][index]})`;
         time_jump_element.style.visibility = "visible";
     });
 
@@ -622,6 +622,99 @@ animation_manager.add_animation("change_round", {
 
 
 // ----------------------------------------------------------------------------
+// -------------------------------- Cameraman ---------------------------------
+// ----------------------------------------------------------------------------
+// This object is concerned with repositioning all the objects in board_window
+// as the camera moves.
+
+const cameraman = new Object();
+cameraman.camera_zoom_status = "idle";
+cameraman.camera_move_keys_pressed = 0;
+cameraman.camera_move_directions = {"w" : false, "d" : false, "s" : false, "a" : false};
+cameraman.camera_zoom_daemon = null;
+cameraman.camera_move_daemon = null;
+// Manimpulation constants
+cameraman.zoom_speed = 1.01;
+cameraman.movement_speed = 0.003;
+cameraman.refresh_rate = 5; // ms
+// Position of the camera centre
+cameraman.cx = 0.5;
+cameraman.cy = 0.5;
+// The camera forces a square aspect ratio, and hence the field-of-view size is
+// parametrised by a single parameter, here chosen to represent the coefficient
+// of the base length of a board square
+cameraman.fov_coef = 1.0;
+cameraman.put_down_tripod = function() {
+    // Find the default setting, which just about displays the entire board
+    let default_width_fov_coef = board_window_width / (x_dim * 100);
+    let default_height_fov_coef = board_window_height / (y_dim * 100);
+    cameraman.default_fov_coef = Math.min(default_width_fov_coef, default_height_fov_coef); // This is also the max value!
+    // Find an offset which places the middle of the board into the middle of the board window
+    cameraman.offset_x = board_window_width * 0.5 - x_dim * 50;
+    cameraman.offset_y = board_window_height * 0.5 - y_dim * 50;
+
+    // Find and store the element which is target to camera's transformations
+    cameraman.subject = document.getElementById("camera_subject");
+}
+
+cameraman.apply_camera = function() {
+    cameraman.subject.style.transform = `translate(${cameraman.offset_x + x_dim * 100 * (0.5 - cameraman.cx) * cameraman.fov_coef}px,${cameraman.offset_y + y_dim * 100 * (0.5 - cameraman.cy) * cameraman.fov_coef}px) scale(${cameraman.fov_coef})`;
+}
+
+cameraman.reset_camera = function() {
+    cameraman.fov_coef = cameraman.default_fov_coef;
+    cameraman.cx = 0.5;
+    cameraman.cy = 0.5;
+    cameraman.apply_camera();
+}
+
+cameraman.zoom_in = function() {
+    cameraman.fov_coef *= cameraman.zoom_speed;
+    cameraman.apply_camera();
+}
+cameraman.zoom_out = function() {
+    cameraman.fov_coef = Math.max(cameraman.fov_coef / cameraman.zoom_speed, cameraman.default_fov_coef);
+    cameraman.apply_camera();
+}
+cameraman.move_camera = function() {
+    if (cameraman.camera_move_directions["w"]) {
+        cameraman.cy -= cameraman.movement_speed / cameraman.fov_coef;
+    }
+    if (cameraman.camera_move_directions["d"]) {
+        cameraman.cx += cameraman.movement_speed / cameraman.fov_coef;
+    }
+    if (cameraman.camera_move_directions["s"]) {
+        cameraman.cy += cameraman.movement_speed / cameraman.fov_coef;
+    }
+    if (cameraman.camera_move_directions["a"]) {
+        cameraman.cx -= cameraman.movement_speed / cameraman.fov_coef;
+    }
+    cameraman.cx = Math.max(0.0, Math.min(1.0, cameraman.cx));
+    cameraman.cy = Math.max(0.0, Math.min(1.0, cameraman.cy));
+    cameraman.apply_camera();
+}
+
+cameraman.move_key_down = function(move_key) {
+    if (cameraman.camera_move_keys_pressed == 0) {
+        cameraman.camera_move_daemon = setInterval(cameraman.move_camera, cameraman.refresh_rate);
+    }
+    if (!(cameraman.camera_move_directions[move_key])) {
+        cameraman.camera_move_keys_pressed += 1;
+        cameraman.camera_move_directions[move_key] = true;
+    }
+}
+
+cameraman.move_key_up = function(move_key) {
+    if (cameraman.camera_move_directions[move_key]) {
+        cameraman.camera_move_keys_pressed -= 1;
+        cameraman.camera_move_directions[move_key] = false;
+    }
+    if (cameraman.camera_move_keys_pressed == 0) {
+        clearInterval(cameraman.camera_move_daemon);
+    }
+}
+
+// ----------------------------------------------------------------------------
 // ---------------------------------- Events ----------------------------------
 // ----------------------------------------------------------------------------
 
@@ -647,8 +740,72 @@ function parse_keydown_event(event) {
             show_active_round();
             break
         case "ArrowDown":
-            //show_canonised_round();
             break
+        case "q":
+            if (cameraman.camera_zoom_status == "idle") {
+                cameraman.camera_zoom_status = "running";
+                cameraman.camera_zoom_daemon = setInterval(cameraman.zoom_in, cameraman.refresh_rate);
+            }
+            break;
+        case "e":
+            if (cameraman.camera_zoom_status == "idle") {
+                cameraman.camera_zoom_status = "running";
+                cameraman.camera_zoom_daemon = setInterval(cameraman.zoom_out, cameraman.refresh_rate);
+            }
+            break;
+        case "r":
+            if (cameraman.camera_zoom_status == "running") {
+                clearInterval(cameraman.camera_zoom_daemon);
+                cameraman.camera_zoom_status = "idle";
+            }
+            cameraman.reset_camera();
+            break;
+        case "f":
+            if (cameraman.camera_zoom_status == "running") {
+                clearInterval(cameraman.camera_zoom_daemon);
+                cameraman.camera_zoom_status = "idle";
+            }
+            cameraman.fov_coef = 1.0;
+            cameraman.apply_camera();
+            break;
+        case "w":
+            cameraman.move_key_down(event.key);
+            break;
+        case "d":
+            cameraman.move_key_down(event.key);
+            break;
+        case "s":
+            cameraman.move_key_down(event.key);
+            break;
+        case "a":
+            cameraman.move_key_down(event.key);
+            break;
+
+    }
+}
+function parse_keyup_event(event) {
+    //alert(event.key);
+    switch(event.key) {
+        case "q":
+            clearInterval(cameraman.camera_zoom_daemon);
+            cameraman.camera_zoom_status = "idle";
+            break;
+        case "e":
+            clearInterval(cameraman.camera_zoom_daemon);
+            cameraman.camera_zoom_status = "idle";
+            break;
+        case "w":
+            cameraman.move_key_up(event.key);
+            break;
+        case "d":
+            cameraman.move_key_up(event.key);
+            break;
+        case "s":
+            cameraman.move_key_up(event.key);
+            break;
+        case "a":
+            cameraman.move_key_up(event.key);
+            break;
 
     }
 }
@@ -838,12 +995,12 @@ for (let inbetween_round_index = 0; inbetween_round_index <= active_round; inbet
                             let unused_tj_marker = inds(time_jumps[inbetween_round_index], [end_time, x, y, "unused"]);
                             if (used_tj_marker != undefined) {
                                 inbetweens[inbetween_round_index][inbetween_time][start_process]["new_time_jumps"][0].push(`used_time_jump_marker_${x}_${y}`);
-                                inbetweens[inbetween_round_index][inbetween_time][start_process]["new_time_jumps"][1].push(used_tj_marker);
+                                inbetweens[inbetween_round_index][inbetween_time][start_process]["new_time_jumps"][1].push(`used_${used_tj_marker}`);
                                 is_redundant = false;
                             }
                             if (unused_tj_marker != undefined) {
                                 inbetweens[inbetween_round_index][inbetween_time][start_process]["new_time_jumps"][0].push(`unused_time_jump_marker_${x}_${y}`);
-                                inbetweens[inbetween_round_index][inbetween_time][start_process]["new_time_jumps"][1].push(unused_tj_marker);
+                                inbetweens[inbetween_round_index][inbetween_time][start_process]["new_time_jumps"][1].push(`unused_${unused_tj_marker}`);
                                 is_redundant = false;
                             }
                         }
@@ -856,12 +1013,12 @@ for (let inbetween_round_index = 0; inbetween_round_index <= active_round; inbet
                             let unused_tj_marker = inds(time_jumps[inbetween_round_index], [inbetween_time, x, y, "unused"]);
                             if (used_tj_marker != undefined) {
                                 inbetweens[inbetween_round_index][inbetween_time][start_process]["old_time_jumps"][0].push(`used_time_jump_marker_${x}_${y}`);
-                                inbetweens[inbetween_round_index][inbetween_time][start_process]["old_time_jumps"][1].push(used_tj_marker);
+                                inbetweens[inbetween_round_index][inbetween_time][start_process]["old_time_jumps"][1].push(`used_${used_tj_marker}`);
                                 is_redundant = false;
                             }
                             if (unused_tj_marker != undefined) {
                                 inbetweens[inbetween_round_index][inbetween_time][start_process]["old_time_jumps"][0].push(`unused_time_jump_marker_${x}_${y}`);
-                                inbetweens[inbetween_round_index][inbetween_time][start_process]["old_time_jumps"][1].push(unused_tj_marker);
+                                inbetweens[inbetween_round_index][inbetween_time][start_process]["old_time_jumps"][1].push(`unused_${unused_tj_marker}`);
                                 is_redundant = false;
                             }
                         }
@@ -880,3 +1037,6 @@ var selected_round = active_round; // Selected by GUI logic, not affected by ani
 var visible_round = selected_round; // Displayed by the GUI, affected by animations
 show_active_timeslice();
 
+// Set up the camera
+cameraman.put_down_tripod();
+cameraman.reset_camera();

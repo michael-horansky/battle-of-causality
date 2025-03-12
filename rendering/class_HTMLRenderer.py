@@ -32,6 +32,9 @@ class HTMLRenderer(Renderer):
         self.game_log_width = 400
         self.game_log_height = 200
 
+        self.board_square_empty_color = "#E5E5FF"
+        self.unused_TJ_clip_circle_radius = 0.45
+
         # Board structure
         self.board_square_base_side_length = 100
 
@@ -39,7 +42,7 @@ class HTMLRenderer(Renderer):
 
     def create_output_file(self):
         output_file = open(self.output_path + self.output_filename + ".html", "w")
-        output_file.write("<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Such and such game</title>\n    <link rel=\"stylesheet\" href=\"boc_ingame.css\">\n</head>\n<body onkeydown=\"parse_keydown_event(event)\">\n")
+        output_file.write("<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Battle of Causality: interactive client</title>\n    <link rel=\"stylesheet\" href=\"boc_ingame.css\">\n</head>\n<body onkeydown=\"parse_keydown_event(event)\" onkeyup=\"parse_keyup_event(event)\">\n")
         output_file.close()
 
     def finish_output_file(self):
@@ -122,28 +125,62 @@ class HTMLRenderer(Renderer):
     def open_board_window(self):
         enclosing_div = "<div id=\"board_window\">"
         svg_window = f"<svg width=\"{self.board_window_width}\" height=\"{self.board_window_height}\" xmlns=\"http://www.w3.org/2000/svg\" id=\"board_window_svg\">"
-        self.commit_to_output([enclosing_div, svg_window])
+        background_rectangle = f"<rect x=\"0\" y =\"0\" width=\"{self.board_window_width}\" height=\"{self.board_window_height}\" id=\"board_window_background\" />"
+        self.commit_to_output([enclosing_div, svg_window, background_rectangle])
         self.board_window_definitions()
 
     def board_window_definitions(self):
         # Declarations after opening the board window <svg> environment
-        used_TJI = []
-        used_TJI.append("<radialGradient id=\"grad_used_TJI\" cx=\"50%\" cy=\"50%\" r=\"70%\" fx=\"50%\" fy=\"50%\">")
-        used_TJI.append("  <stop offset=\"40%\" stop-color=\"cyan\" />")
-        used_TJI.append("  <stop offset=\"100%\" stop-color=\"blue\" />")
-        used_TJI.append("</radialGradient>")
-        used_TJO = []
-        used_TJO.append("<radialGradient id=\"grad_used_TJO\" cx=\"50%\" cy=\"50%\" r=\"70%\" fx=\"50%\" fy=\"50%\">")
-        used_TJO.append("  <stop offset=\"40%\" stop-color=\"orange\" />")
-        used_TJO.append("  <stop offset=\"100%\" stop-color=\"coral\" />")
-        used_TJO.append("</radialGradient>")
-        used_TJ_conflict = []
-        used_TJ_conflict.append("<radialGradient id=\"grad_used_conflict\" cx=\"50%\" cy=\"50%\" r=\"70%\" fx=\"50%\" fy=\"50%\">")
-        used_TJ_conflict.append("  <stop offset=\"40%\" stop-color=\"red\" />")
-        used_TJ_conflict.append("  <stop offset=\"100%\" stop-color=\"crimson\" />") #try crimson-brown
-        used_TJ_conflict.append("</radialGradient>")
 
-        self.commit_to_output([used_TJI, used_TJO, used_TJ_conflict])
+        self.commit_to_output("<defs>")
+
+        # TJ marker gradients
+        used_TJI = []
+        used_TJI.append("  <radialGradient id=\"grad_used_TJI\" cx=\"50%\" cy=\"50%\" r=\"70%\" fx=\"50%\" fy=\"50%\">")
+        used_TJI.append("    <stop offset=\"40%\" stop-color=\"cyan\" />")
+        used_TJI.append("    <stop offset=\"100%\" stop-color=\"blue\" />")
+        used_TJI.append("  </radialGradient>")
+        used_TJO = []
+        used_TJO.append("  <radialGradient id=\"grad_used_TJO\" cx=\"50%\" cy=\"50%\" r=\"70%\" fx=\"50%\" fy=\"50%\">")
+        used_TJO.append("    <stop offset=\"40%\" stop-color=\"orange\" />")
+        used_TJO.append("    <stop offset=\"100%\" stop-color=\"coral\" />")
+        used_TJO.append("  </radialGradient>")
+        used_TJ_conflict = []
+        used_TJ_conflict.append("  <radialGradient id=\"grad_used_conflict\" cx=\"50%\" cy=\"50%\" r=\"70%\" fx=\"50%\" fy=\"50%\">")
+        used_TJ_conflict.append("    <stop offset=\"40%\" stop-color=\"red\" />")
+        used_TJ_conflict.append("    <stop offset=\"100%\" stop-color=\"crimson\" />") #try crimson-brown
+        used_TJ_conflict.append("  </radialGradient>")
+        unused_TJI = []
+        unused_TJI.append("  <radialGradient id=\"grad_unused_TJI\" cx=\"50%\" cy=\"50%\" r=\"70%\" fx=\"50%\" fy=\"50%\">")
+        unused_TJI.append("    <stop offset=\"71%\" stop-color=\"cyan\" />")
+        unused_TJI.append("    <stop offset=\"100%\" stop-color=\"blue\" />")
+        unused_TJI.append("  </radialGradient>")
+        unused_TJO = []
+        unused_TJO.append("  <radialGradient id=\"grad_unused_TJO\" cx=\"50%\" cy=\"50%\" r=\"70%\" fx=\"50%\" fy=\"50%\">")
+        unused_TJO.append("    <stop offset=\"71%\" stop-color=\"orange\" />")
+        unused_TJO.append("    <stop offset=\"100%\" stop-color=\"coral\" />")
+        unused_TJO.append("  </radialGradient>")
+        unused_TJ_conflict = []
+        unused_TJ_conflict.append("  <radialGradient id=\"grad_unused_conflict\" cx=\"50%\" cy=\"50%\" r=\"70%\" fx=\"50%\" fy=\"50%\">")
+        unused_TJ_conflict.append("    <stop offset=\"71%\" stop-color=\"red\" />")
+        unused_TJ_conflict.append("    <stop offset=\"100%\" stop-color=\"crimson\" />") #try crimson-brown
+        unused_TJ_conflict.append("  </radialGradient>")
+        self.commit_to_output([used_TJI, used_TJO, used_TJ_conflict, unused_TJI, unused_TJO, unused_TJ_conflict])
+
+        # unused TJ clip-path
+        unused_TJ_clip_path = []
+        unused_TJ_clip_path.append("  <clipPath id=\"unused_TJ_clip_path\" clipPathUnits=\"objectBoundingBox\" >")
+        unused_TJ_clip_path.append(f"    <path d=\"M0,0 L1,0 L1,1 L0,1 L0,0 M{0.5-self.unused_TJ_clip_circle_radius},0.5 A{self.unused_TJ_clip_circle_radius},{self.unused_TJ_clip_circle_radius}, 180, 1, 0, {0.5+self.unused_TJ_clip_circle_radius}, 0.5 A{self.unused_TJ_clip_circle_radius},{self.unused_TJ_clip_circle_radius}, 180, 1, 0, {0.5-self.unused_TJ_clip_circle_radius}, 0.5 Z\"/>")
+        unused_TJ_clip_path.append("  </clipPath>")
+        self.commit_to_output(unused_TJ_clip_path)
+
+        self.commit_to_output("</defs>")
+
+    def open_board_window_camera_scope(self):
+        self.commit_to_output(f"<g id=\"camera_subject\" transform-origin=\"{self.render_object.x_dim * self.board_square_base_side_length / 2}px {self.render_object.y_dim * self.board_square_base_side_length / 2}px\">")
+
+    def close_board_window_camera_scope(self):
+        self.commit_to_output("</g>")
 
     def draw_board_animation_overlay(self):
         animation_overlay = []
@@ -234,8 +271,9 @@ class HTMLRenderer(Renderer):
         # For efficiency, we omit squares whose main markers are placed above the time jump z index
         if z_index <= 1:
             used_time_jump_marker = f"  <rect width=\"{self.board_square_base_side_length}\" height=\"{self.board_square_base_side_length}\" x=\"{x * self.board_square_base_side_length}\" y=\"{y * self.board_square_base_side_length}\" class=\"used_time_jump_marker\" id=\"{self.encode_used_time_jump_marker_id(x, y)}\" visibility=\"hidden\" />"
-            unused_time_jump_marker_points = [[0, 0], [100, 0], [100, 100], [0, 100], [0, 20], [20, 20], [20, 80], [80, 80], [80, 20], [0, 20]]
-            unused_time_jump_marker = f"  <polygon class=\"unused_time_jump_marker\" id=\"{self.encode_unused_time_jump_marker_id(x, y)}\" points=\"{self.get_polygon_points(unused_time_jump_marker_points, [x * self.board_square_base_side_length, y * self.board_square_base_side_length])}\" visibility=\"hidden\" />"
+            #unused_time_jump_marker_points = [[0, 0], [100, 0], [100, 100], [0, 100], [0, 20], [20, 20], [20, 80], [80, 80], [80, 20], [0, 20]]
+            #unused_time_jump_marker = f"  <polygon class=\"unused_time_jump_marker\" id=\"{self.encode_unused_time_jump_marker_id(x, y)}\" points=\"{self.get_polygon_points(unused_time_jump_marker_points, [x * self.board_square_base_side_length, y * self.board_square_base_side_length])}\" visibility=\"hidden\" />"
+            unused_time_jump_marker = f"  <rect width=\"{self.board_square_base_side_length}\" height=\"{self.board_square_base_side_length}\" x=\"{x * self.board_square_base_side_length}\" y=\"{y * self.board_square_base_side_length}\" class=\"unused_time_jump_marker\" id=\"{self.encode_unused_time_jump_marker_id(x, y)}\" visibility=\"hidden\" clip-path=\"url(#unused_TJ_clip_path)\" />"
             self.board_layer_structure[1] += [used_time_jump_marker, unused_time_jump_marker]
 
 
@@ -271,10 +309,12 @@ class HTMLRenderer(Renderer):
 
     def draw_board(self):
         self.open_board_window()
+        self.open_board_window_camera_scope()
         self.create_board_layer_structure(5) # every element is first added to this, where index = z-index
         self.draw_board_squares()
         self.draw_stones()
         self.commit_board_layer_structure()
+        self.close_board_window_camera_scope()
         self.draw_board_animation_overlay()
         self.close_board_window()
 
