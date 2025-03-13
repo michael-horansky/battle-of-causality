@@ -7,6 +7,8 @@
 import utils.constants as constants
 import utils.functions as functions
 
+from game_logic.class_Flag import Flag
+
 class Abstract_Output():
 
     process_list = [
@@ -26,7 +28,8 @@ class Abstract_Output():
 
         self.factions = []
         self.faction_armies = [] # ["faction"] = [stone_ID list]
-        self.number_of_turns = None
+        self.reverse_causality_flags = {"causes" : [], "effects" : []} # List of keys of reverse_causality_flag_properties
+        self.reverse_causality_flag_properties = {} # ["flag_ID"] = {"t", "x", "y", "flag_type", "stone_ID", "target_effect"} for flag_IDs important to Scenarios
         # ----------------------- Roundwise properties ------------------------
         # These variables always have the first axis [round number], and
         # describe the state of the game in the canonised version of the round,
@@ -37,6 +40,10 @@ class Abstract_Output():
         self.stone_actions = [] # [round_number][t][action index] = [stone_type, action_type, stone_x, stone_y, param1, param2...]
 
         self.time_jumps = [] # [round_number]["t"]["x"]["y"]["used"/"unused"] = "TJI"/"TJO"/"conflict" if present
+        self.scenarios = [] # [round_number] = {{setup activity map}, {effect activity map}, {effect cause map}, {stone inheritance}, {removed setup stones}}
+        self.effects = [] # [round_number] [list of flag_IDs of ante-effects added on that round. These effects will be inactive in the canonised version, but their causes are already active.]
+        self.causes = [] # [round_number] [list of flag_IDs of retro-causes added on that round. These effects will be activated in the canonised version, but their effects are inactive.]
+        self.activated_buffered_causes = [] # [round_number] = list of retro-causes added that round which were activated in the precanonised scenario
 
         self.current_turn = None
 
@@ -57,8 +64,9 @@ class Abstract_Output():
         self.factions = factions
         self.faction_armies = faction_armies
 
-    def record_number_of_turns(self, number_of_turns):
-        self.number_of_turns = number_of_turns
+    def set_current_turn(self, current_turn):
+        self.current_turn = current_turn
+
 
     # -------------------------------------------------------------------------
     # --------------------- Roundwise property management ---------------------
@@ -111,6 +119,38 @@ class Abstract_Output():
             while(len(self.time_jumps) <= round_n):
                 self.time_jumps.append({})
 
+        if len(self.scenarios) > round_n:
+            # key exists
+            self.scenarios[round_n] = {}
+        else:
+            # We keep appending empty turns until key exists
+            while(len(self.scenarios) <= round_n):
+                self.scenarios.append({})
+
+        if len(self.effects) > round_n:
+            # key exists
+            self.effects[round_n] = []
+        else:
+            # We keep appending empty turns until key exists
+            while(len(self.effects) <= round_n):
+                self.effects.append([])
+
+        if len(self.causes) > round_n:
+            # key exists
+            self.causes[round_n] = []
+        else:
+            # We keep appending empty turns until key exists
+            while(len(self.causes) <= round_n):
+                self.causes.append([])
+
+        if len(self.activated_buffered_causes) > round_n:
+            # key exists
+            self.activated_buffered_causes[round_n] = []
+        else:
+            # We keep appending empty turns until key exists
+            while(len(self.activated_buffered_causes) <= round_n):
+                self.activated_buffered_causes.append([])
+
     # --------------------------- Value assignment ----------------------------
 
     def add_empty_trajectory(self, round_n, stone_ID):
@@ -140,9 +180,43 @@ class Abstract_Output():
         elif self.time_jumps[round_n][t][x][y][is_used] not in [time_jump_type, "conflict"]:
             self.time_jumps[round_n][t][x][y][is_used] = "conflict"
 
+    def add_activated_buffered_cause(self, round_n, buffered_cause_ID):
+        self.activated_buffered_causes[round_n].append(buffered_cause_ID)
 
+    def add_scenario(self, round_n, scenario_instance, flags, causes_added_this_round, effects_added_this_round):
+        # NOTE: The rounds represented in Abstract_Output (sans the last one)
+        # governed by the scenarios for the NEXT round, MINUS the ante-effects
+        # added in this round. The only way the rule of dogma manifests in the
+        # canonised version is that the buffered causes are still active.
+        self.scenarios[round_n]["effect_activity_map"] = scenario_instance.effect_activity_map
+        self.scenarios[round_n]["effect_cause_map"] = scenario_instance.effect_cause_map
+        self.scenarios[round_n]["setup_activity_map"] = scenario_instance.setup_activity_map
+        self.scenarios[round_n]["stone_inheritance"] = scenario_instance.stone_inheritance
+        self.scenarios[round_n]["removed_setup_stones"] = scenario_instance.removed_setup_stones
+        # all the effects and causes present in effect_cause map which are not
+        # present in reverse_causality_flag_properties were added this round!
+        self.effects[round_n] = effects_added_this_round
+        self.causes[round_n] = causes_added_this_round
+        for cause_ID in causes_added_this_round:
+            self.reverse_causality_flag_properties[cause_ID] = {
+                    "t" : flags[cause_ID].pos.t,
+                    "x" : flags[cause_ID].pos.x,
+                    "y" : flags[cause_ID].pos.y,
+                    "flag_type" : flags[cause_ID].flag_type,
+                    "stone_ID" : flags[cause_ID].stone_ID,
+                    "target_effect" : flags[cause_ID].effect
+                }
+            #self.reverse_causality_flags["causes"].append(cause_ID)
+        for effect_ID in effects_added_this_round:
+            self.reverse_causality_flag_properties[effect_ID] = {
+                    "t" : flags[effect_ID].pos.t,
+                    "x" : flags[effect_ID].pos.x,
+                    "y" : flags[effect_ID].pos.y,
+                    "flag_type" : flags[effect_ID].flag_type,
+                    "stone_ID" : flags[effect_ID].stone_ID,
+                    "target_effect" : None
+                }
+            #self.reverse_causality_flags["effects"].append(effect_ID)
 
-    def set_current_turn(self, current_turn):
-        self.current_turn = current_turn
 
 

@@ -82,7 +82,8 @@ class HTMLRenderer(Renderer):
     def encode_stone_ID(self, stone_ID):
         return(f"stone_{stone_ID}")
 
-    # ---------------------- Document structure methods -----------------------
+    # ---------------------------- Data depositing ----------------------------
+
     def deposit_datum(self, name, value):
         self.commit_to_output(f"  const {name} = {value};")
 
@@ -109,11 +110,21 @@ class HTMLRenderer(Renderer):
         self.deposit_object("stone_trajectories", self.render_object.stone_trajectories)
         self.deposit_list("stone_actions", self.render_object.stone_actions)
 
+        #self.deposit_object("reverse_causality_flags", self.render_object.reverse_causality_flags)
+        self.deposit_object("reverse_causality_flag_properties", self.render_object.reverse_causality_flag_properties)
+        self.deposit_list("effects", self.render_object.effects)
+        self.deposit_list("causes", self.render_object.causes)
+        self.deposit_list("activated_buffered_causes", self.render_object.activated_buffered_causes)
+        self.deposit_object("scenarios", self.render_object.scenarios)
         self.deposit_object("time_jumps", self.render_object.time_jumps)
 
         self.deposit_datum("current_turn", self.render_object.current_turn)
 
         self.commit_to_output("</script>")
+
+    # -------------------------------------------------------------------------
+    # ---------------------- Document structure methods -----------------------
+    # -------------------------------------------------------------------------
 
     def open_boardside(self):
         # Boardside is the top two thirds of the screen, containing the board control panel, the board window, and the board interaction panel
@@ -128,6 +139,70 @@ class HTMLRenderer(Renderer):
         background_rectangle = f"<rect x=\"0\" y =\"0\" width=\"{self.board_window_width}\" height=\"{self.board_window_height}\" id=\"board_window_background\" />"
         self.commit_to_output([enclosing_div, svg_window, background_rectangle])
         self.board_window_definitions()
+
+    def close_board_window(self):
+        svg_window = "</svg>"
+        enclosing_div = "</div>"
+        self.commit_to_output([svg_window, enclosing_div])
+
+    def open_inspectors(self):
+        self.commit_to_output("<div id=\"inspectors\">")
+
+    def close_inspectors(self):
+        self.commit_to_output("</div>")
+
+    def open_gameside(self):
+        # Gameside is bottom third of the screen, containing the game control panel and the game log
+        self.commit_to_output("<div id=\"gameside\">")
+
+    def close_gameside(self):
+        self.commit_to_output("</div>")
+
+    def draw_game_log(self):
+        self.commit_to_output(f"<div width=\"{self.game_log_width}px\" height=\"{self.game_log_height}px\" id=\"game_log\">")
+
+        self.commit_to_output(f"<p id=\"navigation_label\"></p>")
+
+        self.commit_to_output("</div>")
+
+
+    # -------------------------- General svg methods --------------------------
+
+    def get_polygon_points(self, point_matrix, offset = [0, 0]):
+        # point_matrix = [[x1, y1], [x2, y2]...]
+        # offset = [offset x, offset y]
+        result_string = " ".join(",".join(str(pos[i] + offset[i]) for i in range(len(pos))) for pos in point_matrix)
+        return(result_string)
+
+
+    # ---------------------- Board control panel methods ----------------------
+
+    def draw_board_control_panel(self):
+        # board control panel allows one to traverse timeslices, and toggle camera controls.
+        enclosing_div = "<div id=\"board_control_panel\">"
+        enclosing_svg = "<svg width=\"100%\" height=\"100%\" xmlns=\"http://www.w3.org/2000/svg\" id=\"board_control_panel_svg\">"
+        self.commit_to_output([enclosing_div, enclosing_svg])
+
+        # Next timeslice button
+        next_timeslice_button_points = [[0, 20], [80, 20], [80, 0], [130, 50], [80, 100], [80, 80], [0, 80]]
+        next_timeslice_button_polygon = f"<polygon points=\"{self.get_polygon_points(next_timeslice_button_points, [10, 0])}\" class=\"board_control_panel_button\" id=\"next_timeslice_button\" onclick=\"show_next_timeslice()\" />"
+        next_timeslice_button_text = "<text x=\"16\" y=\"55\" class=\"button_label\" id=\"next_timeslice_button_label\">Next timeslice</text>"
+
+        # Active timeslice button
+        active_timeslice_button_object = f"<rect x=\"20\" y=\"120\" width=\"110\" height=\"60\" rx=\"5\" ry=\"5\" class=\"board_control_panel_button\" id=\"active_timeslice_button\" onclick=\"show_active_timeslice()\" />"
+        active_timeslice_button_text = "<text x=\"40\" y=\"127\" class=\"button_label\" id=\"active_timeslice_button_label\"><tspan x=\"50\" dy=\"1.2em\">Active</tspan><tspan x=\"40\" dy=\"1.2em\">timeslice</tspan></text>"
+
+        # Previous timeslice button
+        prev_timeslice_button_points = [[130, 20], [50, 20], [50, 0], [0, 50], [50, 100], [50, 80], [130, 80]]
+        prev_timeslice_button_polygon = f"<polygon points=\"{self.get_polygon_points(prev_timeslice_button_points, [10, 200])}\" class=\"board_control_panel_button\" id=\"prev_timeslice_button\" onclick=\"show_prev_timeslice()\" />"
+        prev_timeslice_button_text = "<text x=27 y=255 class=\"button_label\" id=\"prev_timeslice_button_label\">Prev timeslice</text>"
+
+        self.commit_to_output([next_timeslice_button_polygon, next_timeslice_button_text, active_timeslice_button_object, active_timeslice_button_text, prev_timeslice_button_polygon, prev_timeslice_button_text])
+
+        self.commit_to_output("</svg>\n</div>")
+
+
+    # ------------------------- Board window methods --------------------------
 
     def board_window_definitions(self):
         # Declarations after opening the board window <svg> environment
@@ -190,64 +265,6 @@ class HTMLRenderer(Renderer):
         animation_overlay.append("</g>")
         self.commit_to_output(animation_overlay)
 
-    def close_board_window(self):
-        svg_window = "</svg>"
-        enclosing_div = "</div>"
-        self.commit_to_output([svg_window, enclosing_div])
-
-    def open_gameside(self):
-        # Gameside is bottom third of the screen, containing the game control panel and the game log
-        self.commit_to_output("<div id=\"gameside\">")
-
-    def close_gameside(self):
-        self.commit_to_output("</div>")
-
-    def draw_game_log(self):
-        self.commit_to_output(f"<div width=\"{self.game_log_width}px\" height=\"{self.game_log_height}px\" id=\"game_log\">")
-
-        self.commit_to_output(f"<p id=\"navigation_label\"></p>")
-
-        self.commit_to_output("</div>")
-
-
-    # -------------------------- General svg methods --------------------------
-
-    def get_polygon_points(self, point_matrix, offset = [0, 0]):
-        # point_matrix = [[x1, y1], [x2, y2]...]
-        # offset = [offset x, offset y]
-        result_string = " ".join(",".join(str(pos[i] + offset[i]) for i in range(len(pos))) for pos in point_matrix)
-        return(result_string)
-
-
-    # ---------------------- Board control panel methods ----------------------
-
-    def draw_board_control_panel(self):
-        # board control panel allows one to traverse timeslices, and toggle camera controls.
-        enclosing_div = "<div id=\"board_control_panel\">"
-        enclosing_svg = "<svg width=\"100%\" height=\"100%\" xmlns=\"http://www.w3.org/2000/svg\" id=\"board_control_panel_svg\">"
-        self.commit_to_output([enclosing_div, enclosing_svg])
-
-        # Next timeslice button
-        next_timeslice_button_points = [[0, 20], [80, 20], [80, 0], [130, 50], [80, 100], [80, 80], [0, 80]]
-        next_timeslice_button_polygon = f"<polygon points=\"{self.get_polygon_points(next_timeslice_button_points, [10, 0])}\" class=\"board_control_panel_button\" id=\"next_timeslice_button\" onclick=\"show_next_timeslice()\" />"
-        next_timeslice_button_text = "<text x=\"16\" y=\"55\" class=\"button_label\" id=\"next_timeslice_button_label\">Next timeslice</text>"
-
-        # Active timeslice button
-        active_timeslice_button_object = f"<rect x=\"20\" y=\"120\" width=\"110\" height=\"60\" rx=\"5\" ry=\"5\" class=\"board_control_panel_button\" id=\"active_timeslice_button\" onclick=\"show_active_timeslice()\" />"
-        active_timeslice_button_text = "<text x=\"40\" y=\"127\" class=\"button_label\" id=\"active_timeslice_button_label\"><tspan x=\"50\" dy=\"1.2em\">Active</tspan><tspan x=\"40\" dy=\"1.2em\">timeslice</tspan></text>"
-
-        # Previous timeslice button
-        prev_timeslice_button_points = [[130, 20], [50, 20], [50, 0], [0, 50], [50, 100], [50, 80], [130, 80]]
-        prev_timeslice_button_polygon = f"<polygon points=\"{self.get_polygon_points(prev_timeslice_button_points, [10, 200])}\" class=\"board_control_panel_button\" id=\"prev_timeslice_button\" onclick=\"show_prev_timeslice()\" />"
-        prev_timeslice_button_text = "<text x=27 y=255 class=\"button_label\" id=\"prev_timeslice_button_label\">Prev timeslice</text>"
-
-        self.commit_to_output([next_timeslice_button_polygon, next_timeslice_button_text, active_timeslice_button_object, active_timeslice_button_text, prev_timeslice_button_polygon, prev_timeslice_button_text])
-
-        self.commit_to_output("</svg>\n</div>")
-
-
-    # ------------------------- Static board methods --------------------------
-
     def create_board_layer_structure(self, number_of_layers):
         self.board_layer_structure = []
         for n in range(number_of_layers):
@@ -263,7 +280,7 @@ class HTMLRenderer(Renderer):
         # ID is position
         # Class is static type
         class_name, z_index = self.encode_board_square_class(x, y)
-        board_square_object = f"  <rect width=\"{self.board_square_base_side_length}\" height=\"{self.board_square_base_side_length}\" x=\"{x * self.board_square_base_side_length}\" y=\"{y * self.board_square_base_side_length}\" class=\"{class_name}\" id=\"{self.encode_board_square_id(x, y)}\" onclick=\"board_square_click({x},{y})\" />"
+        board_square_object = f"  <rect width=\"{self.board_square_base_side_length}\" height=\"{self.board_square_base_side_length}\" x=\"{x * self.board_square_base_side_length}\" y=\"{y * self.board_square_base_side_length}\" class=\"{class_name}\" id=\"{self.encode_board_square_id(x, y)}\" onclick=\"inspector.board_square_click({x},{y})\" />"
         self.board_layer_structure[z_index].append(board_square_object)
 
         # Draws time jump marker into z-index = 1, with
@@ -275,7 +292,6 @@ class HTMLRenderer(Renderer):
             #unused_time_jump_marker = f"  <polygon class=\"unused_time_jump_marker\" id=\"{self.encode_unused_time_jump_marker_id(x, y)}\" points=\"{self.get_polygon_points(unused_time_jump_marker_points, [x * self.board_square_base_side_length, y * self.board_square_base_side_length])}\" visibility=\"hidden\" />"
             unused_time_jump_marker = f"  <rect width=\"{self.board_square_base_side_length}\" height=\"{self.board_square_base_side_length}\" x=\"{x * self.board_square_base_side_length}\" y=\"{y * self.board_square_base_side_length}\" class=\"unused_time_jump_marker\" id=\"{self.encode_unused_time_jump_marker_id(x, y)}\" visibility=\"hidden\" clip-path=\"url(#unused_TJ_clip_path)\" />"
             self.board_layer_structure[1] += [used_time_jump_marker, unused_time_jump_marker]
-
 
     def draw_board_squares(self):
         #enclosing_group = f"<g id=\"static_board_squares\">"
@@ -318,6 +334,54 @@ class HTMLRenderer(Renderer):
         self.draw_board_animation_overlay()
         self.close_board_window()
 
+    # --------------------------- Inspector methods ---------------------------
+
+    def draw_inspector_table(self, which_inspector, table_dict):
+        # table_dict["js_value_key"] = "human-readable label"
+        """for table_key, table_label in table_dict.items():
+            table_element = []
+            table_element.append(f"<div id=\"{which_inspector}_info_{table_key}_container\" class=\"inspector_table_container\">")
+            table_element.append(f"  <div id=\"{which_inspector}_info_{table_key}_label\" class=\"inspector_table_label\">")
+            table_element.append(f"    <p>{table_label}</p>")
+            table_element.append(f"  </div>")
+            table_element.append(f"  <div id=\"{which_inspector}_info_{table_key}\" class=\"inspector_table_value\">")
+            table_element.append(f"  </div>")
+            table_element.append(f"</div>")
+            self.commit_to_output(table_element)"""
+        self.commit_to_output(f"<table id=\"{which_inspector}_info_table class=\"inspector_table\">")
+        for table_key, table_label in table_dict.items():
+            table_element = []
+            table_element.append(f"<tr id=\"{which_inspector}_info_{table_key}_container\" class=\"inspector_table_container\">")
+            table_element.append(f"  <td id=\"{which_inspector}_info_{table_key}_label\" class=\"inspector_table_label\">{table_label}</td>")
+            table_element.append(f"  <td id=\"{which_inspector}_info_{table_key}\" class=\"inspector_table_value\"></td>")
+            table_element.append(f"</tr>")
+            self.commit_to_output(table_element)
+        self.commit_to_output(f"</table>")
+
+    def draw_stone_inspector(self):
+        stone_inspector_object = []
+        stone_inspector_object.append("<div id=\"stone_inspector\" class=\"inspector\">")
+        stone_inspector_object.append("  <p id=\"stone_info_allegiance\"></p>")
+        stone_inspector_object.append("  <p id=\"stone_info_type\"></p>")
+        stone_inspector_object.append("  <p id=\"stone_info_startpoint\"></p>")
+        stone_inspector_object.append("  <p id=\"stone_info_endpoint\"></p>")
+        stone_inspector_object.append("  <p id=\"stone_info_command\"></p>")
+        stone_inspector_object.append("</div>")
+        self.commit_to_output(stone_inspector_object)
+
+    def draw_square_inspector(self):
+        square_inspector_object = []
+        self.commit_to_output("<div id=\"square_inspector\" class=\"inspector\">")
+        #square_inspector_object.append("  <p id=\"square_info_used_tp\"></p>")
+        #square_inspector_object.append("  <p id=\"square_info_unused_tp\"></p>")
+        self.draw_inspector_table("square", {"active_effects" : "Active ante-effects", "activated_causes" : "Activated retro-causes", "inactive_effects" : "Inactive ante-effects", "not_activated_causes" : "Not activated retro-causes"})
+        self.commit_to_output("</div>")
+
+    def draw_inspectors(self):
+        self.open_inspectors()
+        self.draw_stone_inspector()
+        self.draw_square_inspector()
+        self.close_inspectors()
 
 
     # ---------------------- Game control panel methods -----------------------
@@ -363,6 +427,9 @@ class HTMLRenderer(Renderer):
 
         # Draw the static board as a set of timeslices
         self.draw_board()
+
+        # Draw inspectors
+        self.draw_inspectors()
 
         # Close boardside
         self.close_boardside()

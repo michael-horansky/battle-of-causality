@@ -84,12 +84,13 @@ class Gamemaster():
         # ------------------ Trackers for reverse causality -------------------
         # General trackers
         self.effects_by_round = [] # [round number] = [flags which are effected from a later timeslice added in specific round]
+        self.scenarios_by_round = [] # [round_number] = Scenario(activity maps, trackers)
         self.effect_load = {} # [effect ID] = number of activated causes
         self.effect_cause_map = {} # [effect ID] = cause ID for active effects
         # Convenience trackers
         self.stone_inheritance = {} # [stone_ID] = child_ID
-
-        self.scenarios_by_round = [] # [round_number] = Scenario(activity maps, trackers)
+        # Rendering trackers (not useful to the game logic itself)
+        self.causes_by_round = [] # [round number] = [flags which effect a flag in a previous timeslice, added in specific round]
 
         # TUI elements
         self.board_delim = ' | '
@@ -129,7 +130,7 @@ class Gamemaster():
         #          the middle of a round, temporal consistency resolution
         #          at the end of a round, win condition check).
         # After that, the state of the board is displayed (and viewable
-        # for any max_index) and the player is prompted for their input.
+        # for any round number) and the player is prompted for their input.
 
         # The following properties are the raw datapoints mirroring the
         # server-side db. They are both loaded from the db and updated by
@@ -730,6 +731,8 @@ class Gamemaster():
             # Trackers
             self.effects_by_round = functions.add_tail_to_list(self.effects_by_round, round_number + 1, [])
             self.effects_by_round[round_number].append(tji_flag.flag_ID)
+            self.causes_by_round = functions.add_tail_to_list(self.causes_by_round, round_number + 1, [])
+            self.causes_by_round[round_number].append(tjo_flag.flag_ID)
 
             # We add the new stone into the army
             self.stones[tji_flag.stone_ID] = self.create_stone(tji_flag.stone_ID, self.stones[stone_ID].stone_type, tji_flag.flag_ID, self.stones[stone_ID].player_faction)
@@ -741,6 +744,8 @@ class Gamemaster():
             tjo_flag = Flag(STPos(old_t, old_x, old_y), "time_jump_out", self.stones[stone_ID].player_faction, [STPos(new_t - 1, new_x, new_y), TJI_ID], stone_ID, effect = TJI_ID)
             self.board_dynamic[old_t][old_x][old_y].add_flag(tjo_flag.flag_ID, stone_ID)
             self.flags[tjo_flag.flag_ID] = tjo_flag
+            self.causes_by_round = functions.add_tail_to_list(self.causes_by_round, round_number + 1, [])
+            self.causes_by_round[round_number].append(tjo_flag.flag_ID)
             return([tjo_flag.flag_ID])
 
     def add_bomb_flag(self, stone_ID, old_t, old_x, old_y, new_t, new_x, new_y):
@@ -765,6 +770,8 @@ class Gamemaster():
         # Trackers
         self.effects_by_round = functions.add_tail_to_list(self.effects_by_round, round_number + 1, [])
         self.effects_by_round[round_number].append(spawn_bomb_flag.flag_ID)
+        self.causes_by_round = functions.add_tail_to_list(self.causes_by_round, round_number + 1, [])
+        self.causes_by_round[round_number].append(attack_flag.flag_ID)
 
         return([spawn_bomb_flag.flag_ID, attack_flag.flag_ID])
 
@@ -852,6 +859,9 @@ class Gamemaster():
         for round_i in range(len(self.effects_by_round)):
             if flag_ID in self.effects_by_round[round_i]:
                 self.effects_by_round[round_i].remove(flag_ID)
+        for round_i in range(len(self.causes_by_round)):
+            if flag_ID in self.causes_by_round[round_i]:
+                self.causes_by_round[round_i].remove(flag_ID)
 
     # ----------------------------- Flag activity
 
@@ -1794,6 +1804,9 @@ class Gamemaster():
                                 if cur_flag.flag_type == "time_jump_out":
                                     result_causality_trackers["stone_inheritance"][cur_flag.stone_ID] = self.flags[cur_flag.effect].stone_ID
                             # If not in the keys, this has to point at an effect placed in the last round, therefore always active
+                        if save_to_output:
+                            if cur_flag_ID in self.causes_by_round[max_round_number]:
+                                self.rendering_output.add_activated_buffered_cause(rendering_round, cur_flag_ID)
 
                     # Stones whose causal freedom is still t are determined with finality
                     for i in range(len(undetermined_stones) - 1, -1, -1):
@@ -1955,6 +1968,7 @@ class Gamemaster():
             # NOTE: The win condition must be satisfied when board state is determined WITHOUT buffered effects! (so timejumps etc... added this round)
             self.realise_scenario(scenario_for_next_round)
             self.execute_moves(read_causality_trackers = False, max_turn_index = self.current_turn_index, precanonisation = True, save_to_output = True)
+            self.rendering_output.add_scenario(self.round_number, scenario_for_next_round, self.flags, self.causes_by_round[self.round_number], self.effects_by_round[self.round_number])
             self.print_heading_message(f"Canonized board for next round, omitting reverse-causality effects added this round.", 1)
             self.print_board_horizontally(active_turn = self.current_turn_index, highlight_active_timeslice = False)
             current_game_winner = self.game_winner()
@@ -1966,6 +1980,7 @@ class Gamemaster():
 
             self.round_number += 1
             self.effects_by_round.append([])
+            self.causes_by_round.append([])
 
     def open_game(self, player):
         # This is the method to be called by client!
@@ -2023,6 +2038,7 @@ class Gamemaster():
                 # Win condition testing
                 self.realise_scenario(scenario_for_next_round)
                 self.execute_moves(read_causality_trackers = False, max_turn_index = self.current_turn_index, precanonisation = True, save_to_output = True)
+                self.rendering_output.add_scenario(current_round, scenario_for_next_round, self.flags, self.causes_by_round[current_round], self.effects_by_round[current_round])
                 self.print_heading_message(f"Canonized board for next round, omitting reverse-causality effects added this round.", 1)
                 self.print_board_horizontally(active_turn = self.current_turn_index, highlight_active_timeslice = False)
                 current_game_winner = self.game_winner()
@@ -2033,6 +2049,7 @@ class Gamemaster():
                     return(0)
 
                 self.effects_by_round.append([])
+                self.causes_by_round.append([])
 
 
             self.flags_by_turn.append({})
@@ -2049,9 +2066,13 @@ class Gamemaster():
         self.execute_moves(save_to_output = True)
         self.rendering_output.set_current_turn(self.current_turn_index)
 
-        # Now, we record all the finalised properties, such as stone lists
+        # Now, we record all the finalised properties, such as stone/flag lists
         self.rendering_output.record_faction_armies(self.factions, self.faction_armies)
-        self.rendering_output.record_number_of_turns(len(self.flags_by_turn))
+
+        # Now, we record the ongoing round, using the last round's scenario
+        cur_round, active_timeslice = self.round_from_turn(self.current_turn_index)
+        self.rendering_output.add_scenario(cur_round, self.scenarios_by_round[cur_round], self.flags, self.causes_by_round[cur_round], self.effects_by_round[cur_round])
+
 
     # -------------------------------------------------------------------------
     # ---------------------- Data saving/loading methods ----------------------
@@ -2322,6 +2343,7 @@ class Gamemaster():
         # We find Scenarios for each started round, assuming the last turn is incomplete
         current_round_number, active_timeslice = self.round_from_turn(len(dynamic_data_representation) - 1)
         self.effects_by_round = functions.add_tail_to_list(self.effects_by_round, current_round_number + 1, [])
+        self.causes_by_round = functions.add_tail_to_list(self.causes_by_round, current_round_number + 1, [])
 
         self.scenarios_by_round = []
 
@@ -2360,6 +2382,7 @@ class Gamemaster():
         # We now save all the canonised rounds to output
         for round_number in range(final_round_number):
             self.execute_moves(read_causality_trackers = False, max_turn_index = (round_number + 1) * self.t_dim, precanonisation = True, save_to_output = True)
+            self.rendering_output.add_scenario(round_number, self.scenarios_by_round[round_number + 1], self.flags, self.causes_by_round[round_number], self.effects_by_round[round_number])
 
 
 

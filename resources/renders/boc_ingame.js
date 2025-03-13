@@ -51,6 +51,17 @@ function round_from_turn(turn_index) {
     return [current_round_number, current_timeslice];
 }
 
+function is_flag_at_pos(flag_ID, t, x, y) {
+    if (reverse_causality_flag_properties[flag_ID] == undefined) {
+        alert(`[Flag ID: ${flag_ID}] properties requested at (${t},${x},${y}) but flag does not exist.`);
+    }
+    return (reverse_causality_flag_properties[flag_ID]["t"] == t && reverse_causality_flag_properties[flag_ID]["x"] == x && reverse_causality_flag_properties[flag_ID]["y"] == y);
+}
+
+function bound(val, lower_bound, upper_bound) {
+    return Math.max(lower_bound, Math.min(val, upper_bound));
+}
+
 function cubic_bezier(t, params) {
     // t = 0 => 0
     // t = 1 => 1
@@ -649,6 +660,7 @@ cameraman.put_down_tripod = function() {
     let default_width_fov_coef = board_window_width / (x_dim * 100);
     let default_height_fov_coef = board_window_height / (y_dim * 100);
     cameraman.default_fov_coef = Math.min(default_width_fov_coef, default_height_fov_coef); // This is also the max value!
+    cameraman.max_fov_coef = board_window_width / 400;
     // Find an offset which places the middle of the board into the middle of the board window
     cameraman.offset_x = board_window_width * 0.5 - x_dim * 50;
     cameraman.offset_y = board_window_height * 0.5 - y_dim * 50;
@@ -669,7 +681,7 @@ cameraman.reset_camera = function() {
 }
 
 cameraman.zoom_in = function() {
-    cameraman.fov_coef *= cameraman.zoom_speed;
+    cameraman.fov_coef = Math.min(cameraman.fov_coef * cameraman.zoom_speed, cameraman.max_fov_coef);
     cameraman.apply_camera();
 }
 cameraman.zoom_out = function() {
@@ -861,8 +873,140 @@ function show_active_round() {
     }
 }
 
-function board_square_click(x, y){
-    alert(`This is a board square at time ${selected_timeslice} and position (${x}, ${y}).`);
+// -------------------------------- Inspector ---------------------------------
+
+const inspector = new Object();
+inspector.inspector_elements = {
+    "stone" : new Object(),
+    "square" : new Object()
+}
+inspector.record_inspector_elements = function(which_inspector, element_name_list) {
+    element_name_list.forEach(function(element_name, element_index) {
+        inspector.inspector_elements[which_inspector][element_name] = document.getElementById(`${which_inspector}_info_${element_name}`);
+    });
+}
+inspector.display_value_list = function(which_inspector, element_name, value_list) {
+    html_object = "";
+    for (let i = 0; i < value_list.length; i++) {
+        html_object += `<p>${value_list[i]}</p>\n`;
+    }
+    inspector.inspector_elements[which_inspector][element_name].innerHTML = html_object;
+}
+
+
+inspector.record_inspector_elements("stone", ["allegiance", "type", "startpoint", "endpoint"]);
+inspector.record_inspector_elements("square", ["active_effects", "activated_causes", "inactive_effects", "not_activated_causes"]);
+
+inspector.reverse_causality_flags = []; // [round_n] = {"causes" : {"activated" : [], "not_activated" : [], "buffered" : []}, "effects" : {"active" : [], "inactive" : []}}
+inspector.organise_reverse_causality_flags = function() {
+    for (let round_n = 0; round_n <= active_round; round_n++) {
+        inspector.reverse_causality_flags.push(new Object());
+        inspector.reverse_causality_flags[round_n]["causes"] = {
+            "activated" : [],
+            "not_activated" : []
+        }
+        inspector.reverse_causality_flags[round_n]["effects"] = {
+            "active" : [],
+            "inactive" : [],
+            "buffered" : []
+        }
+        // First, we check the non-buffered flags
+        for (let passed_round_n = 0; passed_round_n < round_n; passed_round_n++) {
+            for (let effect_i = 0; effect_i < effects[passed_round_n].length; effect_i++) {
+                // Is effect active?
+                if (scenarios[round_n]["effect_activity_map"][effects[passed_round_n][effect_i]]) {
+                    inspector.reverse_causality_flags[round_n]["effects"]["active"].push(effects[passed_round_n][effect_i]);
+                    // NOTE: If swapping, the corresponding cause may have been added on the last round, and will be encountered again!
+                    inspector.reverse_causality_flags[round_n]["causes"]["activated"].push(scenarios[round_n]["effect_cause_map"][effects[passed_round_n][effect_i]]);
+                } else {
+                    inspector.reverse_causality_flags[round_n]["effects"]["inactive"].push(effects[passed_round_n][effect_i]);
+                }
+
+            }
+            // Now we add the omitted non-buffered causes as not activated
+            for (let cause_i = 0; cause_i < causes[passed_round_n].length; cause_i++) {
+                // Is cause not activated?
+                if (!(inspector.reverse_causality_flags[round_n]["causes"]["activated"].includes(causes[passed_round_n][cause_i]))) {
+                    inspector.reverse_causality_flags[round_n]["causes"]["not_activated"].push(causes[passed_round_n][cause_i]);
+                }
+
+            }
+        }
+        // Now for the buffered flags: the effects are always inactive, for causes, it depends on the stone trajectory
+        for (let effect_i = 0; effect_i < effects[round_n].length; effect_i++) {
+            inspector.reverse_causality_flags[round_n]["effects"]["buffered"].push(effects[round_n][effect_i]);
+        }
+        for (let cause_i = 0; cause_i < causes[round_n].length; cause_i++) {
+            if (!(inspector.reverse_causality_flags[round_n]["causes"]["activated"].includes(causes[round_n][cause_i]) || inspector.reverse_causality_flags[round_n]["causes"]["not_activated"].includes(causes[round_n][cause_i]))) {
+                if (activated_buffered_causes[round_n].includes(causes[round_n][cause_i])) {
+                    inspector.reverse_causality_flags[round_n]["causes"]["activated"].push(causes[round_n][cause_i]);
+                } else {
+                    inspector.reverse_causality_flags[round_n]["causes"]["not_activated"].push(causes[round_n][cause_i]);
+                }
+            }
+        }
+    }
+}
+
+inspector.display_square_info = function(x, y) {
+
+    // First, we find all reverse-causality flags associated with this square
+    let active_effects_message_list = [];
+    let inactive_effects_message_list = [];
+    let activated_causes_message_list = [];
+    let not_activated_causes_message_list = [];
+    // Active effects
+    for (let effect_i = 0; effect_i < inspector.reverse_causality_flags[selected_round]["effects"]["active"].length; effect_i++) {
+        let active_effect_ID = inspector.reverse_causality_flags[selected_round]["effects"]["active"][effect_i];
+        // Is flag at selected square?
+        if (is_flag_at_pos(active_effect_ID, selected_timeslice - 1, x, y)) {
+            active_effects_message_list.push(`${reverse_causality_flag_properties[active_effect_ID]["flag_type"]} happens here, caused by this and this`);
+        }
+    }
+    // Inactive effects
+    for (let effect_i = 0; effect_i < inspector.reverse_causality_flags[selected_round]["effects"]["inactive"].length; effect_i++) {
+        let inactive_effect_ID = inspector.reverse_causality_flags[selected_round]["effects"]["inactive"][effect_i];
+        // Is flag at selected square?
+        if (is_flag_at_pos(inactive_effect_ID, selected_timeslice - 1, x, y)) {
+            inactive_effects_message_list.push(`${reverse_causality_flag_properties[inactive_effect_ID]["flag_type"]} would happen here.`);
+        }
+    }
+    // Buffered effects
+    for (let effect_i = 0; effect_i < inspector.reverse_causality_flags[selected_round]["effects"]["buffered"].length; effect_i++) {
+        let buffered_effect_ID = inspector.reverse_causality_flags[selected_round]["effects"]["buffered"][effect_i];
+        // Is flag at selected square?
+        if (is_flag_at_pos(buffered_effect_ID, selected_timeslice - 1, x, y)) {
+            inactive_effects_message_list.push(`${reverse_causality_flag_properties[buffered_effect_ID]["flag_type"]} is dogmatic in the next round.`);
+        }
+    }
+    // Activated causes
+    for (let cause_i = 0; cause_i < inspector.reverse_causality_flags[selected_round]["causes"]["activated"].length; cause_i++) {
+        let activated_cause_ID = inspector.reverse_causality_flags[selected_round]["causes"]["activated"][cause_i];
+        // Is flag at selected square?
+        if (is_flag_at_pos(activated_cause_ID, selected_timeslice, x, y)) {
+            activated_causes_message_list.push(`${reverse_causality_flag_properties[activated_cause_ID]["flag_type"]} happens here, causing this and this`);
+        }
+    }
+    // Not activated causes
+    for (let cause_i = 0; cause_i < inspector.reverse_causality_flags[selected_round]["causes"]["not_activated"].length; cause_i++) {
+        let not_activated_cause_ID = inspector.reverse_causality_flags[selected_round]["causes"]["not_activated"][cause_i];
+        // Is flag at selected square?
+        if (is_flag_at_pos(not_activated_cause_ID, selected_timeslice, x, y)) {
+            not_activated_causes_message_list.push(`${reverse_causality_flag_properties[not_activated_cause_ID]["flag_type"]} would happen here, causing this and this`);
+        }
+    }
+
+    // Display messages
+    inspector.display_value_list("square", "active_effects", active_effects_message_list);
+    inspector.display_value_list("square", "inactive_effects", inactive_effects_message_list);
+    inspector.display_value_list("square", "activated_causes", activated_causes_message_list);
+    inspector.display_value_list("square", "not_activated_causes", not_activated_causes_message_list);
+}
+
+inspector.board_square_click = function(x, y){
+    // We get information about the square
+    inspector.display_square_info(x, y);
+
 }
 
 
@@ -1040,3 +1184,6 @@ show_active_timeslice();
 // Set up the camera
 cameraman.put_down_tripod();
 cameraman.reset_camera();
+
+// Set up inspector
+inspector.organise_reverse_causality_flags();
