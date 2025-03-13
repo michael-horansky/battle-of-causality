@@ -209,7 +209,7 @@ class Abstract_Output():
             #self.reverse_causality_flags["causes"].append(cause_ID)
         for effect_ID in effects_added_this_round:
             self.reverse_causality_flag_properties[effect_ID] = {
-                    "t" : flags[effect_ID].pos.t,
+                    "t" : flags[effect_ID].pos.t + 1,
                     "x" : flags[effect_ID].pos.x,
                     "y" : flags[effect_ID].pos.y,
                     "flag_type" : flags[effect_ID].flag_type,

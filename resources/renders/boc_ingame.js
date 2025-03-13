@@ -706,6 +706,12 @@ cameraman.move_camera = function() {
     cameraman.apply_camera();
 }
 
+cameraman.show_square = function(x, y) {
+    cameraman.cx = (x + 0.5) / x_dim;
+    cameraman.cy = (y + 0.5) / y_dim;
+    cameraman.apply_camera();
+}
+
 cameraman.move_key_down = function(move_key) {
     if (cameraman.camera_move_keys_pressed == 0) {
         cameraman.camera_move_daemon = setInterval(cameraman.move_camera, cameraman.refresh_rate);
@@ -948,6 +954,121 @@ inspector.organise_reverse_causality_flags = function() {
     }
 }
 
+inspector.human_readable_flag = function(action_role, flag_significance, flag_status, flag_ID) {
+    // action_role defines the role of the flag in the sentence
+    // flag_significance: cause or effect
+    switch(action_role) {
+        case "primary":
+            switch(flag_significance) {
+                case "effect":
+                    switch(flag_status) {
+                        case "active":
+                            switch(reverse_causality_flag_properties[flag_ID]["flag_type"]) {
+                                case "time_jump_in":
+                                    return `A <span class=\"stone_highlight\">STONE</span> time-jumps in`;
+                                case "spawn_bomb":
+                                    return `A bomb explodes`;
+
+                            }
+                        case "inactive":
+                            switch(reverse_causality_flag_properties[flag_ID]["flag_type"]) {
+                                case "time_jump_in":
+                                    return `A <span class=\"stone_highlight\">STONE</span> would time-jump in`;
+                                case "spawn_bomb":
+                                    return `A bomb would explode`;
+
+                            }
+                        case "buffered":
+                            switch(reverse_causality_flag_properties[flag_ID]["flag_type"]) {
+                                case "time_jump_in":
+                                    return `A <span class=\"stone_highlight\">STONE</span> is set to time-jump in`;
+                                case "spawn_bomb":
+                                    return `A bomb is set to explode`;
+
+                            }
+                    }
+                case "cause":
+                    switch(flag_status) {
+                        case "activated":
+                            switch(reverse_causality_flag_properties[flag_ID]["flag_type"]) {
+                                case "time_jump_out":
+                                    return `A <span class=\"stone_highlight\">STONE</span> time-jumps out`;
+                                case "attack":
+                                    // switch stone type
+                                    return `A <span class=\"stone_highlight\">STONE</span> (attacks? drops a bomb?)`;
+
+                            }
+                        case "not_activated":
+                            switch(reverse_causality_flag_properties[flag_ID]["flag_type"]) {
+                                case "time_jump_out":
+                                    return `A <span class=\"stone_highlight\">STONE</span> would time-jump out`;
+                                case "attack":
+                                    // switch stone type
+                                    return `A <span class=\"stone_highlight\">STONE</span> (would attack? would drop a bomb?)`;
+
+                            }
+                    }
+            }
+        case "secondary":
+            switch(flag_significance) {
+                case "effect":
+                    switch(reverse_causality_flag_properties[flag_ID]["flag_type"]) {
+                        case "time_jump_in":
+                            return `causing a <span class=\"stone_highlight\">STONE</span> to time-jump in`;
+                        case "spawn_bomb":
+                            return `causing a bomb to explode`;
+
+                    }
+                case "cause":
+                    switch(reverse_causality_flag_properties[flag_ID]["flag_type"]) {
+                        case "time_jump_out":
+                            return `caused by a <span class=\"stone_highlight\">STONE</span> time-jumping out`;
+                        case "attack":
+                            // switch stone type
+                            return `caused by a <span class=\"stone_highlight\">STONE</span> (attacking? dropping a bomb?)`;
+
+                    }
+            }
+    }
+}
+
+inspector.flag_description = function(flag_significance, flag_status, flag_ID) {
+    // flag_significnce = effect or cause
+    // NOTE: This function assumes selected_round is sane
+
+    switch(flag_significance) {
+        case "effect":
+            primary_descriptor = inspector.human_readable_flag("primary", "effect", flag_status, flag_ID);
+            if (["active", "buffered"].includes(flag_status)) {
+                let corresponding_cause_ID = scenarios[selected_round]["effect_cause_map"][flag_ID];
+                let cause_t = reverse_causality_flag_properties[corresponding_cause_ID]["t"];
+                let cause_x = reverse_causality_flag_properties[corresponding_cause_ID]["x"];
+                let cause_y = reverse_causality_flag_properties[corresponding_cause_ID]["y"];
+                primary_descriptor += `, ${inspector.human_readable_flag("secondary", "cause", "activated", corresponding_cause_ID)} at <span class=\"pos_highlight\" onclick=\"go_to_square(${cause_t},${cause_x},${cause_y})\">(${cause_t},${cause_x},${cause_y})</tspan>`;
+            }
+            return primary_descriptor;
+        case "cause":
+            primary_descriptor = inspector.human_readable_flag("primary", "cause", flag_status, flag_ID);
+            // We need to find the effect
+            let corresponding_effect_ID = reverse_causality_flag_properties[flag_ID]["target_effect"];
+            let corresponding_effect_status = undefined;
+            let effect_statuses_to_try = ["active", "inactive", "buffered"];
+            for (effect_status_index = 0; effect_status_index < effect_statuses_to_try.length; effect_status_index++) {
+                if (inspector.reverse_causality_flags[selected_round]["effects"][effect_statuses_to_try[effect_status_index]].includes(corresponding_effect_ID)) {
+                    corresponding_effect_status = effect_statuses_to_try[effect_status_index];
+                    break;
+                }
+            }
+            if (corresponding_effect_ID != undefined) {
+                let effect_t = reverse_causality_flag_properties[corresponding_effect_ID]["t"];
+                let effect_x = reverse_causality_flag_properties[corresponding_effect_ID]["x"];
+                let effect_y = reverse_causality_flag_properties[corresponding_effect_ID]["y"];
+                primary_descriptor += `, ${inspector.human_readable_flag("secondary", "effect", corresponding_effect_status, corresponding_effect_ID)} at <span class=\"pos_highlight\" onclick=\"go_to_square(${effect_t},${effect_x},${effect_y})\">(${effect_t},${effect_x},${effect_y})</tspan>`;
+            }
+            return primary_descriptor;
+    }
+}
+
 inspector.display_square_info = function(x, y) {
 
     // First, we find all reverse-causality flags associated with this square
@@ -959,24 +1080,24 @@ inspector.display_square_info = function(x, y) {
     for (let effect_i = 0; effect_i < inspector.reverse_causality_flags[selected_round]["effects"]["active"].length; effect_i++) {
         let active_effect_ID = inspector.reverse_causality_flags[selected_round]["effects"]["active"][effect_i];
         // Is flag at selected square?
-        if (is_flag_at_pos(active_effect_ID, selected_timeslice - 1, x, y)) {
-            active_effects_message_list.push(`${reverse_causality_flag_properties[active_effect_ID]["flag_type"]} happens here, caused by this and this`);
+        if (is_flag_at_pos(active_effect_ID, selected_timeslice, x, y)) {
+            active_effects_message_list.push(inspector.flag_description("effect", "active", active_effect_ID));
         }
     }
     // Inactive effects
     for (let effect_i = 0; effect_i < inspector.reverse_causality_flags[selected_round]["effects"]["inactive"].length; effect_i++) {
         let inactive_effect_ID = inspector.reverse_causality_flags[selected_round]["effects"]["inactive"][effect_i];
         // Is flag at selected square?
-        if (is_flag_at_pos(inactive_effect_ID, selected_timeslice - 1, x, y)) {
-            inactive_effects_message_list.push(`${reverse_causality_flag_properties[inactive_effect_ID]["flag_type"]} would happen here.`);
+        if (is_flag_at_pos(inactive_effect_ID, selected_timeslice, x, y)) {
+            inactive_effects_message_list.push(inspector.flag_description("effect", "inactive", inactive_effect_ID));
         }
     }
     // Buffered effects
     for (let effect_i = 0; effect_i < inspector.reverse_causality_flags[selected_round]["effects"]["buffered"].length; effect_i++) {
         let buffered_effect_ID = inspector.reverse_causality_flags[selected_round]["effects"]["buffered"][effect_i];
         // Is flag at selected square?
-        if (is_flag_at_pos(buffered_effect_ID, selected_timeslice - 1, x, y)) {
-            inactive_effects_message_list.push(`${reverse_causality_flag_properties[buffered_effect_ID]["flag_type"]} is dogmatic in the next round.`);
+        if (is_flag_at_pos(buffered_effect_ID, selected_timeslice, x, y)) {
+            inactive_effects_message_list.push(inspector.flag_description("effect", "buffered", buffered_effect_ID));
         }
     }
     // Activated causes
@@ -984,7 +1105,7 @@ inspector.display_square_info = function(x, y) {
         let activated_cause_ID = inspector.reverse_causality_flags[selected_round]["causes"]["activated"][cause_i];
         // Is flag at selected square?
         if (is_flag_at_pos(activated_cause_ID, selected_timeslice, x, y)) {
-            activated_causes_message_list.push(`${reverse_causality_flag_properties[activated_cause_ID]["flag_type"]} happens here, causing this and this`);
+            activated_causes_message_list.push(inspector.flag_description("cause", "activated", activated_cause_ID));
         }
     }
     // Not activated causes
@@ -992,7 +1113,7 @@ inspector.display_square_info = function(x, y) {
         let not_activated_cause_ID = inspector.reverse_causality_flags[selected_round]["causes"]["not_activated"][cause_i];
         // Is flag at selected square?
         if (is_flag_at_pos(not_activated_cause_ID, selected_timeslice, x, y)) {
-            not_activated_causes_message_list.push(`${reverse_causality_flag_properties[not_activated_cause_ID]["flag_type"]} would happen here, causing this and this`);
+            not_activated_causes_message_list.push(inspector.flag_description("cause", "not_activated", not_activated_cause_ID));
         }
     }
 
@@ -1001,6 +1122,8 @@ inspector.display_square_info = function(x, y) {
     inspector.display_value_list("square", "inactive_effects", inactive_effects_message_list);
     inspector.display_value_list("square", "activated_causes", activated_causes_message_list);
     inspector.display_value_list("square", "not_activated_causes", not_activated_causes_message_list);
+
+    //cameraman.show_square(x, y);
 }
 
 inspector.board_square_click = function(x, y){
@@ -1009,6 +1132,13 @@ inspector.board_square_click = function(x, y){
 
 }
 
+function go_to_square(t, x, y) {
+    select_timeslice(t);
+    show_stones_at_process(selected_round, selected_timeslice, "canon");
+    show_time_jumps_at_time(selected_round, selected_timeslice);
+    cameraman.show_square(x, y);
+    inspector.display_square_info(x, y);
+}
 
 // ----------------------------------------------------------------------------
 // ------------------------------ Document setup ------------------------------
