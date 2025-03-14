@@ -28,6 +28,7 @@ class Abstract_Output():
 
         self.factions = []
         self.faction_armies = [] # ["faction"] = [stone_ID list]
+        self.stone_properties = {} # ["stone_ID"] = {"allegiance", "stone_type", "orientable", "opposable"}
         self.reverse_causality_flags = {"causes" : [], "effects" : []} # List of keys of reverse_causality_flag_properties
         self.reverse_causality_flag_properties = {} # ["flag_ID"] = {"t", "x", "y", "flag_type", "stone_ID", "target_effect"} for flag_IDs important to Scenarios
         # ----------------------- Roundwise properties ------------------------
@@ -60,9 +61,16 @@ class Abstract_Output():
     def set_board_static(self, board_static):
         self.board_static = board_static # [x][y] = square string rep
 
-    def record_faction_armies(self, factions, faction_armies):
+    def record_faction_armies(self, factions, faction_armies, gm_stones):
         self.factions = factions
         self.faction_armies = faction_armies
+        for stone_ID, stone_object in gm_stones.items():
+            self.stone_properties[stone_ID] = {
+                    "allegiance" : stone_object.player_faction,
+                    "stone_type" : stone_object.stone_type,
+                    "orientable" : stone_object.orientable,
+                    "opposable" : stone_object.opposable
+                }
 
     def set_current_turn(self, current_turn):
         self.current_turn = current_turn
@@ -209,7 +217,7 @@ class Abstract_Output():
             #self.reverse_causality_flags["causes"].append(cause_ID)
         for effect_ID in effects_added_this_round:
             self.reverse_causality_flag_properties[effect_ID] = {
-                    "t" : flags[effect_ID].pos.t + 1,
+                    "t" : flags[effect_ID].pos.t + 1, # Since effects are always shifted by one timeslice
                     "x" : flags[effect_ID].pos.x,
                     "y" : flags[effect_ID].pos.y,
                     "flag_type" : flags[effect_ID].flag_type,

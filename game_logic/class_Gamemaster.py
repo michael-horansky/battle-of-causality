@@ -2067,7 +2067,7 @@ class Gamemaster():
         self.rendering_output.set_current_turn(self.current_turn_index)
 
         # Now, we record all the finalised properties, such as stone/flag lists
-        self.rendering_output.record_faction_armies(self.factions, self.faction_armies)
+        self.rendering_output.record_faction_armies(self.factions, self.faction_armies, self.stones)
 
         # Now, we record the ongoing round, using the last round's scenario
         cur_round, active_timeslice = self.round_from_turn(self.current_turn_index)

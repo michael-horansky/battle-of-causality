@@ -106,6 +106,7 @@ class HTMLRenderer(Renderer):
         self.deposit_datum("y_dim", self.render_object.y_dim)
         self.deposit_list("factions", self.render_object.factions)
         self.deposit_list("faction_armies", self.render_object.faction_armies)
+        self.deposit_object("stone_properties", self.render_object.stone_properties)
 
         self.deposit_object("stone_trajectories", self.render_object.stone_trajectories)
         self.deposit_list("stone_actions", self.render_object.stone_actions)
@@ -156,13 +157,6 @@ class HTMLRenderer(Renderer):
         self.commit_to_output("<div id=\"gameside\">")
 
     def close_gameside(self):
-        self.commit_to_output("</div>")
-
-    def draw_game_log(self):
-        self.commit_to_output(f"<div width=\"{self.game_log_width}px\" height=\"{self.game_log_height}px\" id=\"game_log\">")
-
-        self.commit_to_output(f"<p id=\"navigation_label\"></p>")
-
         self.commit_to_output("</div>")
 
 
@@ -249,6 +243,14 @@ class HTMLRenderer(Renderer):
         unused_TJ_clip_path.append("  </clipPath>")
         self.commit_to_output(unused_TJ_clip_path)
 
+        # drop shadow for highlighting elements
+        drop_shadow_filter = []
+        drop_shadow_filter.append("<filter id=\"spotlight\">")
+        drop_shadow_filter.append("  <feDropShadow dx=\"0\" dy=\"0\" stdDeviation=\"15\" flood-color=\"#ffe100\" flood-opacity=\"1\"/>")
+        drop_shadow_filter.append("  <feDropShadow dx=\"0\" dy=\"0\" stdDeviation=\"15\" flood-color=\"#ffe100\" flood-opacity=\"1\"/>")
+        drop_shadow_filter.append("</filter>")
+        self.commit_to_output(drop_shadow_filter)
+
         self.commit_to_output("</defs>")
 
     def open_board_window_camera_scope(self):
@@ -323,12 +325,16 @@ class HTMLRenderer(Renderer):
             for faction_stone_ID in self.render_object.faction_armies[faction]:
                 self.draw_tank(faction, faction_stone_ID)
 
+    def draw_square_highlighter(self):
+        self.board_layer_structure[3].append(f"<polyline id=\"square_highlighter\" points=\"{self.get_polygon_points([[0, 0], [100, 0], [100, 100], [0, 100], [0, 0]], [0, 0])}\" display=\"none\"/>")
+
     def draw_board(self):
         self.open_board_window()
         self.open_board_window_camera_scope()
         self.create_board_layer_structure(5) # every element is first added to this, where index = z-index
         self.draw_board_squares()
         self.draw_stones()
+        self.draw_square_highlighter()
         self.commit_board_layer_structure()
         self.close_board_window_camera_scope()
         self.draw_board_animation_overlay()
@@ -348,7 +354,7 @@ class HTMLRenderer(Renderer):
             table_element.append(f"  </div>")
             table_element.append(f"</div>")
             self.commit_to_output(table_element)"""
-        self.commit_to_output(f"<table id=\"{which_inspector}_info_table class=\"inspector_table\">")
+        self.commit_to_output(f"<table id=\"{which_inspector}_info_table\" class=\"inspector_table\">")
         for table_key, table_label in table_dict.items():
             table_element = []
             table_element.append(f"<tr id=\"{which_inspector}_info_{table_key}_container\" class=\"inspector_table_container\">")
@@ -359,19 +365,37 @@ class HTMLRenderer(Renderer):
         self.commit_to_output(f"</table>")
 
     def draw_stone_inspector(self):
+        # This inspector is used for:
+        #   1. Inspecting stone commands
+        #   2. Administering stone commands
+        self.commit_to_output("<div id=\"stone_inspector\" class=\"inspector\">")
+        self.commit_to_output("  <h1 id=\"stone_inspector_title\" class=\"inspector_title\"></h1>")
+        self.commit_to_output("  <div id=\"stone_inspector_header\" class=\"stone_inspector_part\">")
+        #stone_inspector_object.append("    <p id=\"stone_info_allegiance\"></p>")
+        #stone_inspector_object.append("    <p id=\"stone_info_type\"></p>")
+        #stone_inspector_object.append("    <p id=\"stone_info_startpoint\"></p>")
+        #stone_inspector_object.append("    <p id=\"stone_info_endpoint\"></p>")
+        #stone_inspector_object.append("    <p id=\"stone_info_command\"></p>")
+        self.draw_inspector_table("stone", {"allegiance" : "Allegiance", "stone_type" : "Stone type", "startpoint" : "Start-point", "endpoint" : "End-point"})
         stone_inspector_object = []
-        stone_inspector_object.append("<div id=\"stone_inspector\" class=\"inspector\">")
-        stone_inspector_object.append("  <p id=\"stone_info_allegiance\"></p>")
-        stone_inspector_object.append("  <p id=\"stone_info_type\"></p>")
-        stone_inspector_object.append("  <p id=\"stone_info_startpoint\"></p>")
-        stone_inspector_object.append("  <p id=\"stone_info_endpoint\"></p>")
-        stone_inspector_object.append("  <p id=\"stone_info_command\"></p>")
+        stone_inspector_object.append("  </div>")
+        stone_inspector_object.append("  <div id=\"stone_inspector_commands\" class=\"stone_inspector_part\">")
+        stone_inspector_object.append("  </div>")
         stone_inspector_object.append("</div>")
         self.commit_to_output(stone_inspector_object)
+
+    def draw_tracking_inspector(self):
+        tracking_inspector = []
+        tracking_inspector.append("<div id=\"tracking_inspector\" class=\"inspector\">")
+        tracking_inspector.append("  <p id=\"stone_tracking_label\"></p>")
+        tracking_inspector.append("</div>")
+        self.commit_to_output(tracking_inspector)
+
 
     def draw_square_inspector(self):
         square_inspector_object = []
         self.commit_to_output("<div id=\"square_inspector\" class=\"inspector\">")
+        self.commit_to_output("  <h1 id=\"square_inspector_title\" class=\"inspector_title\"></h1>")
         #square_inspector_object.append("  <p id=\"square_info_used_tp\"></p>")
         #square_inspector_object.append("  <p id=\"square_info_unused_tp\"></p>")
         self.draw_inspector_table("square", {"active_effects" : "Active ante-effects", "activated_causes" : "Activated retro-causes", "inactive_effects" : "Inactive ante-effects", "not_activated_causes" : "Not activated retro-causes"})
@@ -380,6 +404,7 @@ class HTMLRenderer(Renderer):
     def draw_inspectors(self):
         self.open_inspectors()
         self.draw_stone_inspector()
+        self.draw_tracking_inspector()
         self.draw_square_inspector()
         self.close_inspectors()
 
@@ -409,6 +434,15 @@ class HTMLRenderer(Renderer):
         self.commit_to_output([prev_round_button_polygon, prev_round_button_text, active_round_button_object, active_round_button_text, next_round_button_polygon, next_round_button_text])
 
         self.commit_to_output("</svg>\n</div>")
+
+    # --------------------------- Game log methods ----------------------------
+
+    def draw_game_log(self):
+        self.commit_to_output(f"<div width=\"{self.game_log_width}px\" height=\"{self.game_log_height}px\" id=\"game_log\">")
+
+        self.commit_to_output(f"  <p id=\"navigation_label\"></p>")
+
+        self.commit_to_output("</div>")
 
 
     # ---------------------------- Global methods -----------------------------

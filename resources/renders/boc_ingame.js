@@ -58,6 +58,19 @@ function is_flag_at_pos(flag_ID, t, x, y) {
     return (reverse_causality_flag_properties[flag_ID]["t"] == t && reverse_causality_flag_properties[flag_ID]["x"] == x && reverse_causality_flag_properties[flag_ID]["y"] == y);
 }
 
+function find_stone_at_pos(x, y) {
+    for (let faction_i = 0; faction_i < factions.length; faction_i++) {
+        for (let stone_i = 0; stone_i < faction_armies[factions[faction_i]].length; stone_i++) {
+            if (stone_trajectories[selected_round][visible_timeslice]["canon"][faction_armies[factions[faction_i]][stone_i]] != null) {
+                if (arrays_equal(stone_trajectories[selected_round][visible_timeslice]["canon"][faction_armies[factions[faction_i]][stone_i]].slice(0,2), [x, y])) {
+                    return faction_armies[factions[faction_i]][stone_i];
+                }
+            }
+        }
+    }
+    return null;
+}
+
 function bound(val, lower_bound, upper_bound) {
     return Math.max(lower_bound, Math.min(val, upper_bound));
 }
@@ -78,11 +91,11 @@ function arrays_equal(arr1, arr2) {
 }
 
 // Vector algebra
-function vec_add(vec1,vec2){
+function vec_add(vec1, vec2){
     return vec1.map((e,i) => e + vec2[i]);
 }
 
-function vec_sub(vec1,vec2){
+function vec_sub(vec1, vec2){
     return vec1.map((e,i) => e - vec2[i]);
 }
 
@@ -136,7 +149,7 @@ function animated_vector_transformation(vec_start, vec_end, total_frames, frame_
     // total_frames is the number of frames, frame_key is the current frame id.
 
     // linear method: replace with easening!
-    return vec_add(vec_start, vec_scale(vec_sub(vec_end, vec_start), frame_key / total_frames));
+    return vec_add(vec_start, vec_scale(vec_sub(vec_end, vec_start), cubic_bezier(frame_key / total_frames, [0.1, 1])));
 }
 
 function animated_matrix_transformation(mat_start, mat_end, total_frames, frame_key) {
@@ -192,6 +205,7 @@ function select_round(new_round_n, new_timeslice = null) {
 function show_canon_board_slice(round_n, timeslice){
     visible_round = round_n;
     visible_timeslice = timeslice;
+    visible_process = "canon";
     show_stones_at_process(round_n, timeslice, "canon");
     show_time_jumps_at_time(round_n, timeslice);
 }
@@ -235,6 +249,7 @@ function show_stones_at_process(round_n, time, process_key){
     // NOT animated
     // This resets the animation properties (opacity, scale)
     visible_timeslice = time;
+    visible_process = process_key;
     all_factions.forEach(function(faction, faction_index) {
         faction_armies[faction].forEach(function(stone_ID, stone_index){
             let stone_state = stone_trajectories[round_n][time][process_key][`${stone_ID}`];
@@ -390,26 +405,42 @@ animation_manager.play_if_available = function() {
     if (animation_manager.is_playing == false) {
         if (animation_manager.animation_queue.length > 0) {
             let current_animation = animation_manager.animation_queue.shift();
-            animation_manager.is_playing = true;
-            // prepare contextual animation specifications
-            animation_manager.total_frames = animation_manager.dictionary_of_animations[current_animation[0]]["total_frames"];
-            animation_manager.frame_latency = animation_manager.dictionary_of_animations[current_animation[0]]["frame_latency"];
-            animation_manager.dictionary_of_animations[current_animation[0]]["preparation"](current_animation.slice(1));
-            animation_manager.animation_daemon = setInterval(animation_manager.shift_frame_method, animation_manager.frame_latency, current_animation);
+            if (typeof(current_animation) == 'string') {
+                // Magic word
+                switch(current_animation) {
+                    case "reset_to_canon":
+                        visible_process = "canon";
+                        cameraman.apply_tracking();
+                }
+                animation_manager.play_if_available();
+            } else {
+                animation_manager.is_playing = true;
+                // prepare contextual animation specifications
+                animation_manager.total_frames = animation_manager.dictionary_of_animations[current_animation[0]]["total_frames"];
+                animation_manager.frame_latency = animation_manager.dictionary_of_animations[current_animation[0]]["frame_latency"];
+                animation_manager.dictionary_of_animations[current_animation[0]]["preparation"](current_animation.slice(1));
+                animation_manager.animation_daemon = setInterval(animation_manager.shift_frame_method, animation_manager.frame_latency, current_animation);
+            }
         }
     }
 }
+
 animation_manager.add_to_queue = function(list_of_animations) {
     // Each animation is a list, where the first element is a key in dictionary_of_animations
     list_of_animations.forEach(function(animation_args, index) {
-        switch(animation_args[0]) {
-            case "change_process":
-                if (!(inbetweens[animation_args[1]][animation_args[2]][animation_args[3]]["redundant"])) {
+        if (typeof(animation_args) == 'string') {
+            // It's a magic word!
+            animation_manager.animation_queue.push(animation_args);
+        } else {
+            switch(animation_args[0]) {
+                case "change_process":
+                    if (!(inbetweens[animation_args[1]][animation_args[2]][animation_args[3]]["redundant"])) {
+                        animation_manager.animation_queue.push(animation_args);
+                    }
+                    break;
+                default:
                     animation_manager.animation_queue.push(animation_args);
-                }
-                break;
-            default:
-                animation_manager.animation_queue.push(animation_args);
+            }
         }
     });
     //animation_manager.animation_queue = animation_manager.animation_queue.concat(list_of_animations);
@@ -520,6 +551,20 @@ animation_manager.change_process_get_frame = function(animation_args) {
     show_stones_at_state(inbetweens[round_n][s_time][s_process]["new_stones"], inbetweens[round_n][s_time][s_process]["new_stones_states"], 1, animated_scalar_transformation(0.0, 1.0, animation_manager.total_frames, contextual_frame_key));
     show_ids_at_state(inbetweens[round_n][s_time][s_process]["new_time_jumps"][0], null, animated_scalar_transformation(0.0, 1.0, animation_manager.total_frames, contextual_frame_key));
     show_ids_at_state(inbetweens[round_n][s_time][s_process]["old_time_jumps"][0], null, animated_scalar_transformation(1.0, 0.0, animation_manager.total_frames, contextual_frame_key));
+    // If tracking, we find the tracking stone's state
+    if (cameraman.tracking_stone != null) {
+        if (inbetweens[round_n][s_time][s_process]["new_stones"].includes(cameraman.tracking_stone)) {
+            cameraman.apply_tracking(inbetweens[round_n][s_time][s_process]["new_stones_states"][inbetweens[round_n][s_time][s_process]["new_stones"].indexOf(cameraman.tracking_stone)]);
+            cameraman.used_by_an_animation = true;
+        } else if (inbetweens[round_n][s_time][s_process]["dest_stones"].includes(cameraman.tracking_stone)) {
+            cameraman.apply_tracking(inbetweens[round_n][s_time][s_process]["dest_stones_states"][inbetweens[round_n][s_time][s_process]["dest_stones"].indexOf(cameraman.tracking_stone)]);
+            cameraman.used_by_an_animation = true;
+        } else if (inbetweens[round_n][s_time][s_process]["cont_stones"].includes(cameraman.tracking_stone)) {
+            let tracking_stone_index = inbetweens[round_n][s_time][s_process]["cont_stones"].indexOf(cameraman.tracking_stone);
+            cameraman.apply_tracking(animated_vector_transformation(inbetweens[round_n][s_time][s_process]["cont_stones_states"][0][tracking_stone_index], inbetweens[round_n][s_time][s_process]["cont_stones_states"][1][tracking_stone_index], animation_manager.total_frames, contextual_frame_key));
+            cameraman.used_by_an_animation = true;
+        }
+    }
 }
 animation_manager.change_process_cleanup = function(animation_args) {
     let round_n = animation_args[0];
@@ -548,6 +593,10 @@ animation_manager.change_process_cleanup = function(animation_args) {
             document.getElementById(new_time_jump_id).style.visibility = "hidden";
         });
     }
+    // Update camera
+    cameraman.used_by_an_animation = false;
+    // Only if the tracking stone changed position or recently appeared, we reset the highlight
+    cameraman.apply_tracking();
 }
 
 // change_round
@@ -643,6 +692,7 @@ cameraman.camera_zoom_status = "idle";
 cameraman.camera_move_keys_pressed = 0;
 cameraman.camera_move_directions = {"w" : false, "d" : false, "s" : false, "a" : false};
 cameraman.camera_zoom_daemon = null;
+cameraman.camera_zoom_directions = {"in" : false, "out" : false};
 cameraman.camera_move_daemon = null;
 // Manimpulation constants
 cameraman.zoom_speed = 1.01;
@@ -655,6 +705,13 @@ cameraman.cy = 0.5;
 // parametrised by a single parameter, here chosen to represent the coefficient
 // of the base length of a board square
 cameraman.fov_coef = 1.0;
+// Tracking properties
+cameraman.tracking_stone = null;
+cameraman.is_tracking_stone_onscreen = false;
+cameraman.used_by_an_animation = false;
+
+// --------------------------------- Methods ----------------------------------
+
 cameraman.put_down_tripod = function() {
     // Find the default setting, which just about displays the entire board
     let default_width_fov_coef = board_window_width / (x_dim * 100);
@@ -673,37 +730,104 @@ cameraman.apply_camera = function() {
     cameraman.subject.style.transform = `translate(${cameraman.offset_x + x_dim * 100 * (0.5 - cameraman.cx) * cameraman.fov_coef}px,${cameraman.offset_y + y_dim * 100 * (0.5 - cameraman.cy) * cameraman.fov_coef}px) scale(${cameraman.fov_coef})`;
 }
 
+cameraman.apply_tracking = function(tracking_stone_state = null) {
+    // tracking_stone_state is used mid-animations
+    if (tracking_stone_state == null) {
+        if (cameraman.tracking_stone != null) {
+            if (stone_trajectories[visible_round][visible_timeslice][visible_process][cameraman.tracking_stone] != null) {
+                cameraman.cx = (stone_trajectories[visible_round][visible_timeslice][visible_process][cameraman.tracking_stone][0] + 0.5) / x_dim;
+                cameraman.cy = (stone_trajectories[visible_round][visible_timeslice][visible_process][cameraman.tracking_stone][1] + 0.5) / y_dim;
+                cameraman.is_tracking_stone_onscreen = true;
+                if (visible_process == "canon") {
+                    inspector.display_square_info(stone_trajectories[visible_round][visible_timeslice][visible_process][cameraman.tracking_stone][0], stone_trajectories[visible_round][visible_timeslice][visible_process][cameraman.tracking_stone][1]);
+                    inspector.display_stone_info(stone_trajectories[visible_round][visible_timeslice][visible_process][cameraman.tracking_stone][0], stone_trajectories[visible_round][visible_timeslice][visible_process][cameraman.tracking_stone][1]);
+                }
+            } else {
+                cameraman.is_tracking_stone_onscreen = false;
+                if (inspector.highlighted_square != null) {
+                    inspector.display_stone_info(inspector.highlighted_square[0], inspector.highlighted_square[1]);
+                    inspector.display_square_info(inspector.highlighted_square[0], inspector.highlighted_square[1]);
+                }
+            }
+        } else {
+            cameraman.is_tracking_stone_onscreen = false;
+            if (inspector.highlighted_square != null) {
+                inspector.display_stone_info(inspector.highlighted_square[0], inspector.highlighted_square[1]);
+                inspector.display_square_info(inspector.highlighted_square[0], inspector.highlighted_square[1]);
+            }
+        }
+    } else {
+        cameraman.cx = (tracking_stone_state[0] + 0.5) / x_dim;
+        cameraman.cy = (tracking_stone_state[1] + 0.5) / y_dim;
+        cameraman.is_tracking_stone_onscreen = true;
+    }
+    cameraman.apply_camera();
+}
+
+// -------------------------- Camera stone tracking ---------------------------
+// Tracking has the following effects:
+//   1. A panel shows up at the bottom of Stone inspector, allowing the player
+//      to view the endpoints of the stone's trajectory and turn off tracking
+//   2. The camera follows the stone, affixing it to the centre of the window
+//   3. Auto-selecting the stone's trajectory points for the Square inspector
+// Tracking can be turned on in the following ways:
+//   1. Clicking on a stone highlight
+//   2. Clicking on the button "Track this stone" in the Stone inspector panel
+//   3. Double-clicking an occupied square
+// And it can be turned off in the following ways:
+//   1. Clicking the "Turn off tracking" button in the tracking inspector
+//   2. Resetting the camera, e.g. by pressing the "R" key
+cameraman.track_stone = function(stone_ID) {
+    // If null, tracking is turned off
+    cameraman.tracking_stone = stone_ID;
+    document.getElementById("stone_tracking_label").innerHTML = (stone_ID == null ? "Stone tracking off" : `Tracking a ${stone_highlight(stone_ID)}. <span class=\"inline_command\" onclick=\"cameraman.track_stone(null)\">Turn off</span>`);
+    set_stone_highlight(null); // We turn off the highlight
+    cameraman.apply_tracking();
+}
+
+
 cameraman.reset_camera = function() {
     cameraman.fov_coef = cameraman.default_fov_coef;
     cameraman.cx = 0.5;
     cameraman.cy = 0.5;
+    cameraman.track_stone(null);
     cameraman.apply_camera();
 }
 
-cameraman.zoom_in = function() {
-    cameraman.fov_coef = Math.min(cameraman.fov_coef * cameraman.zoom_speed, cameraman.max_fov_coef);
-    cameraman.apply_camera();
+
+// ------------------------------ Camera zooming ------------------------------
+
+cameraman.zoom_camera = function() {
+    if (cameraman.camera_zoom_directions["in"] && (! cameraman.camera_zoom_directions["out"])) {
+        cameraman.fov_coef = Math.min(cameraman.fov_coef * cameraman.zoom_speed, cameraman.max_fov_coef);
+    } else if (cameraman.camera_zoom_directions["out"] && (! cameraman.camera_zoom_directions["in"])) {
+        cameraman.fov_coef = Math.max(cameraman.fov_coef / cameraman.zoom_speed, cameraman.default_fov_coef);
+    }
+    if (!cameraman.used_by_an_animation) {
+        cameraman.apply_camera();
+    }
 }
-cameraman.zoom_out = function() {
-    cameraman.fov_coef = Math.max(cameraman.fov_coef / cameraman.zoom_speed, cameraman.default_fov_coef);
-    cameraman.apply_camera();
-}
+
+// ----------------------------- Camera movement ------------------------------
+
 cameraman.move_camera = function() {
-    if (cameraman.camera_move_directions["w"]) {
-        cameraman.cy -= cameraman.movement_speed / cameraman.fov_coef;
+    if (!(cameraman.tracking_stone != null && cameraman.is_tracking_stone_onscreen)) {
+        if (cameraman.camera_move_directions["w"]) {
+            cameraman.cy -= cameraman.movement_speed / cameraman.fov_coef;
+        }
+        if (cameraman.camera_move_directions["d"]) {
+            cameraman.cx += cameraman.movement_speed / cameraman.fov_coef;
+        }
+        if (cameraman.camera_move_directions["s"]) {
+            cameraman.cy += cameraman.movement_speed / cameraman.fov_coef;
+        }
+        if (cameraman.camera_move_directions["a"]) {
+            cameraman.cx -= cameraman.movement_speed / cameraman.fov_coef;
+        }
+        cameraman.cx = Math.max(0.0, Math.min(1.0, cameraman.cx));
+        cameraman.cy = Math.max(0.0, Math.min(1.0, cameraman.cy));
+        cameraman.apply_camera();
     }
-    if (cameraman.camera_move_directions["d"]) {
-        cameraman.cx += cameraman.movement_speed / cameraman.fov_coef;
-    }
-    if (cameraman.camera_move_directions["s"]) {
-        cameraman.cy += cameraman.movement_speed / cameraman.fov_coef;
-    }
-    if (cameraman.camera_move_directions["a"]) {
-        cameraman.cx -= cameraman.movement_speed / cameraman.fov_coef;
-    }
-    cameraman.cx = Math.max(0.0, Math.min(1.0, cameraman.cx));
-    cameraman.cy = Math.max(0.0, Math.min(1.0, cameraman.cy));
-    cameraman.apply_camera();
 }
 
 cameraman.show_square = function(x, y) {
@@ -711,6 +835,8 @@ cameraman.show_square = function(x, y) {
     cameraman.cy = (y + 0.5) / y_dim;
     cameraman.apply_camera();
 }
+
+// --------------------------- Camera event parsers ---------------------------
 
 cameraman.move_key_down = function(move_key) {
     if (cameraman.camera_move_keys_pressed == 0) {
@@ -730,6 +856,41 @@ cameraman.move_key_up = function(move_key) {
     if (cameraman.camera_move_keys_pressed == 0) {
         clearInterval(cameraman.camera_move_daemon);
     }
+}
+
+cameraman.zoom_key_down = function(zoom_key) {
+    if (!(cameraman.camera_zoom_directions["in"] || cameraman.camera_zoom_directions["out"])) {
+        cameraman.camera_zoom_daemon = setInterval(cameraman.zoom_camera, cameraman.refresh_rate);
+    }
+    if (!(cameraman.camera_zoom_directions[zoom_key])) {
+        cameraman.camera_zoom_directions[zoom_key] = true;
+    }
+}
+
+cameraman.zoom_key_up = function(zoom_key) {
+    if (cameraman.camera_zoom_directions[zoom_key]) {
+        cameraman.camera_zoom_directions[zoom_key] = false;
+    }
+    if (!(cameraman.camera_zoom_directions["in"] || cameraman.camera_zoom_directions["out"])) {
+        clearInterval(cameraman.camera_zoom_daemon);
+    }
+}
+
+var highlighted_stone = null;
+function set_stone_highlight(stone_ID) {
+    if (stone_ID != highlighted_stone && highlighted_stone != null) {
+        // Change of the guard
+        document.getElementById(`stone_${highlighted_stone}`).style.filter = "";
+    }
+    highlighted_stone = stone_ID
+    if (stone_ID != null) {
+        document.getElementById(`stone_${stone_ID}`).style.filter = "url(#spotlight)";
+    }
+}
+
+
+function stone_highlight(stone_ID) {
+    return `<span class=\"stone_highlight\" onmouseenter=\"set_stone_highlight(${stone_ID})\" onmouseleave=\"set_stone_highlight(null)\" onclick=\"cameraman.track_stone(${stone_ID})\">${stone_properties[stone_ID]["stone_type"].toUpperCase()} [P. ${stone_properties[stone_ID]["allegiance"]}]</span>`;
 }
 
 // ----------------------------------------------------------------------------
@@ -760,16 +921,10 @@ function parse_keydown_event(event) {
         case "ArrowDown":
             break
         case "q":
-            if (cameraman.camera_zoom_status == "idle") {
-                cameraman.camera_zoom_status = "running";
-                cameraman.camera_zoom_daemon = setInterval(cameraman.zoom_in, cameraman.refresh_rate);
-            }
+            cameraman.zoom_key_down("in");
             break;
         case "e":
-            if (cameraman.camera_zoom_status == "idle") {
-                cameraman.camera_zoom_status = "running";
-                cameraman.camera_zoom_daemon = setInterval(cameraman.zoom_out, cameraman.refresh_rate);
-            }
+            cameraman.zoom_key_down("out");
             break;
         case "r":
             if (cameraman.camera_zoom_status == "running") {
@@ -805,12 +960,10 @@ function parse_keyup_event(event) {
     //alert(event.key);
     switch(event.key) {
         case "q":
-            clearInterval(cameraman.camera_zoom_daemon);
-            cameraman.camera_zoom_status = "idle";
+            cameraman.zoom_key_up("in");
             break;
         case "e":
-            clearInterval(cameraman.camera_zoom_daemon);
-            cameraman.camera_zoom_status = "idle";
+            cameraman.zoom_key_up("out");
             break;
         case "w":
             cameraman.move_key_up(event.key);
@@ -836,6 +989,7 @@ function show_next_timeslice(){
         for (let process_key_index = 0; process_key_index < process_keys.length - 1; process_key_index++) {
             animation_manager.add_to_queue([["change_process", selected_round, selected_timeslice, process_keys[process_key_index], false]]);
         }
+        animation_manager.add_to_queue(["reset_to_canon"]);
     }
 }
 
@@ -846,6 +1000,7 @@ function show_prev_timeslice(){
             animation_manager.add_to_queue([["change_process", selected_round, selected_timeslice + 1, process_keys[process_key_index], true]]);
         }
         animation_manager.add_to_queue([["change_process", selected_round, selected_timeslice, "canon", true]]);
+        animation_manager.add_to_queue(["reset_to_canon"]);
     }
 }
 
@@ -890,6 +1045,7 @@ inspector.record_inspector_elements = function(which_inspector, element_name_lis
     element_name_list.forEach(function(element_name, element_index) {
         inspector.inspector_elements[which_inspector][element_name] = document.getElementById(`${which_inspector}_info_${element_name}`);
     });
+    inspector.inspector_elements[which_inspector]["TITLE"] = document.getElementById(`${which_inspector}_inspector_title`);
 }
 inspector.display_value_list = function(which_inspector, element_name, value_list) {
     html_object = "";
@@ -954,6 +1110,8 @@ inspector.organise_reverse_causality_flags = function() {
     }
 }
 
+// ----------------------- Human readable text methods ------------------------
+
 inspector.human_readable_flag = function(action_role, flag_significance, flag_status, flag_ID) {
     // action_role defines the role of the flag in the sentence
     // flag_significance: cause or effect
@@ -965,7 +1123,7 @@ inspector.human_readable_flag = function(action_role, flag_significance, flag_st
                         case "active":
                             switch(reverse_causality_flag_properties[flag_ID]["flag_type"]) {
                                 case "time_jump_in":
-                                    return `A <span class=\"stone_highlight\">STONE</span> time-jumps in`;
+                                    return `A ${stone_highlight(reverse_causality_flag_properties[flag_ID]["stone_ID"])} time-jumps in`;
                                 case "spawn_bomb":
                                     return `A bomb explodes`;
 
@@ -973,7 +1131,7 @@ inspector.human_readable_flag = function(action_role, flag_significance, flag_st
                         case "inactive":
                             switch(reverse_causality_flag_properties[flag_ID]["flag_type"]) {
                                 case "time_jump_in":
-                                    return `A <span class=\"stone_highlight\">STONE</span> would time-jump in`;
+                                    return `A ${stone_highlight(reverse_causality_flag_properties[flag_ID]["stone_ID"])} would time-jump in`;
                                 case "spawn_bomb":
                                     return `A bomb would explode`;
 
@@ -981,7 +1139,7 @@ inspector.human_readable_flag = function(action_role, flag_significance, flag_st
                         case "buffered":
                             switch(reverse_causality_flag_properties[flag_ID]["flag_type"]) {
                                 case "time_jump_in":
-                                    return `A <span class=\"stone_highlight\">STONE</span> is set to time-jump in`;
+                                    return `A ${stone_highlight(reverse_causality_flag_properties[flag_ID]["stone_ID"])} is set to time-jump in`;
                                 case "spawn_bomb":
                                     return `A bomb is set to explode`;
 
@@ -992,19 +1150,19 @@ inspector.human_readable_flag = function(action_role, flag_significance, flag_st
                         case "activated":
                             switch(reverse_causality_flag_properties[flag_ID]["flag_type"]) {
                                 case "time_jump_out":
-                                    return `A <span class=\"stone_highlight\">STONE</span> time-jumps out`;
+                                    return `A ${stone_highlight(reverse_causality_flag_properties[flag_ID]["stone_ID"])} time-jumps out`;
                                 case "attack":
                                     // switch stone type
-                                    return `A <span class=\"stone_highlight\">STONE</span> (attacks? drops a bomb?)`;
+                                    return `A ${stone_highlight(reverse_causality_flag_properties[flag_ID]["stone_ID"])} (attacks? drops a bomb?)`;
 
                             }
                         case "not_activated":
                             switch(reverse_causality_flag_properties[flag_ID]["flag_type"]) {
                                 case "time_jump_out":
-                                    return `A <span class=\"stone_highlight\">STONE</span> would time-jump out`;
+                                    return `A ${stone_highlight(reverse_causality_flag_properties[flag_ID]["stone_ID"])} would time-jump out`;
                                 case "attack":
                                     // switch stone type
-                                    return `A <span class=\"stone_highlight\">STONE</span> (would attack? would drop a bomb?)`;
+                                    return `A ${stone_highlight(reverse_causality_flag_properties[flag_ID]["stone_ID"])} (would attack? would drop a bomb?)`;
 
                             }
                     }
@@ -1014,7 +1172,7 @@ inspector.human_readable_flag = function(action_role, flag_significance, flag_st
                 case "effect":
                     switch(reverse_causality_flag_properties[flag_ID]["flag_type"]) {
                         case "time_jump_in":
-                            return `causing a <span class=\"stone_highlight\">STONE</span> to time-jump in`;
+                            return `causing a ${stone_highlight(reverse_causality_flag_properties[flag_ID]["stone_ID"])} to time-jump in`;
                         case "spawn_bomb":
                             return `causing a bomb to explode`;
 
@@ -1022,10 +1180,10 @@ inspector.human_readable_flag = function(action_role, flag_significance, flag_st
                 case "cause":
                     switch(reverse_causality_flag_properties[flag_ID]["flag_type"]) {
                         case "time_jump_out":
-                            return `caused by a <span class=\"stone_highlight\">STONE</span> time-jumping out`;
+                            return `caused by a ${stone_highlight(reverse_causality_flag_properties[flag_ID]["stone_ID"])} time-jumping out`;
                         case "attack":
                             // switch stone type
-                            return `caused by a <span class=\"stone_highlight\">STONE</span> (attacking? dropping a bomb?)`;
+                            return `caused by a ${stone_highlight(reverse_causality_flag_properties[flag_ID]["stone_ID"])} (attacking? dropping a bomb?)`;
 
                     }
             }
@@ -1066,6 +1224,35 @@ inspector.flag_description = function(flag_significance, flag_status, flag_ID) {
                 primary_descriptor += `, ${inspector.human_readable_flag("secondary", "effect", corresponding_effect_status, corresponding_effect_ID)} at <span class=\"pos_highlight\" onclick=\"go_to_square(${effect_t},${effect_x},${effect_y})\">(${effect_t},${effect_x},${effect_y})</tspan>`;
             }
             return primary_descriptor;
+    }
+}
+
+// ---------------------------- Stone info methods ----------------------------
+
+inspector.display_stone_info = function(x, y) {
+    // Is there even a stone present?
+    let stone_ID = find_stone_at_pos(x, y);
+    inspector.inspector_elements["stone"]["TITLE"].innerHTML = (stone_ID == null ? "No stone selected" : `A ${stone_highlight(stone_ID)} selected`);
+}
+
+// --------------------------- Square info methods ----------------------------
+
+inspector.highlighted_square = null;
+inspector.set_square_highlight = function(new_square) {
+    if (inspector.highlighted_square != null) {
+        if (new_square == null) {
+            // Change of the guard
+            document.getElementById(`square_highlighter`).style.display = "none";
+        }
+        if(!arrays_equal(new_square, inspector.highlighted_square)) {
+            // Change of the guard
+            document.getElementById(`square_highlighter`).style.display = "none";
+        }
+    }
+    inspector.highlighted_square = new_square;
+    if (inspector.highlighted_square != null) {
+        document.getElementById(`square_highlighter`).style.display = "inline";
+        document.getElementById(`square_highlighter`).style.transform = `translate(${inspector.highlighted_square[0] * 100}px,${inspector.highlighted_square[1] * 100}px)`;
     }
 }
 
@@ -1123,10 +1310,15 @@ inspector.display_square_info = function(x, y) {
     inspector.display_value_list("square", "activated_causes", activated_causes_message_list);
     inspector.display_value_list("square", "not_activated_causes", not_activated_causes_message_list);
 
-    //cameraman.show_square(x, y);
+    // Highligh square, reset stone highlight
+    inspector.set_square_highlight([x, y]);
+    inspector.inspector_elements["square"]["TITLE"].innerHTML = `A SQUARE TYPE selected`;
+    set_stone_highlight(null);
 }
 
 inspector.board_square_click = function(x, y){
+    // We get information about the stone
+    inspector.display_stone_info(x, y);
     // We get information about the square
     inspector.display_square_info(x, y);
 
@@ -1137,6 +1329,7 @@ function go_to_square(t, x, y) {
     show_stones_at_process(selected_round, selected_timeslice, "canon");
     show_time_jumps_at_time(selected_round, selected_timeslice);
     cameraman.show_square(x, y);
+    inspector.display_stone_info(x, y);
     inspector.display_square_info(x, y);
 }
 
@@ -1309,6 +1502,7 @@ for (let inbetween_round_index = 0; inbetween_round_index <= active_round; inbet
 // -------------------------- Initial display setup ---------------------------
 var selected_round = active_round; // Selected by GUI logic, not affected by animations
 var visible_round = selected_round; // Displayed by the GUI, affected by animations
+var visible_process = "canon";
 show_active_timeslice();
 
 // Set up the camera
