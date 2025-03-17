@@ -1043,7 +1043,7 @@ class Gamemaster():
                     self.conflicting_squares[t].remove(cur_pos)
 
         if save_to_output:
-            self.save_timeslice_to_output(rendering_round, t, "pushes")
+            self.save_timeslice_to_output(rendering_round, t, "pushes", assume_destruction = False)
 
         # Capture resolution
         squares_to_be_checked = squares_with_capture.copy()
@@ -1084,7 +1084,7 @@ class Gamemaster():
             self.board_dynamic[t][x][y].remove_stones()
 
         if save_to_output:
-            self.save_timeslice_to_output(rendering_round, t, "destructions")
+            self.save_timeslice_to_output(rendering_round, t, "destructions", assume_destruction = True)
 
     # --------------------- Temporal conflict resolution
 
@@ -1440,11 +1440,15 @@ class Gamemaster():
                             action_array = [self.stones[stone_ID].stone_type, "attack", cur_x, cur_y, stone_action_msg.msg.x, stone_action_msg.msg.y]
                             self.rendering_output.add_stone_action(rendering_round, t, action_array)
 
-    def save_timeslice_to_output(self, output_round, output_t, process_key):
+    def save_timeslice_to_output(self, output_round, output_t, process_key, assume_destruction = False):
         for x in range(self.x_dim):
             for y in range(self.y_dim):
                 for stone_ID in self.board_dynamic[output_t][x][y].stones:
                     self.rendering_output.stone_trajectories[output_round][output_t][process_key][stone_ID] = [x, y] + self.board_dynamic[output_t][x][y].stone_properties[stone_ID]
+        if assume_destruction:
+            for prev_stone_ID, prev_stone_state in self.rendering_output.stone_trajectories[output_round][output_t][Abstract_Output.shift_process(process_key, -1)].items():
+                if prev_stone_state is not None and self.rendering_output.stone_trajectories[output_round][output_t][process_key][prev_stone_ID] is None:
+                    self.rendering_output.add_stone_endpoint(output_round, prev_stone_ID, "end", "destruction", STPos(output_t, prev_stone_state[0], prev_stone_state[1]))
 
 
     def execute_moves(self, read_causality_trackers = False, max_turn_index = None, precanonisation = False, save_to_output = False):
@@ -1557,12 +1561,12 @@ class Gamemaster():
                             self.place_stone_on_board(STPos(0, x, y), cur_flag.stone_ID, [cur_flag.flag_args[1]])
                             self.stone_causal_freedom[cur_flag.stone_ID] = 0
                             if save_to_output:
-                                self.rendering_output.add_stone_endpoint(rendering_round, cur_flag.stone_ID, "start", "setup")
+                                self.rendering_output.add_stone_endpoint(rendering_round, cur_flag.stone_ID, "start", "setup", STPos(0, x, y))
                         if cur_flag.flag_type == "time_jump_in":
                             self.place_stone_on_board(STPos(0, x, y), cur_flag.stone_ID, [cur_flag.flag_args[1]])
                             self.stone_causal_freedom[cur_flag.stone_ID] = 0
                             if save_to_output:
-                                self.rendering_output.add_stone_endpoint(rendering_round, cur_flag.stone_ID, "start", "TJI")
+                                self.rendering_output.add_stone_endpoint(rendering_round, cur_flag.stone_ID, "start", "TJI", STPos(0, x, y))
                                 self.rendering_output.add_time_jump(rendering_round, 0, x, y, "used", "TJI")
                         if cur_flag.flag_type == "spawn_bomb":
                             self.board_actions[0][x][y]["explosion"].append(cur_flag_ID)
@@ -1580,7 +1584,7 @@ class Gamemaster():
             # moves which result in conflict.
 
             if save_to_output:
-                self.save_timeslice_to_output(rendering_round, t, "flags")
+                self.save_timeslice_to_output(rendering_round, t, "flags", assume_destruction = False)
 
 
             # -------------------- 1. Conflict resolution ---------------------
@@ -1657,7 +1661,7 @@ class Gamemaster():
                             self.move_stone_forward_in_time(stone_ID, x, y, t, t + 1)
 
             if save_to_output:
-                self.save_timeslice_to_output(rendering_round, t, "tagscreens")
+                self.save_timeslice_to_output(rendering_round, t, "tagscreens", assume_destruction = False)
 
 
             # --------------- 3. Stone/board actions resolution ---------------
@@ -1674,7 +1678,7 @@ class Gamemaster():
 
 
             if save_to_output:
-                self.save_timeslice_to_output(rendering_round, t, "canon")
+                self.save_timeslice_to_output(rendering_round, t, "canon", assume_destruction = True)
 
             # At this moment, the time-slice t is in its canonical state, and stone history may be recorded
             self.record_stones_at_time(t)
@@ -1729,6 +1733,8 @@ class Gamemaster():
                         # If tag locked and this is final timeslice, we set as causally locked
                         if t == self.t_dim - 1 and self.stones[stone_ID].has_been_tag_locked:
                             self.stone_causal_freedom[stone_ID] = None
+                            if save_to_output:
+                                self.rendering_output.add_stone_endpoint(rendering_round, stone_ID, "end", "tag_locked", STPos(t, x, y))
                         else:
                             self.stone_causal_freedom[stone_ID] = t
 
@@ -1765,12 +1771,12 @@ class Gamemaster():
                                 self.place_stone_on_board(STPos(t+1, x, y), cur_flag.stone_ID, [cur_flag.flag_args[1]])
                                 self.stone_causal_freedom[cur_flag.stone_ID] = t+1
                                 if save_to_output:
-                                    self.rendering_output.add_stone_endpoint(rendering_round, cur_flag.stone_ID, "start", "setup")
+                                    self.rendering_output.add_stone_endpoint(rendering_round, cur_flag.stone_ID, "start", "setup", STPos(t+1, x, y))
                             if cur_flag.flag_type == "time_jump_in":
                                 self.place_stone_on_board(STPos(t+1, x, y), cur_flag.stone_ID, [cur_flag.flag_args[1]])
                                 self.stone_causal_freedom[cur_flag.stone_ID] = t+1
                                 if save_to_output:
-                                    self.rendering_output.add_stone_endpoint(rendering_round, cur_flag.stone_ID, "start", "TJI")
+                                    self.rendering_output.add_stone_endpoint(rendering_round, cur_flag.stone_ID, "start", "TJI", STPos(t+1, x, y))
                             # For the following flags, the stone has to be present in the current time-slice
                             if cur_flag.flag_type == "spatial_move":
                                 self.place_stone_on_board(STPos(t+1, cur_flag.flag_args[0], cur_flag.flag_args[1]), cur_flag.stone_ID, [cur_flag.flag_args[2]])
@@ -1794,7 +1800,7 @@ class Gamemaster():
                             # but not TJOs added together with new TJIs
                             self.stone_causal_freedom[cur_flag.stone_ID] = None
                             if save_to_output:
-                                self.rendering_output.add_stone_endpoint(rendering_round, cur_flag.stone_ID, "end", "TJO")
+                                self.rendering_output.add_stone_endpoint(rendering_round, cur_flag.stone_ID, "end", "TJO", STPos(t, x, y))
 
                         # If the flag effects a previous flag, we read it here. These can be any flags!
                         if read_causality_trackers and cur_flag.effect is not None:
@@ -1808,10 +1814,13 @@ class Gamemaster():
                             if cur_flag_ID in self.causes_by_round[max_round_number]:
                                 self.rendering_output.add_activated_buffered_cause(rendering_round, cur_flag_ID)
 
-                    # Stones whose causal freedom is still t are determined with finality
-                    for i in range(len(undetermined_stones) - 1, -1, -1):
-                        if self.stone_causal_freedom[undetermined_stones[i]] == t:
-                            undetermined_stones.pop(i)
+            # Stones whose causal freedom is still t are determined with finality
+            for i in range(len(undetermined_stones) - 1, -1, -1):
+                if self.stone_causal_freedom[undetermined_stones[i]] == t:
+                    if save_to_output:
+                        final_x, final_y, final_a = self.stones[undetermined_stones[i]].history[t]
+                        self.rendering_output.add_stone_endpoint(rendering_round, undetermined_stones[i], "end", "causally_free", STPos(t, final_x, final_y))
+                    undetermined_stones.pop(i)
 
         return(result_causality_trackers)
 
@@ -1944,11 +1953,11 @@ class Gamemaster():
                     if output_message.header == "commands added":
                         self.commit_commands(output_message.msg, self.current_turn_index, player)
                     elif output_message.header == "pass":
-                        # We need to commit an empty datapoint, otherwise game status will think the player still needs to make his turn
+                        # We need to commit an empty datapoint, otherwise game status will think the player still needs to make their turn
                         self.commit_commands([], self.current_turn_index, player)
                     elif output_message.header == "option":
                         if output_message.msg == "quit":
-                            self.exit_routine()
+                            self.exit_routine(player)
                             return(0)
 
 
@@ -1975,7 +1984,7 @@ class Gamemaster():
             if current_game_winner is not None:
                 self.print_heading_message(f"Player {current_game_winner} wins the game!", 0)
                 self.outcome = (constants.Gamemaster_delim).join(["win", current_game_winner])
-                self.exit_routine()
+                self.exit_routine(None)
                 return(0)
 
             self.round_number += 1
@@ -1991,8 +2000,8 @@ class Gamemaster():
         self.print_board_horizontally(active_turn = self.current_turn_index, highlight_active_timeslice = True)
 
         if self.did_player_finish_turn(player, self.current_turn_index):
-            # This player has already submitted his moves
-            self.print_heading_message(f"Player {player} has already finished his turn, and is waiting for his opponent.", 2)
+            # This player has already submitted their moves
+            self.print_heading_message(f"Player {player} has already finished their turn, and is waiting for their opponent.", 2)
             # In case key does not exist, we go ahead and populate with empty string
             if player not in self.flags_by_turn[self.current_turn_index].keys():
                 self.commit_commands([], self.current_turn_index, player)
@@ -2002,11 +2011,11 @@ class Gamemaster():
             if output_message.header == "commands added":
                 self.commit_commands(output_message.msg, self.current_turn_index, player)
             elif output_message.header == "pass":
-                # We need to commit an empty datapoint, otherwise game status will think the player still needs to make his turn
+                # We need to commit an empty datapoint, otherwise game status will think the player still needs to make their turn
                 self.commit_commands([], self.current_turn_index, player)
             elif output_message.header == "option":
                 if output_message.msg == "quit":
-                    self.exit_routine()
+                    self.exit_routine(player)
                     return(0)
 
         # For every player that didn't play their turn yet, but has no causally
@@ -2045,7 +2054,7 @@ class Gamemaster():
                 if current_game_winner is not None:
                     self.print_heading_message(f"Player {current_game_winner} wins the game!", 0)
                     self.outcome = (constants.Gamemaster_delim).join(["win", current_game_winner])
-                    self.exit_routine()
+                    self.exit_routine(player)
                     return(0)
 
                 self.effects_by_round.append([])
@@ -2056,11 +2065,14 @@ class Gamemaster():
             self.current_turn_index += 1
             self.open_game(player)
 
-        self.exit_routine()
+        self.exit_routine(player)
 
-    def exit_routine(self):
+    def exit_routine(self, prompted_player):
         # This method is called right before the program quits. It performs a
         # cleanup, and finalises self.rendering_output.
+        #
+        # prompted_player is the faction of the player who requested an
+        # instance of Gamemaster, and is ready to submit their next turn.
 
         # First, we save the unfinished round in which current_turn is set
         self.execute_moves(save_to_output = True)
@@ -2072,6 +2084,14 @@ class Gamemaster():
         # Now, we record the ongoing round, using the last round's scenario
         cur_round, active_timeslice = self.round_from_turn(self.current_turn_index)
         self.rendering_output.add_scenario(cur_round, self.scenarios_by_round[cur_round], self.flags, self.causes_by_round[cur_round], self.effects_by_round[cur_round])
+
+        # Now, we record the actions which the prompted player can take
+        if prompted_player is not None:
+            self.rendering_output.did_player_finish_turn = self.did_player_finish_turn(prompted_player, self.current_turn_index)
+            if not self.rendering_output.did_player_finish_turn:
+                self.rendering_output.stones_to_be_commanded = self.causally_free_stones_at_time_by_player(active_timeslice, prompted_player)
+                for cf_stone_ID in self.rendering_output.stones_to_be_commanded:
+                    self.rendering_output.available_commands[cf_stone_ID] = self.stones[cf_stone_ID].get_available_commands(self)
 
 
     # -------------------------------------------------------------------------
@@ -2190,6 +2210,7 @@ class Gamemaster():
         self.setup_stones = {}
         self.removed_setup_stones = {}
         self.effects_by_round = [[]]
+        self.causes_by_round = [[]]
         self.scenarios_by_round = [Scenario({}, {}, {}, {})]
         self.current_turn_index = 0
 
@@ -2322,6 +2343,7 @@ class Gamemaster():
         # round number = number of causally-consistent-scenario selections
         # executed so far (i.e. the number of canonized rounds).
         self.effects_by_round = []
+        self.causes_by_round = []
 
         self.current_turn_index = None
         for historic_turn_index in range(len(dynamic_data_representation)):
@@ -2381,6 +2403,7 @@ class Gamemaster():
 
         # We now save all the canonised rounds to output
         for round_number in range(final_round_number):
+            self.realise_scenario(self.scenarios_by_round[round_number + 1]) # We always bring the board to the next round's scenario, since this is the canonised version
             self.execute_moves(read_causality_trackers = False, max_turn_index = (round_number + 1) * self.t_dim, precanonisation = True, save_to_output = True)
             self.rendering_output.add_scenario(round_number, self.scenarios_by_round[round_number + 1], self.flags, self.causes_by_round[round_number], self.effects_by_round[round_number])
 

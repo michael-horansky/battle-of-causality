@@ -5,7 +5,8 @@
 const board_window_width = 800;
 const board_window_height = 700;
 
-
+const stone_command_btn_width = 100;
+const stone_command_btn_height = 83;
 // ----------------------------------------------------------------------------
 // --------------------------- HTML DOM management ----------------------------
 // ----------------------------------------------------------------------------
@@ -194,9 +195,7 @@ function select_timeslice(new_timeslice) {
 
 function select_round(new_round_n, new_timeslice = null) {
     selected_round = new_round_n;
-    if (new_timeslice == null) {
-        selected_timeslice = 0;
-    } else {
+    if (new_timeslice != null) {
         selected_timeslice = new_timeslice;
     }
     document.getElementById("navigation_label").innerText = `Selected timeslice ${selected_timeslice}, selected round ${selected_round}`;
@@ -745,15 +744,13 @@ cameraman.apply_tracking = function(tracking_stone_state = null) {
             } else {
                 cameraman.is_tracking_stone_onscreen = false;
                 if (inspector.highlighted_square != null) {
-                    inspector.display_stone_info(inspector.highlighted_square[0], inspector.highlighted_square[1]);
-                    inspector.display_square_info(inspector.highlighted_square[0], inspector.highlighted_square[1]);
+                    inspector.display_highlighted_info();
                 }
             }
         } else {
             cameraman.is_tracking_stone_onscreen = false;
             if (inspector.highlighted_square != null) {
-                inspector.display_stone_info(inspector.highlighted_square[0], inspector.highlighted_square[1]);
-                inspector.display_square_info(inspector.highlighted_square[0], inspector.highlighted_square[1]);
+                inspector.display_highlighted_info();
             }
         }
     } else {
@@ -773,16 +770,30 @@ cameraman.apply_tracking = function(tracking_stone_state = null) {
 // Tracking can be turned on in the following ways:
 //   1. Clicking on a stone highlight
 //   2. Clicking on the button "Track this stone" in the Stone inspector panel
-//   3. Double-clicking an occupied square
+//   3. Double-clicking an occupied square (NOPE)
 // And it can be turned off in the following ways:
 //   1. Clicking the "Turn off tracking" button in the tracking inspector
 //   2. Resetting the camera, e.g. by pressing the "R" key
+//   3. Turning on a different camera mode, e.g. "go to square"
 cameraman.track_stone = function(stone_ID) {
     // If null, tracking is turned off
-    cameraman.tracking_stone = stone_ID;
-    document.getElementById("stone_tracking_label").innerHTML = (stone_ID == null ? "Stone tracking off" : `Tracking a ${stone_highlight(stone_ID)}. <span class=\"inline_command\" onclick=\"cameraman.track_stone(null)\">Turn off</span>`);
-    set_stone_highlight(null); // We turn off the highlight
-    cameraman.apply_tracking();
+
+    // We refuse to track a stone not placed on the board in this round
+    if (stone_ID != null && stone_endpoints[selected_round][stone_ID] == undefined) {
+        alert("Stone not placed on board");
+    } else {
+        cameraman.tracking_stone = stone_ID;
+        document.getElementById("stone_tracking_label").innerHTML = (stone_ID == null ? "Stone tracking off" : `Tracking a<br/>${stone_highlight(stone_ID)}.`);
+        set_stone_highlight(null); // We turn off the highlight
+        if (stone_ID == null) {
+            // Hide tracking buttons
+            document.getElementById("tracking_inspector_svg").style.visibility = "hidden"
+        } else {
+            // Show tracking buttons
+            document.getElementById("tracking_inspector_svg").style.visibility = "visible"
+        }
+        cameraman.apply_tracking();
+    }
 }
 
 
@@ -893,6 +904,10 @@ function stone_highlight(stone_ID) {
     return `<span class=\"stone_highlight\" onmouseenter=\"set_stone_highlight(${stone_ID})\" onmouseleave=\"set_stone_highlight(null)\" onclick=\"cameraman.track_stone(${stone_ID})\">${stone_properties[stone_ID]["stone_type"].toUpperCase()} [P. ${stone_properties[stone_ID]["allegiance"]}]</span>`;
 }
 
+function square_highlight(t, x, y) {
+    return `<span class=\"square_highlight\" onclick=\"go_to_square(${t},${x},${y})\">(${t},${x},${y})</tspan>`;
+}
+
 // ----------------------------------------------------------------------------
 // ---------------------------------- Events ----------------------------------
 // ----------------------------------------------------------------------------
@@ -953,6 +968,20 @@ function parse_keydown_event(event) {
         case "a":
             cameraman.move_key_down(event.key);
             break;
+        case "Escape":
+            // The "Escape" behaviour is highly contextual, and the different
+            // contexts it affects are sorted by priority as follows:
+            //   1. Exits selection mode if board is in selection mode--otherwise,
+            //   2. turns off tracking if tracking exists--otherwise,
+            //   3. unselects square if selected
+            if (false) {
+                // Exit selection mode if applicable
+            } else if (cameraman.tracking_stone != null) {
+                cameraman.track_stone(null);
+            } else if (inspector.highlighted_square != null) {
+                inspector.unselect_all();
+            }
+            break;
 
     }
 }
@@ -1010,27 +1039,28 @@ function show_active_timeslice(){
         animation_manager.clear_queue();
         select_timeslice(active_timeslice);
         show_canon_board_slice(selected_round, selected_timeslice);
+        cameraman.apply_tracking();
     }
 }
 
 function show_next_round() {
     if (round_navigation_enabled && (selected_round < active_round)) {
         select_round(selected_round += 1);
-        animation_manager.add_to_queue([["change_round", selected_round, selected_timeslice, ">>", "up"]]);
+        animation_manager.add_to_queue([["change_round", selected_round, selected_timeslice, ">>", "up"], "reset_to_canon"]);
     }
 }
 
 function show_prev_round() {
     if (round_navigation_enabled && (selected_round > 0)) {
         select_round(selected_round -= 1);
-        animation_manager.add_to_queue([["change_round", selected_round, selected_timeslice, "<<", "down"]]);
+        animation_manager.add_to_queue([["change_round", selected_round, selected_timeslice, "<<", "down"], "reset_to_canon"]);
     }
 }
 
 function show_active_round() {
     if (round_navigation_enabled && (selected_round != active_round)) {
         select_round(active_round);
-        animation_manager.add_to_queue([["change_round", selected_round, selected_timeslice, ">|", "up"]]);
+        animation_manager.add_to_queue([["change_round", selected_round, selected_timeslice, ">|", "up"], "reset_to_canon"]);
     }
 }
 
@@ -1038,25 +1068,31 @@ function show_active_round() {
 
 const inspector = new Object();
 inspector.inspector_elements = {
-    "stone" : new Object(),
-    "square" : new Object()
+    "stone" : {"title" : null, "containers" : new Object(), "values" : new Object()},
+    "square" : {"title" : null, "containers" : new Object(), "values" : new Object()}
 }
 inspector.record_inspector_elements = function(which_inspector, element_name_list) {
     element_name_list.forEach(function(element_name, element_index) {
-        inspector.inspector_elements[which_inspector][element_name] = document.getElementById(`${which_inspector}_info_${element_name}`);
+        inspector.inspector_elements[which_inspector]["containers"][element_name] = document.getElementById(`${which_inspector}_info_${element_name}_container`);
+        inspector.inspector_elements[which_inspector]["values"][element_name] = document.getElementById(`${which_inspector}_info_${element_name}`);
     });
-    inspector.inspector_elements[which_inspector]["TITLE"] = document.getElementById(`${which_inspector}_inspector_title`);
+    inspector.inspector_elements[which_inspector]["title"] = document.getElementById(`${which_inspector}_inspector_title`);
 }
 inspector.display_value_list = function(which_inspector, element_name, value_list) {
-    html_object = "";
-    for (let i = 0; i < value_list.length; i++) {
-        html_object += `<p>${value_list[i]}</p>\n`;
+    if (value_list.length == 0) {
+        inspector.inspector_elements[which_inspector]["containers"][element_name].style.display = "none";
+    } else {
+        inspector.inspector_elements[which_inspector]["containers"][element_name].style.display = "block";
+        html_object = "";
+        for (let i = 0; i < value_list.length; i++) {
+            html_object += `<p>${value_list[i]}</p>\n`;
+        }
+        inspector.inspector_elements[which_inspector]["values"][element_name].innerHTML = html_object;
     }
-    inspector.inspector_elements[which_inspector][element_name].innerHTML = html_object;
 }
 
 
-inspector.record_inspector_elements("stone", ["allegiance", "type", "startpoint", "endpoint"]);
+inspector.record_inspector_elements("stone", ["allegiance", "stone_type", "startpoint", "endpoint"]);
 inspector.record_inspector_elements("square", ["active_effects", "activated_causes", "inactive_effects", "not_activated_causes"]);
 
 inspector.reverse_causality_flags = []; // [round_n] = {"causes" : {"activated" : [], "not_activated" : [], "buffered" : []}, "effects" : {"active" : [], "inactive" : []}}
@@ -1202,7 +1238,7 @@ inspector.flag_description = function(flag_significance, flag_status, flag_ID) {
                 let cause_t = reverse_causality_flag_properties[corresponding_cause_ID]["t"];
                 let cause_x = reverse_causality_flag_properties[corresponding_cause_ID]["x"];
                 let cause_y = reverse_causality_flag_properties[corresponding_cause_ID]["y"];
-                primary_descriptor += `, ${inspector.human_readable_flag("secondary", "cause", "activated", corresponding_cause_ID)} at <span class=\"pos_highlight\" onclick=\"go_to_square(${cause_t},${cause_x},${cause_y})\">(${cause_t},${cause_x},${cause_y})</tspan>`;
+                primary_descriptor += `, ${inspector.human_readable_flag("secondary", "cause", "activated", corresponding_cause_ID)} at ${square_highlight(cause_t, cause_x, cause_y)}`;
             }
             return primary_descriptor;
         case "cause":
@@ -1221,18 +1257,196 @@ inspector.flag_description = function(flag_significance, flag_status, flag_ID) {
                 let effect_t = reverse_causality_flag_properties[corresponding_effect_ID]["t"];
                 let effect_x = reverse_causality_flag_properties[corresponding_effect_ID]["x"];
                 let effect_y = reverse_causality_flag_properties[corresponding_effect_ID]["y"];
-                primary_descriptor += `, ${inspector.human_readable_flag("secondary", "effect", corresponding_effect_status, corresponding_effect_ID)} at <span class=\"pos_highlight\" onclick=\"go_to_square(${effect_t},${effect_x},${effect_y})\">(${effect_t},${effect_x},${effect_y})</tspan>`;
+                primary_descriptor += `, ${inspector.human_readable_flag("secondary", "effect", corresponding_effect_status, corresponding_effect_ID)} at ${square_highlight(effect_t, effect_x, effect_y)}`;
             }
             return primary_descriptor;
     }
 }
 
+inspector.endpoint_description = function(endpoint_event) {
+    switch(endpoint_event) {
+        case "setup":
+            return "placed on setup";
+        case "TJI":
+            return "time-jumps-in";
+        case "TJO":
+            return "time-jumps-out";
+        case "destruction":
+            return "is destroyed";
+        case "causally_free":
+            return "becomes causally free";
+        case "tag_locked":
+            return "is tag-locked";
+        default:
+            return "UNKNOWN EVENT";
+    }
+}
+
 // ---------------------------- Stone info methods ----------------------------
+
+// Selection mode methods
+
+inspector.select_from_squares = function(selection_mode_props) {
+
+}
+
+inspector.select_on_square = function(stone_ID, selection_mode_square) {
+    default_square_selection = new Object();
+    default_square_selection["t"] = selection_mode_square["t"];
+    default_square_selection["x"] = selection_mode_square["x"];
+    default_square_selection["y"] = selection_mode_square["y"];
+    if (selection_mode_square["a"] != null) {
+        if (selection_mode_square["a"].length == 1) {
+            default_square_selection["a"] = selection_mode_square["a"][0];
+        } else {
+            // We select the target azimuth
+            alert(`Select azimuth by pressing keys`);
+        }
+    } else {
+        // Default azimuth is the old azimuth
+        default_square_selection["a"] = "default";
+    }
+    if (selection_mode_square["swap_effects"] != null) {
+        if (selection_mode_square["swap_effects"].length == 1) {
+            default_square_selection["swap_effect"] = selection_mode_square["swap_effects"][0];
+        } else {
+            // We select the target azimuth
+            alert(`Select swap ID by pressing keys`);
+        }
+    } else {
+        // Default swap is no swap
+        default_square_selection["swap_effect"] = null;
+    }
+
+    return default_square_selection;
+
+}
+
+// Stone commands
+
+inspector.prepare_command = function(stone_ID, command_key) {
+    // Prompts user further to specify the arguments for the command
+    console.log(`stone ${stone_ID} performs ${command_key}`);
+    let cur_cmd_props = available_commands[stone_ID]["command_properties"][command_key];
+
+    result_command = new Object();
+
+    result_command["stone_ID"] = stone_ID;
+    result_command["type"] = cur_cmd_props["command_type"];
+    result_command["t"] = active_timeslice;
+    result_command["x"] = stone_trajectories[selected_round][selected_timeslice]["canon"][stone_ID][0];
+    result_command["y"] = stone_trajectories[selected_round][selected_timeslice]["canon"][stone_ID][1];
+    result_command["a"] = stone_trajectories[selected_round][selected_timeslice]["canon"][stone_ID][2];
+
+
+    // First, is selection mode required?
+
+    if (cur_cmd_props["selection_mode"]["is_required"]) {
+        // This means the "target_t", "target_x", "target_y", "target_a", "swap_effect" keywords may be required
+        if (cur_cmd_props["selection_mode"]["squares"].length == 1) {
+            // The square STPos is default
+            let default_square_selection = inspector.select_on_square(stone_ID, cur_cmd_props["selection_mode"]["squares"][0]);
+            result_command["target_t"] = default_square_selection["t"];
+            result_command["target_x"] = default_square_selection["x"];
+            result_command["target_y"] = default_square_selection["y"];
+            if (default_square_selection["a"] == "default") {
+                result_command["target_a"] = result_command["a"];
+            } else {
+                result_command["target_a"] = default_square_selection["a"];
+            }
+            result_command["swap_effect"] = default_square_selection["swap_effect"];
+        } else {
+            // Selection from multiple squares
+            alert("Choose from multiple squares!");
+        }
+    }
+
+}
+
+inspector.display_stone_commands = function(stone_ID) {
+    // if stone_ID = null, hides stone commands
+    stone_inspector_commands_svg = document.getElementById("stone_inspector_commands_svg");
+    if (stone_ID == null) {
+        while (stone_inspector_commands_svg.firstChild) {
+            stone_inspector_commands_svg.removeChild(stone_inspector_commands_svg.lastChild);
+        }
+    } else {
+        // First, we delete everything
+        inspector.display_stone_commands(null);
+
+        // Now, we find the list of commands
+        let list_of_commands = available_commands[stone_ID]["commands"];
+
+        // We draw every button
+        offset_x = 0;
+        offset_y = 0;
+        for (let i = 0; i < list_of_commands.length; i++) {
+            let cur_label = available_commands[stone_ID]["command_properties"][list_of_commands[i]]["label"];
+            let new_button = make_SVG_element("rect", {
+                class : "game_control_panel_button",
+                id : `stone_command_${list_of_commands[i]}`,
+                onclick : `inspector.prepare_command(${stone_ID}, \"${list_of_commands[i]}\")`,
+                x : offset_x,
+                y : 0,
+                width : stone_command_btn_width,
+                height : stone_command_btn_height
+            });
+            let new_button_label = make_SVG_element("text", {
+                class : "button_label",
+                id : `stone_command_${list_of_commands[i]}_label`,
+                x : offset_x + stone_command_btn_width / 2,
+                y : stone_command_btn_height / 2,
+                "text-anchor" : "middle"
+            });
+            new_button_label.textContent = available_commands[stone_ID]["command_properties"][list_of_commands[i]]["label"]
+            stone_inspector_commands_svg.appendChild(new_button);
+            stone_inspector_commands_svg.appendChild(new_button_label);
+            offset_x += 110;
+
+        }
+    }
+}
+
+
+
+// General stone properties
 
 inspector.display_stone_info = function(x, y) {
     // Is there even a stone present?
     let stone_ID = find_stone_at_pos(x, y);
-    inspector.inspector_elements["stone"]["TITLE"].innerHTML = (stone_ID == null ? "No stone selected" : `A ${stone_highlight(stone_ID)} selected`);
+    inspector.inspector_elements["stone"]["title"].innerHTML = (stone_ID == null ? "No stone selected" : `A ${stone_highlight(stone_ID)} selected`);
+
+    if (stone_ID != null) {
+        inspector.display_value_list("stone", "allegiance", [stone_properties[stone_ID]["allegiance"]]);
+        inspector.display_value_list("stone", "stone_type", [stone_properties[stone_ID]["stone_type"].toUpperCase()]);
+        inspector.display_value_list("stone", "startpoint", [`Stone ${inspector.endpoint_description(stone_endpoints[selected_round][stone_ID]["start"]["event"])} at ${square_highlight(stone_endpoints[selected_round][stone_ID]["start"]["t"], stone_endpoints[selected_round][stone_ID]["start"]["x"], stone_endpoints[selected_round][stone_ID]["start"]["y"])}`]);
+        inspector.display_value_list("stone", "endpoint", [`Stone ${inspector.endpoint_description(stone_endpoints[selected_round][stone_ID]["end"]["event"])} at ${square_highlight(stone_endpoints[selected_round][stone_ID]["end"]["t"], stone_endpoints[selected_round][stone_ID]["end"]["x"], stone_endpoints[selected_round][stone_ID]["end"]["y"])}`]);
+
+        // Check if can be commanded
+        if (stones_to_be_commanded.includes(stone_ID) && selected_round == active_round && selected_timeslice == active_timeslice && arrays_equal(stone_trajectories[selected_round][selected_timeslice]["canon"][stone_ID].slice(0, 2), [x, y])) {
+            // Display commands
+            inspector.display_stone_commands(stone_ID);
+        } else {
+            inspector.display_stone_commands(null);
+        }
+
+    } else {
+        inspector.display_value_list("stone", "allegiance", []);
+        inspector.display_value_list("stone", "stone_type", []);
+        inspector.display_value_list("stone", "startpoint", []);
+        inspector.display_value_list("stone", "endpoint", []);
+        inspector.display_stone_commands(null);
+    }
+
+    return stone_ID;
+}
+
+inspector.hide_stone_info = function() {
+    inspector.inspector_elements["stone"]["title"].innerHTML = "No stone selected";
+    inspector.display_value_list("stone", "allegiance", []);
+    inspector.display_value_list("stone", "stone_type", []);
+    inspector.display_value_list("stone", "startpoint", []);
+    inspector.display_value_list("stone", "endpoint", []);
 }
 
 // --------------------------- Square info methods ----------------------------
@@ -1243,8 +1457,7 @@ inspector.set_square_highlight = function(new_square) {
         if (new_square == null) {
             // Change of the guard
             document.getElementById(`square_highlighter`).style.display = "none";
-        }
-        if(!arrays_equal(new_square, inspector.highlighted_square)) {
+        } else if(!arrays_equal(new_square, inspector.highlighted_square)) {
             // Change of the guard
             document.getElementById(`square_highlighter`).style.display = "none";
         }
@@ -1312,8 +1525,20 @@ inspector.display_square_info = function(x, y) {
 
     // Highligh square, reset stone highlight
     inspector.set_square_highlight([x, y]);
-    inspector.inspector_elements["square"]["TITLE"].innerHTML = `A SQUARE TYPE selected`;
+    inspector.inspector_elements["square"]["title"].innerHTML = `A SQUARE TYPE selected`;
     set_stone_highlight(null);
+}
+
+
+inspector.hide_square_info = function() {
+    inspector.display_value_list("square", "active_effects", []);
+    inspector.display_value_list("square", "inactive_effects", []);
+    inspector.display_value_list("square", "activated_causes", []);
+    inspector.display_value_list("square", "not_activated_causes", []);
+
+    // Highligh square, reset stone highlight
+    inspector.set_square_highlight(null);
+    inspector.inspector_elements["square"]["title"].innerHTML = `No square selected`;
 }
 
 inspector.board_square_click = function(x, y){
@@ -1324,13 +1549,49 @@ inspector.board_square_click = function(x, y){
 
 }
 
-function go_to_square(t, x, y) {
+inspector.display_highlighted_info = function() {
+    inspector.display_stone_info(inspector.highlighted_square[0], inspector.highlighted_square[1]);
+    inspector.display_square_info(inspector.highlighted_square[0], inspector.highlighted_square[1]);
+}
+
+inspector.unselect_all = function() {
+    inspector.hide_stone_info();
+    inspector.hide_square_info();
+}
+
+
+function go_to_square(t, x, y, turn_off_tracking = true) {
     select_timeslice(t);
     show_stones_at_process(selected_round, selected_timeslice, "canon");
     show_time_jumps_at_time(selected_round, selected_timeslice);
+    if (turn_off_tracking) {
+        cameraman.track_stone(null);
+    }
     cameraman.show_square(x, y);
     inspector.display_stone_info(x, y);
     inspector.display_square_info(x, y);
+}
+
+function tracking_startpoint() {
+    /*if (cameraman.tracking_stone != null) {
+        if (stone_endpoints[selected_round][cameraman.tracking_stone] == undefined) {
+            console.log("Stone not placed on board");
+        } else {
+            console.log(`Startpoint: ${stone_endpoints[selected_round][cameraman.tracking_stone]["start"]["event"]} at (${stone_endpoints[selected_round][cameraman.tracking_stone]["start"]["x"]}, ${stone_endpoints[selected_round][cameraman.tracking_stone]["start"]["y"]})`);
+        }
+    }*/
+    go_to_square(stone_endpoints[selected_round][cameraman.tracking_stone]["start"]["t"], stone_endpoints[selected_round][cameraman.tracking_stone]["start"]["x"], stone_endpoints[selected_round][cameraman.tracking_stone]["start"]["y"], false)
+}
+
+function tracking_endpoint() {
+    /*if (cameraman.tracking_stone != null) {
+        if (stone_endpoints[selected_round][cameraman.tracking_stone] == undefined) {
+            console.log("Stone not placed on board");
+        } else {
+            console.log(`Endpoint: ${stone_endpoints[selected_round][cameraman.tracking_stone]["end"]["event"]} at (${stone_endpoints[selected_round][cameraman.tracking_stone]["end"]["x"]}, ${stone_endpoints[selected_round][cameraman.tracking_stone]["end"]["y"]})`);
+        }
+    }*/
+    go_to_square(stone_endpoints[selected_round][cameraman.tracking_stone]["end"]["t"], stone_endpoints[selected_round][cameraman.tracking_stone]["end"]["x"], stone_endpoints[selected_round][cameraman.tracking_stone]["end"]["y"], false)
 }
 
 // ----------------------------------------------------------------------------
@@ -1503,7 +1764,8 @@ for (let inbetween_round_index = 0; inbetween_round_index <= active_round; inbet
 var selected_round = active_round; // Selected by GUI logic, not affected by animations
 var visible_round = selected_round; // Displayed by the GUI, affected by animations
 var visible_process = "canon";
-show_active_timeslice();
+
+var selection_mode = false;
 
 // Set up the camera
 cameraman.put_down_tripod();
@@ -1511,3 +1773,7 @@ cameraman.reset_camera();
 
 // Set up inspector
 inspector.organise_reverse_causality_flags();
+inspector.hide_stone_info();
+inspector.hide_square_info();
+
+show_active_timeslice();

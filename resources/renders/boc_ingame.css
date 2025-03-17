@@ -197,6 +197,7 @@ margin: 0;
 
 .inspector_table {
     width : 100%;
+    table-layout : fixed;
 }
 
 
@@ -220,8 +221,17 @@ margin: 0;
     float : left;
 }*/
 
-.inspector_table_label {
-    width : 35%;
+
+.stone_inspector_table_label {
+    width : 100px;
+    padding-top : 10px;
+    padding-left : 10px;
+    padding-right : 10px;
+    font-weight : bold;
+}
+
+.square_inspector_table_label {
+    width : 175px;
     padding-top : 10px;
     padding-left : 10px;
     padding-right : 10px;
@@ -233,10 +243,10 @@ margin: 0;
     padding-right : 10px;
 }
 
-.pos_highlight {
+.square_highlight {
     background-color : #af9dd4;
 }
-.pos_highlight:hover {
+.square_highlight:hover {
     cursor : pointer;
     background-color : #b798f5;
 }
@@ -254,6 +264,28 @@ margin: 0;
 .inline_command:hover {
     cursor : pointer;
     background-color : #fca692;
+}
+
+#stone_inspector_commands {
+    width : 480px;
+    height : 83px;
+    padding : 10px;
+}
+
+#tracking_inspector_header {
+    width : 30%;
+    height : 100%;
+    margin-top : 17px;
+    float : left;
+    display: flex;
+    align-items : center;
+    flex-direction: column;
+}
+
+
+#stone_tracking_label {
+    margin : 10px;
+    text-align: center;
 }
 
 #square_highlighter {

@@ -203,10 +203,79 @@ class Stone():
                     return(Message(False, "Specified time-jump-in has been added only this round, and thus hasn't been realised yet."))
         return(Message(True))
 
+    def get_available_timejumps(self, gm, round_number, old_t, old_x, old_y, old_a):
+        # For timejumps of the static variety
+        timejump_squares = []
+        if (not self.has_been_tag_locked) and gm.is_square_available(old_x, old_y):
+            for t_prev in range(old_t):
+                timejump_squares.append({"t" : t_prev, "x" : old_x, "y" : old_y, "a" : [old_a], "swap_effects" : [None]})
+                for prev_round in range(round_number):
+                    for effect_ID in gm.effects_by_round[prev_round]:
+                        if gm.flags[effect_ID].flag_type != "time_jump_in":
+                            # not a TJI
+                            continue
+                        if not (gm.flags[effect_ID].pos.t == t_prev - 1 and gm.flags[effect_ID].pos.x == old_x and gm.flags[effect_ID].pos.y == old_y):
+                            # Not on the specified square
+                            continue
+                        if self.player_faction != gm.stones[gm.flags[effect_ID].stone_ID].player_faction:
+                            # Not the same faction
+                            continue
+                        if self.stone_type not in [gm.stones[gm.flags[effect_ID].stone_ID].stone_type, "wildcard"]:
+                            # Not a compatible stone type
+                            continue
+                        if self.orientable and gm.flags[effect_ID].flag_args[1] != old_a:
+                            # Incorrect azimuth
+                            continue
+                        timejump_squares[t_prev]["swap_effects"].append(effect_ID)
+        return(timejump_squares)
+
     # -------------------------------------------------------------------------
     # -------------------------- Overridden methods ---------------------------
     # -------------------------------------------------------------------------
 
+    def get_available_commands(self, gm):
+        # Assumes the board is prepared in a proper way and that stone is
+        # causally free in timeslice t corresponding to gm.current_turn_index.
+
+        # This method returns a dictionary commands w/ the following structure:
+        #   {
+        #     "commands" : [list of command keys],
+        #     "command_properties" : {
+        #       "command key" : {
+        #         "command_type" : name of command type as interpreted by Gamemaster,
+        #         "selection_mode" : {
+        #           "is_required" : True or False,
+        #           "lock_timeslice" : t if SM is locked into a t.s., None otherwise,
+        #           "squares" = [list of {
+        #             "t", "x", "y",
+        #             "a" : None or a list of available azimuths,
+        #             "swap_effects" : a list of ante-effects which can be swapped here. Can be empty.
+        #           } objects.]
+        #         },
+        #         "azimuths" : None if azimuth argument not required or provided by selecion mode, a list of available azimuths otherwise,
+        #         "choice_keyword": If not None, it's a string defining the key in the command dict,
+        #         "choice_options" : [list of values the user can pick from],
+        #         "label" : human-readable label
+        #       }
+        #     }
+        #   }
+        return({"commands" : [], "command_properties" : {}})
+
+
+    # ------------------------- Stone action methods --------------------------
+    # These methods only read the state of gm, and always return
+    # Message("board action", STPos)
+
+    def attack(self, gm, attack_flag_ID, t):
+        return(Message("pass"))
+
+    def find_next_default_position(self, gm, t, x, y, props):
+        # Method used only by neutral stones(owned bu 'GM')
+        # Returns new_x, new_y, new_props for the next time-slice
+        return(x, y, props.copy())
+
+
+    # ---------------- LEGACY FEATURE: LOCAL TUI COMPATIBILITY ----------------
     # ------------------------ Command parsing methods ------------------------
 
     def parse_move_cmd(self, gm, t):
@@ -264,17 +333,5 @@ class Stone():
                 print("Try again; Arguments with numerical inputs should be well-formatted")
             except Exception as e:
                 print("Try again;", e)
-
-    # ------------------------- Stone action methods --------------------------
-    # These methods only read the state of gm, and always return
-    # Message("board action", STPos)
-
-    def attack(self, gm, attack_flag_ID, t):
-        return(Message("pass"))
-
-    def find_next_default_position(self, gm, t, x, y, props):
-        # Method used only by neutral stones(owned bu 'GM')
-        # Returns new_x, new_y, new_props for the next time-slice
-        return(x, y, props.copy())
 
 

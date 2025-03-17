@@ -85,7 +85,13 @@ class HTMLRenderer(Renderer):
     # ---------------------------- Data depositing ----------------------------
 
     def deposit_datum(self, name, value):
-        self.commit_to_output(f"  const {name} = {value};")
+        if isinstance(value, bool):
+            if value:
+                self.commit_to_output(f"  const {name} = true;")
+            else:
+                self.commit_to_output(f"  const {name} = false;")
+        else:
+            self.commit_to_output(f"  const {name} = {value};")
 
     def deposit_list(self, name, value):
         # If there are no dictionaries in the nest, the output of json.dumps is
@@ -108,7 +114,14 @@ class HTMLRenderer(Renderer):
         self.deposit_list("faction_armies", self.render_object.faction_armies)
         self.deposit_object("stone_properties", self.render_object.stone_properties)
 
+        # Command properties
+        self.deposit_datum("did_player_finish_turn", self.render_object.did_player_finish_turn)
+        self.deposit_list("stones_to_be_commanded", self.render_object.stones_to_be_commanded)
+        self.deposit_object("available_commands", self.render_object.available_commands)
+
+        # ----------------------- Roundwise properties ------------------------
         self.deposit_object("stone_trajectories", self.render_object.stone_trajectories)
+        self.deposit_object("stone_endpoints", self.render_object.stone_endpoints)
         self.deposit_list("stone_actions", self.render_object.stone_actions)
 
         #self.deposit_object("reverse_causality_flags", self.render_object.reverse_causality_flags)
@@ -162,10 +175,10 @@ class HTMLRenderer(Renderer):
 
     # -------------------------- General svg methods --------------------------
 
-    def get_polygon_points(self, point_matrix, offset = [0, 0]):
+    def get_polygon_points(self, point_matrix, offset = [0, 0], scale = 1):
         # point_matrix = [[x1, y1], [x2, y2]...]
         # offset = [offset x, offset y]
-        result_string = " ".join(",".join(str(pos[i] + offset[i]) for i in range(len(pos))) for pos in point_matrix)
+        result_string = " ".join(",".join(str(pos[i] * scale + offset[i]) for i in range(len(pos))) for pos in point_matrix)
         return(result_string)
 
 
@@ -282,7 +295,7 @@ class HTMLRenderer(Renderer):
         # ID is position
         # Class is static type
         class_name, z_index = self.encode_board_square_class(x, y)
-        board_square_object = f"  <rect width=\"{self.board_square_base_side_length}\" height=\"{self.board_square_base_side_length}\" x=\"{x * self.board_square_base_side_length}\" y=\"{y * self.board_square_base_side_length}\" class=\"{class_name}\" id=\"{self.encode_board_square_id(x, y)}\" onclick=\"inspector.board_square_click({x},{y})\" />"
+        board_square_object = f"  <rect width=\"{self.board_square_base_side_length}\" height=\"{self.board_square_base_side_length}\" x=\"{x * self.board_square_base_side_length}\" y=\"{y * self.board_square_base_side_length}\" class=\"{class_name}\" id=\"{self.encode_board_square_id(x, y)}\" onclick=\"inspector.board_square_click({x},{y})\" ondblclick=\"inspector.board_square_double_click({x},{y})\" />"
         self.board_layer_structure[z_index].append(board_square_object)
 
         # Draws time jump marker into z-index = 1, with
@@ -358,7 +371,7 @@ class HTMLRenderer(Renderer):
         for table_key, table_label in table_dict.items():
             table_element = []
             table_element.append(f"<tr id=\"{which_inspector}_info_{table_key}_container\" class=\"inspector_table_container\">")
-            table_element.append(f"  <td id=\"{which_inspector}_info_{table_key}_label\" class=\"inspector_table_label\">{table_label}</td>")
+            table_element.append(f"  <td id=\"{which_inspector}_info_{table_key}_label\" class=\"{which_inspector}_inspector_table_label\">{table_label}</td>")
             table_element.append(f"  <td id=\"{which_inspector}_info_{table_key}\" class=\"inspector_table_value\"></td>")
             table_element.append(f"</tr>")
             self.commit_to_output(table_element)
@@ -380,16 +393,39 @@ class HTMLRenderer(Renderer):
         stone_inspector_object = []
         stone_inspector_object.append("  </div>")
         stone_inspector_object.append("  <div id=\"stone_inspector_commands\" class=\"stone_inspector_part\">")
+        stone_inspector_object.append("    <svg width=\"100%\" height=\"100%\" xmlns=\"http://www.w3.org/2000/svg\" id=\"stone_inspector_commands_svg\">")
+        stone_inspector_object.append("    </svg>")
         stone_inspector_object.append("  </div>")
         stone_inspector_object.append("</div>")
         self.commit_to_output(stone_inspector_object)
 
     def draw_tracking_inspector(self):
-        tracking_inspector = []
-        tracking_inspector.append("<div id=\"tracking_inspector\" class=\"inspector\">")
-        tracking_inspector.append("  <p id=\"stone_tracking_label\"></p>")
-        tracking_inspector.append("</div>")
-        self.commit_to_output(tracking_inspector)
+        self.commit_to_output("<div id=\"tracking_inspector\" class=\"inspector\">")
+        #self.commit_to_output("  <p id=\"stone_tracking_label\"></p>")
+        self.commit_to_output("  <div id=\"tracking_inspector_header\">")
+        self.commit_to_output("    <p id=\"stone_tracking_label\"></p>")
+        self.commit_to_output("  </div>")
+        self.commit_to_output(f"  <svg width=\"70%\" height=\"100%\" xmlns=\"http://www.w3.org/2000/svg\" id=\"tracking_inspector_svg\">")
+
+
+        # Start-point button
+        startpoint_button_points = [[130, 20], [50, 20], [50, 0], [0, 50], [50, 100], [50, 80], [130, 80]]
+        startpoint_button_polygon = f"<polygon points=\"{self.get_polygon_points(startpoint_button_points, [10, 10], 0.8)}\" class=\"game_control_panel_button\" id=\"tracking_startpoint_button\" onclick=\"tracking_startpoint()\" />"
+        startpoint_button_text = "<text x=25 y=55 class=\"button_label\" id=\"tracking_startpoint_button_label\">Start-point</text>"
+
+        # End-point button
+        endpoint_button_points = [[0, 20], [80, 20], [80, 0], [130, 50], [80, 100], [80, 80], [0, 80]]
+        endpoint_button_polygon = f"<polygon points=\"{self.get_polygon_points(endpoint_button_points, [120, 10], 0.8)}\" class=\"game_control_panel_button\" id=\"tracking_endpoint_button\" onclick=\"tracking_endpoint()\" />"
+        endpoint_button_text = "<text x=\"128\" y=\"55\" class=\"button_label\" id=\"tracking_endpoint_button_label\">End-point</text>"
+
+        # Turn off tracking button
+        turn_off_tracking_button_object = f"<rect x=\"235\" y=\"26\" width=\"88\" height=\"48\" rx=\"5\" ry=\"5\" class=\"game_control_panel_button\" id=\"turn_off_tracking_button\" onclick=\"cameraman.track_stone(null)\" />"
+        turn_off_tracking_button_text = "<text x=\"238\" y=\"27\" class=\"button_label\" id=\"turn_off_tracking_button_label\"><tspan x=\"248\" dy=\"1.2em\">Turn off</tspan><tspan x=\"248\" dy=\"1.2em\">tracking</tspan></text>"
+
+        self.commit_to_output([startpoint_button_polygon, startpoint_button_text, endpoint_button_polygon, endpoint_button_text, turn_off_tracking_button_object, turn_off_tracking_button_text])
+
+        self.commit_to_output("  </svg>")
+        self.commit_to_output("</div>")
 
 
     def draw_square_inspector(self):
@@ -407,7 +443,6 @@ class HTMLRenderer(Renderer):
         self.draw_tracking_inspector()
         self.draw_square_inspector()
         self.close_inspectors()
-
 
     # ---------------------- Game control panel methods -----------------------
 

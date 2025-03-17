@@ -37,6 +37,137 @@ class Tank(Stone):
     # -------------------------- Overridden methods ---------------------------
     # -------------------------------------------------------------------------
 
+    def get_available_commands(self, gm):
+        # Assumes the board is prepared in a proper way and that stone is
+        # causally free in timeslice t corresponding to gm.current_turn_index.
+
+        # This method returns a dictionary commands w/ the following structure:
+        #   {
+        #     "commands" : [list of command keys],
+        #     "command_properties" : {
+        #       "command key" : {
+        #         "command_type" : name of command type as interpreted by Gamemaster,
+        #         "selection_mode" : {
+        #           "is_required" : True or False,
+        #           "lock_timeslice" : t if SM is locked into a t.s., None otherwise,
+        #           "squares" = [list of {
+        #             "t", "x", "y",
+        #             "a" : None or a list of available azimuths,
+        #             "swap_effects" : a list of ante-effects which can be swapped here. Can be empty.
+        #           } objects.]. If length is one, the first element is the default one.
+        #         },
+        #         "azimuths" : None if azimuth argument not required or provided by selecion mode, a list of available azimuths otherwise,
+        #         "choice_keyword": If not None, it's a string defining the key in the command dict,
+        #         "choice_options" : [list of values the user can pick from],
+        #         "label" : human-readable label
+        #       }
+        #     }
+        #   }
+        round_number, t = gm.round_from_turn(gm.current_turn_index)
+        cur_x, cur_y, cur_a = self.history[t]
+        available_commands = {"commands" : [], "command_properties" : {}}
+
+        if t == gm.t_dim - 1:
+            # Final time-slice
+
+            # Command: pass
+            available_commands["commands"].append("pass")
+            available_commands["command_properties"]["pass"] = {
+                    "command_type" : "pass",
+                    "selection_mode" : {"is_required" : False},
+                    "azimuths" : None,
+                    "choice_keyword" : None,
+                    "label" : "Pass"
+                }
+
+            # Command: timejump
+            available_timejump_squares = self.get_available_timejumps(gm, round_number, t, cur_x, cur_y, cur_a)
+            if len(timejump_squares) > 0:
+                available_commands["commands"].append("timejump")
+                available_commands["command_properties"]["timejump"] = {
+                        "command_type" : "timejump",
+                        "selection_mode" : {
+                                "is_required" : True,
+                                "lock_timeslice" : None,
+                                "squares" : available_timejump_squares
+                            },
+                        "azimuths" : None,
+                        "choice_keyword" : None,
+                        "label" : "Timejump"
+                    }
+        else:
+            # Other time-slices
+
+            # Command: wait
+            available_commands["commands"].append("wait")
+            available_commands["command_properties"]["wait"] = {
+                    "command_type" : "spatial_move",
+                    "selection_mode" : {
+                            "is_required" : True,
+                            "squares" : [{"t" : t + 1, "x" : cur_x, "y" : cur_y, "a" : [cur_a], "swap_effects" : None}]
+                        },
+                    "azimuths" : None,
+                    "choice_keyword" : None,
+                    "label" : "Wait"
+                }
+
+            # Command: turn
+            available_commands["commands"].append("turn")
+            available_commands["command_properties"]["turn"] = {
+                    "command_type" : "spatial_move",
+                    "selection_mode" : {
+                            "is_required" : True,
+                            "squares" : [{"t" : t + 1, "x" : cur_x, "y" : cur_y, "a" : [0, 1, 2, 3], "swap_effects" : None}]
+                        },
+                    "azimuths" : [0, 1, 2, 3],
+                    "choice_keyword" : None,
+                    "label" : "Turn"
+                }
+
+            # Command: move
+
+            available_move_squares = []
+            fwd_x, fwd_y = functions.pos_step((cur_x, cur_y), cur_a)
+            bwd_x, bwd_y = functions.pos_step((cur_x, cur_y), functions.azimuth_addition(cur_a, 2))
+            tank_azimuths = [cur_a, functions.azimuth_addition(cur_a, 1), functions.azimuth_addition(cur_a, -1)]
+            if gm.is_square_available(fwd_x, fwd_y):
+                available_move_squares.append({"t" : t+1, "x" : fwd_x, "y" : fwd_y, "a" : tank_azimuths, "swap_effects" : None})
+            if gm.is_square_available(bwd_x, bwd_y):
+                available_move_squares.append({"t" : t+1, "x" : bwd_x, "y" : bwd_y, "a" : tank_azimuths, "swap_effects" : None})
+
+            if len(available_move_squares) > 0:
+                available_commands["commands"].append("move")
+                available_commands["command_properties"]["move"] = {
+                        "command_type" : "spatial_move",
+                        "selection_mode" : {
+                                "is_required" : True,
+                                "lock_timeslice" : t + 1,
+                                "squares" : available_move_squares
+                            },
+                        "azimuths" : None,
+                        "choice_keyword" : None,
+                        "label" : "Move"
+                    }
+        return(available_commands)
+
+    # ------------------------- Stone action methods --------------------------
+    # These methods only read the state of gm, and always return
+    # Message("board action", STPos)
+
+    def attack(self, gm, attack_flag_ID, t):
+        cur_x, cur_y, cur_a = self.history[t]
+
+        los_pos = STPos(t, cur_x, cur_y)
+        los_pos.step(cur_a)
+
+        while(gm.is_valid_position(los_pos.x, los_pos.y)):
+            if gm.board_dynamic[t][los_pos.x][los_pos.y].occupied or (not gm.is_square_available(los_pos.x, los_pos.y)):
+                return(Message("destruction", los_pos))
+            los_pos.step(cur_a)
+        return(Message("pass"))
+
+
+    # ---------------- LEGACY FEATURE: LOCAL TUI COMPATIBILITY ----------------
     # ------------------------ Command parsing methods ------------------------
 
     def parse_move_cmd(self, gm):
@@ -216,21 +347,5 @@ class Tank(Stone):
                 print("Try again; Arguments with numerical inputs should be well-formatted")
             except Exception as e:
                 print("Try again;", e)
-
-    # ------------------------- Stone action methods --------------------------
-    # These methods only read the state of gm, and always return
-    # Message("board action", STPos)
-
-    def attack(self, gm, attack_flag_ID, t):
-        cur_x, cur_y, cur_a = self.history[t]
-
-        los_pos = STPos(t, cur_x, cur_y)
-        los_pos.step(cur_a)
-
-        while(gm.is_valid_position(los_pos.x, los_pos.y)):
-            if gm.board_dynamic[t][los_pos.x][los_pos.y].occupied or (not gm.is_square_available(los_pos.x, los_pos.y)):
-                return(Message("destruction", los_pos))
-            los_pos.step(cur_a)
-        return(Message("pass"))
 
 
