@@ -7,6 +7,7 @@
 </head>
 <body onkeydown="parse_keydown_event(event)" onkeyup="parse_keyup_event(event)">
 <script>
+  const board_static = [["X", "X", "X", "X", "X", "X", "X"], ["X", " ", " ", " ", " ", " ", "X"], ["X", " ", " ", " ", " ", " ", "X"], ["X", " ", " ", "X", " ", " ", "X"], ["X", " ", " ", " ", " ", " ", "X"], ["X", " ", " ", " ", " ", " ", "X"], ["X", "X", "X", "X", "X", "X", "X"]];
   const t_dim = 6;
   const x_dim = 7;
   const y_dim = 7;
@@ -15,7 +16,7 @@
   const stone_properties = JSON.parse('{"0": {"allegiance": "A", "stone_type": "tank", "orientable": true, "opposable": true}, "1": {"allegiance": "A", "stone_type": "tank", "orientable": true, "opposable": true}, "2": {"allegiance": "B", "stone_type": "tank", "orientable": true, "opposable": true}, "3": {"allegiance": "B", "stone_type": "tank", "orientable": true, "opposable": true}, "4": {"allegiance": "A", "stone_type": "tank", "orientable": true, "opposable": true}, "5": {"allegiance": "B", "stone_type": "tank", "orientable": true, "opposable": true}, "6": {"allegiance": "B", "stone_type": "tank", "orientable": true, "opposable": true}}');
   const did_player_finish_turn = false;
   const stones_to_be_commanded = [6];
-  const available_commands = JSON.parse('{"6": {"commands": ["wait", "turn", "move"], "command_properties": {"wait": {"command_type": "spatial_move", "selection_mode": {"is_required": true, "squares": [{"t": 2, "x": 3, "y": 1, "a": [3], "swap_effects": null}]}, "azimuths": null, "choice_keyword": null, "label": "Wait"}, "turn": {"command_type": "spatial_move", "selection_mode": {"is_required": true, "squares": [{"t": 2, "x": 3, "y": 1, "a": [0, 1, 2, 3], "swap_effects": null}]}, "azimuths": [0, 1, 2, 3], "choice_keyword": null, "label": "Turn"}, "move": {"command_type": "spatial_move", "selection_mode": {"is_required": true, "lock_timeslice": 2, "squares": [{"t": 2, "x": 2, "y": 1, "a": [3, 0, 2], "swap_effects": null}, {"t": 2, "x": 4, "y": 1, "a": [3, 0, 2], "swap_effects": null}]}, "azimuths": null, "choice_keyword": null, "label": "Move"}}}}');
+  const available_commands = JSON.parse('{"6": {"commands": ["wait", "turn", "move"], "command_properties": {"wait": {"command_type": "spatial_move", "selection_mode": {"is_required": true, "lock_timeslice": null, "squares": [{"t": 2, "x": 3, "y": 1, "a": [3], "swap_effects": null}]}, "azimuths": null, "choice_keyword": null, "label": "Wait"}, "turn": {"command_type": "spatial_move", "selection_mode": {"is_required": true, "lock_timeslice": null, "squares": [{"t": 2, "x": 3, "y": 1, "a": [0, 1, 2, 3], "swap_effects": null}]}, "azimuths": [0, 1, 2, 3], "choice_keyword": null, "label": "Turn"}, "move": {"command_type": "spatial_move", "selection_mode": {"is_required": true, "lock_timeslice": 2, "squares": [{"t": 2, "x": 2, "y": 1, "a": [3, 0, 2], "swap_effects": null}, {"t": 2, "x": 4, "y": 1, "a": [3, 0, 2], "swap_effects": null}]}, "azimuths": null, "choice_keyword": null, "label": "Move"}}}}');
   const stone_trajectories = JSON.parse('[[{"flags": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null, "5": null, "6": null}, "pushes": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null, "5": null, "6": null}, "destructions": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null, "5": null, "6": null}, "tagscreens": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null, "5": null, "6": null}, "canon": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null, "5": null, "6": null}}, {"flags": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": null, "6": null}, "pushes": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": null, "6": null}, "destructions": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": null, "6": null}, "tagscreens": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": null, "6": null}, "canon": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": null, "6": null}}, {"flags": {"0": [1, 2, 1], "1": [2, 3, 0], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": null, "6": null}, "pushes": {"0": [1, 2, 1], "1": [2, 3, 0], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": null, "6": null}, "destructions": {"0": [1, 2, 1], "1": [2, 3, 0], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": null, "6": null}, "tagscreens": {"0": [1, 2, 1], "1": [2, 3, 0], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": null, "6": null}, "canon": {"0": [1, 2, 1], "1": [2, 3, 0], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": null, "6": null}}, {"flags": {"0": [2, 2, 1], "1": [2, 3, 0], "2": [4, 2, 0], "3": [4, 3, 2], "4": null, "5": null, "6": null}, "pushes": {"0": [2, 2, 1], "1": [2, 3, 0], "2": [4, 2, 0], "3": [4, 3, 2], "4": null, "5": null, "6": null}, "destructions": {"0": [2, 2, 1], "1": [2, 3, 0], "2": [4, 2, 0], "3": [4, 3, 2], "4": null, "5": null, "6": null}, "tagscreens": {"0": [2, 2, 1], "1": [2, 3, 0], "2": [4, 2, 0], "3": [4, 3, 2], "4": null, "5": null, "6": null}, "canon": {"0": [2, 2, 1], "1": [2, 3, 0], "2": [4, 2, 0], "3": [4, 3, 2], "4": null, "5": null, "6": null}}, {"flags": {"0": [2, 2, 1], "1": [2, 2, 1], "2": [4, 1, 3], "3": [4, 4, 3], "4": null, "5": null, "6": null}, "pushes": {"0": [2, 1, 1], "1": [2, 2, 1], "2": [4, 1, 3], "3": [4, 4, 3], "4": null, "5": null, "6": null}, "destructions": {"0": [2, 1, 1], "1": [2, 2, 1], "2": [4, 1, 3], "3": [4, 4, 3], "4": null, "5": null, "6": null}, "tagscreens": {"0": [2, 1, 1], "1": [2, 2, 1], "2": [4, 1, 3], "3": [4, 4, 3], "4": null, "5": null, "6": null}, "canon": {"0": [2, 1, 1], "1": [2, 2, 1], "2": null, "3": [4, 4, 3], "4": null, "5": null, "6": null}}, {"flags": {"0": [2, 1, 2], "1": [3, 2, 1], "2": null, "3": [3, 4, 3], "4": null, "5": null, "6": null}, "pushes": {"0": [2, 1, 2], "1": [3, 2, 1], "2": null, "3": [3, 4, 3], "4": null, "5": null, "6": null}, "destructions": {"0": [2, 1, 2], "1": [3, 2, 1], "2": null, "3": [3, 4, 3], "4": null, "5": null, "6": null}, "tagscreens": {"0": [2, 1, 2], "1": [3, 2, 1], "2": null, "3": [3, 4, 3], "4": null, "5": null, "6": null}, "canon": {"0": [2, 1, 2], "1": [3, 2, 1], "2": null, "3": [3, 4, 3], "4": null, "5": null, "6": null}}], [{"flags": {"0": null, "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null, "5": [3, 4, 3], "6": null}, "pushes": {"0": null, "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null, "5": [3, 4, 3], "6": null}, "destructions": {"0": null, "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null, "5": [3, 4, 3], "6": null}, "tagscreens": {"0": null, "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null, "5": [3, 4, 3], "6": null}, "canon": {"0": null, "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null, "5": [3, 4, 3], "6": null}}, {"flags": {"0": null, "1": [2, 3, 1], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": [2, 4, 0], "6": null}, "pushes": {"0": null, "1": [2, 3, 1], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": [2, 4, 0], "6": null}, "destructions": {"0": null, "1": [2, 3, 1], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": [2, 4, 0], "6": null}, "tagscreens": {"0": null, "1": [2, 3, 1], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": [2, 4, 0], "6": null}, "canon": {"0": null, "1": [2, 3, 1], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": [2, 4, 0], "6": null}}, {"flags": {"0": null, "1": [2, 3, 0], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": [2, 4, 0], "6": null}, "pushes": {"0": null, "1": [2, 3, 0], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": [2, 4, 0], "6": null}, "destructions": {"0": null, "1": [2, 3, 0], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": [2, 4, 0], "6": null}, "tagscreens": {"0": null, "1": [2, 3, 0], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": [2, 4, 0], "6": null}, "canon": {"0": null, "1": [2, 3, 0], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": [2, 4, 0], "6": null}}, {"flags": {"0": null, "1": [2, 3, 0], "2": [4, 2, 0], "3": [4, 3, 2], "4": null, "5": [2, 4, 0], "6": null}, "pushes": {"0": null, "1": [2, 3, 0], "2": [4, 2, 0], "3": [4, 3, 2], "4": null, "5": [2, 4, 0], "6": null}, "destructions": {"0": null, "1": [2, 3, 0], "2": [4, 2, 0], "3": [4, 3, 2], "4": null, "5": [2, 4, 0], "6": null}, "tagscreens": {"0": null, "1": [2, 3, 0], "2": [4, 2, 0], "3": [4, 3, 2], "4": null, "5": [2, 4, 0], "6": null}, "canon": {"0": null, "1": [2, 3, 0], "2": [4, 2, 0], "3": [4, 3, 2], "4": null, "5": [2, 4, 0], "6": null}}, {"flags": {"0": null, "1": [2, 2, 1], "2": [4, 1, 3], "3": [4, 4, 3], "4": null, "5": [2, 4, 0], "6": null}, "pushes": {"0": null, "1": [2, 2, 1], "2": [4, 1, 3], "3": [4, 4, 3], "4": null, "5": [2, 4, 0], "6": null}, "destructions": {"0": null, "1": [2, 2, 1], "2": [4, 1, 3], "3": [4, 4, 3], "4": null, "5": [2, 4, 0], "6": null}, "tagscreens": {"0": null, "1": [2, 2, 1], "2": [4, 1, 3], "3": [4, 4, 3], "4": null, "5": [2, 4, 0], "6": null}, "canon": {"0": null, "1": null, "2": [4, 1, 3], "3": [4, 4, 3], "4": null, "5": [2, 4, 0], "6": null}}, {"flags": {"0": null, "1": null, "2": [4, 1, 3], "3": [3, 4, 3], "4": null, "5": [2, 5, 3], "6": null}, "pushes": {"0": null, "1": null, "2": [4, 1, 3], "3": [3, 4, 3], "4": null, "5": [2, 5, 3], "6": null}, "destructions": {"0": null, "1": null, "2": [4, 1, 3], "3": [3, 4, 3], "4": null, "5": [2, 5, 3], "6": null}, "tagscreens": {"0": null, "1": null, "2": [4, 1, 3], "3": [3, 4, 3], "4": null, "5": [2, 5, 3], "6": null}, "canon": {"0": null, "1": null, "2": [4, 1, 3], "3": [3, 4, 3], "4": null, "5": [2, 5, 3], "6": null}}], [{"flags": {"0": null, "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null, "5": [3, 4, 3], "6": [4, 1, 3]}, "pushes": {"0": null, "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null, "5": [3, 4, 3], "6": [4, 1, 3]}, "destructions": {"0": null, "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null, "5": [3, 4, 3], "6": [4, 1, 3]}, "tagscreens": {"0": null, "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null, "5": [3, 4, 3], "6": [4, 1, 3]}, "canon": {"0": null, "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null, "5": [3, 4, 3], "6": [4, 1, 3]}}, {"flags": {"0": null, "1": [2, 3, 1], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": [2, 4, 0], "6": [3, 1, 3]}, "pushes": {"0": null, "1": [2, 3, 1], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": [2, 4, 0], "6": [3, 1, 3]}, "destructions": {"0": null, "1": [2, 3, 1], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": [2, 4, 0], "6": [3, 1, 3]}, "tagscreens": {"0": null, "1": [2, 3, 1], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": [2, 4, 0], "6": [3, 1, 3]}, "canon": {"0": null, "1": [2, 3, 1], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": [2, 4, 0], "6": [3, 1, 3]}}, {"flags": {"0": null, "1": [2, 3, 0], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": [2, 4, 0], "6": null}, "pushes": {"0": null, "1": [2, 3, 0], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": [2, 4, 0], "6": null}, "destructions": {"0": null, "1": [2, 3, 0], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": [2, 4, 0], "6": null}, "tagscreens": {"0": null, "1": [2, 3, 0], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": [2, 4, 0], "6": null}, "canon": {"0": null, "1": [2, 3, 0], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": [2, 4, 0], "6": null}}, {"flags": {"0": null, "1": [2, 3, 0], "2": [4, 2, 0], "3": [4, 3, 2], "4": null, "5": [2, 4, 0], "6": null}, "pushes": {"0": null, "1": [2, 3, 0], "2": [4, 2, 0], "3": [4, 3, 2], "4": null, "5": [2, 4, 0], "6": null}, "destructions": {"0": null, "1": [2, 3, 0], "2": [4, 2, 0], "3": [4, 3, 2], "4": null, "5": [2, 4, 0], "6": null}, "tagscreens": {"0": null, "1": [2, 3, 0], "2": [4, 2, 0], "3": [4, 3, 2], "4": null, "5": [2, 4, 0], "6": null}, "canon": {"0": null, "1": [2, 3, 0], "2": [4, 2, 0], "3": [4, 3, 2], "4": null, "5": [2, 4, 0], "6": null}}, {"flags": {"0": null, "1": [2, 2, 1], "2": [4, 1, 3], "3": [4, 4, 3], "4": null, "5": [2, 4, 0], "6": null}, "pushes": {"0": null, "1": [2, 2, 1], "2": [4, 1, 3], "3": [4, 4, 3], "4": null, "5": [2, 4, 0], "6": null}, "destructions": {"0": null, "1": [2, 2, 1], "2": [4, 1, 3], "3": [4, 4, 3], "4": null, "5": [2, 4, 0], "6": null}, "tagscreens": {"0": null, "1": [2, 2, 1], "2": [4, 1, 3], "3": [4, 4, 3], "4": null, "5": [2, 4, 0], "6": null}, "canon": {"0": null, "1": null, "2": [4, 1, 3], "3": [4, 4, 3], "4": null, "5": [2, 4, 0], "6": null}}, {"flags": {"0": null, "1": null, "2": [4, 1, 3], "3": [3, 4, 3], "4": null, "5": [2, 5, 3], "6": null}, "pushes": {"0": null, "1": null, "2": [4, 1, 3], "3": [3, 4, 3], "4": null, "5": [2, 5, 3], "6": null}, "destructions": {"0": null, "1": null, "2": [4, 1, 3], "3": [3, 4, 3], "4": null, "5": [2, 5, 3], "6": null}, "tagscreens": {"0": null, "1": null, "2": [4, 1, 3], "3": [3, 4, 3], "4": null, "5": [2, 5, 3], "6": null}, "canon": {"0": null, "1": null, "2": [4, 1, 3], "3": [3, 4, 3], "4": null, "5": [2, 5, 3], "6": null}}]]');
   const stone_endpoints = JSON.parse('[{"0": {"start": {"event": "setup", "t": 0, "x": 1, "y": 3}, "end": {"event": "TJO", "t": 5, "x": 2, "y": 1}}, "1": {"start": {"event": "setup", "t": 0, "x": 2, "y": 3}, "end": {"event": "causally_free", "t": 5, "x": 3, "y": 2}}, "2": {"start": {"event": "setup", "t": 0, "x": 4, "y": 3}, "end": {"event": "destruction", "t": 4, "x": 4, "y": 1}}, "3": {"start": {"event": "setup", "t": 0, "x": 5, "y": 3}, "end": {"event": "TJO", "t": 5, "x": 3, "y": 4}}, "4": null, "5": null, "6": null}, {"0": null, "1": {"start": {"event": "setup", "t": 0, "x": 2, "y": 3}, "end": {"event": "destruction", "t": 4, "x": 2, "y": 2}}, "2": {"start": {"event": "setup", "t": 0, "x": 4, "y": 3}, "end": {"event": "TJO", "t": 5, "x": 4, "y": 1}}, "3": {"start": {"event": "setup", "t": 0, "x": 5, "y": 3}, "end": {"event": "TJO", "t": 5, "x": 3, "y": 4}}, "4": null, "5": {"start": {"event": "TJI", "t": 0, "x": 3, "y": 4}, "end": {"event": "causally_free", "t": 5, "x": 2, "y": 5}}, "6": null}, {"0": null, "1": {"start": {"event": "setup", "t": 0, "x": 2, "y": 3}, "end": {"event": "destruction", "t": 4, "x": 2, "y": 2}}, "2": {"start": {"event": "setup", "t": 0, "x": 4, "y": 3}, "end": {"event": "TJO", "t": 5, "x": 4, "y": 1}}, "3": {"start": {"event": "setup", "t": 0, "x": 5, "y": 3}, "end": {"event": "TJO", "t": 5, "x": 3, "y": 4}}, "4": null, "5": {"start": {"event": "TJI", "t": 0, "x": 3, "y": 4}, "end": {"event": "causally_free", "t": 5, "x": 2, "y": 5}}, "6": {"start": {"event": "TJI", "t": 0, "x": 4, "y": 1}, "end": {"event": "causally_free", "t": 1, "x": 3, "y": 1}}}]');
   const stone_actions = [[[], [], [["tank", "attack", 4, 3, 4, 0]], [], [["tank", "attack", 2, 1, 4, 1]], []], [[], [], [["tank", "attack", 4, 3, 4, 0]], [], [["tank", "attack", 2, 4, 2, 2]], [["tank", "attack", 4, 1, 0, 1]]], [[], [], [["tank", "attack", 4, 3, 4, 0]], [], [["tank", "attack", 2, 4, 2, 2]], [["tank", "attack", 4, 1, 0, 1]]]];
@@ -76,30 +77,30 @@
 </defs>
 <g id="camera_subject" transform-origin="350.0px 350.0px">
 <g class="board_layer" id="board_layer_0">
-  <rect width="100" height="100" x="100" y="100" class="board_square_empty" id="board_square_1_1" onclick="inspector.board_square_click(1,1)" ondblclick="inspector.board_square_double_click(1,1)" />
-  <rect width="100" height="100" x="100" y="200" class="board_square_empty" id="board_square_1_2" onclick="inspector.board_square_click(1,2)" ondblclick="inspector.board_square_double_click(1,2)" />
-  <rect width="100" height="100" x="100" y="300" class="board_square_empty" id="board_square_1_3" onclick="inspector.board_square_click(1,3)" ondblclick="inspector.board_square_double_click(1,3)" />
-  <rect width="100" height="100" x="100" y="400" class="board_square_empty" id="board_square_1_4" onclick="inspector.board_square_click(1,4)" ondblclick="inspector.board_square_double_click(1,4)" />
-  <rect width="100" height="100" x="100" y="500" class="board_square_empty" id="board_square_1_5" onclick="inspector.board_square_click(1,5)" ondblclick="inspector.board_square_double_click(1,5)" />
-  <rect width="100" height="100" x="200" y="100" class="board_square_empty" id="board_square_2_1" onclick="inspector.board_square_click(2,1)" ondblclick="inspector.board_square_double_click(2,1)" />
-  <rect width="100" height="100" x="200" y="200" class="board_square_empty" id="board_square_2_2" onclick="inspector.board_square_click(2,2)" ondblclick="inspector.board_square_double_click(2,2)" />
-  <rect width="100" height="100" x="200" y="300" class="board_square_empty" id="board_square_2_3" onclick="inspector.board_square_click(2,3)" ondblclick="inspector.board_square_double_click(2,3)" />
-  <rect width="100" height="100" x="200" y="400" class="board_square_empty" id="board_square_2_4" onclick="inspector.board_square_click(2,4)" ondblclick="inspector.board_square_double_click(2,4)" />
-  <rect width="100" height="100" x="200" y="500" class="board_square_empty" id="board_square_2_5" onclick="inspector.board_square_click(2,5)" ondblclick="inspector.board_square_double_click(2,5)" />
-  <rect width="100" height="100" x="300" y="100" class="board_square_empty" id="board_square_3_1" onclick="inspector.board_square_click(3,1)" ondblclick="inspector.board_square_double_click(3,1)" />
-  <rect width="100" height="100" x="300" y="200" class="board_square_empty" id="board_square_3_2" onclick="inspector.board_square_click(3,2)" ondblclick="inspector.board_square_double_click(3,2)" />
-  <rect width="100" height="100" x="300" y="400" class="board_square_empty" id="board_square_3_4" onclick="inspector.board_square_click(3,4)" ondblclick="inspector.board_square_double_click(3,4)" />
-  <rect width="100" height="100" x="300" y="500" class="board_square_empty" id="board_square_3_5" onclick="inspector.board_square_click(3,5)" ondblclick="inspector.board_square_double_click(3,5)" />
-  <rect width="100" height="100" x="400" y="100" class="board_square_empty" id="board_square_4_1" onclick="inspector.board_square_click(4,1)" ondblclick="inspector.board_square_double_click(4,1)" />
-  <rect width="100" height="100" x="400" y="200" class="board_square_empty" id="board_square_4_2" onclick="inspector.board_square_click(4,2)" ondblclick="inspector.board_square_double_click(4,2)" />
-  <rect width="100" height="100" x="400" y="300" class="board_square_empty" id="board_square_4_3" onclick="inspector.board_square_click(4,3)" ondblclick="inspector.board_square_double_click(4,3)" />
-  <rect width="100" height="100" x="400" y="400" class="board_square_empty" id="board_square_4_4" onclick="inspector.board_square_click(4,4)" ondblclick="inspector.board_square_double_click(4,4)" />
-  <rect width="100" height="100" x="400" y="500" class="board_square_empty" id="board_square_4_5" onclick="inspector.board_square_click(4,5)" ondblclick="inspector.board_square_double_click(4,5)" />
-  <rect width="100" height="100" x="500" y="100" class="board_square_empty" id="board_square_5_1" onclick="inspector.board_square_click(5,1)" ondblclick="inspector.board_square_double_click(5,1)" />
-  <rect width="100" height="100" x="500" y="200" class="board_square_empty" id="board_square_5_2" onclick="inspector.board_square_click(5,2)" ondblclick="inspector.board_square_double_click(5,2)" />
-  <rect width="100" height="100" x="500" y="300" class="board_square_empty" id="board_square_5_3" onclick="inspector.board_square_click(5,3)" ondblclick="inspector.board_square_double_click(5,3)" />
-  <rect width="100" height="100" x="500" y="400" class="board_square_empty" id="board_square_5_4" onclick="inspector.board_square_click(5,4)" ondblclick="inspector.board_square_double_click(5,4)" />
-  <rect width="100" height="100" x="500" y="500" class="board_square_empty" id="board_square_5_5" onclick="inspector.board_square_click(5,5)" ondblclick="inspector.board_square_double_click(5,5)" />
+  <rect width="100" height="100" x="100" y="100" class="board_square_empty" id="board_square_1_1" onclick="inspector.board_square_click(1,1)" />
+  <rect width="100" height="100" x="100" y="200" class="board_square_empty" id="board_square_1_2" onclick="inspector.board_square_click(1,2)" />
+  <rect width="100" height="100" x="100" y="300" class="board_square_empty" id="board_square_1_3" onclick="inspector.board_square_click(1,3)" />
+  <rect width="100" height="100" x="100" y="400" class="board_square_empty" id="board_square_1_4" onclick="inspector.board_square_click(1,4)" />
+  <rect width="100" height="100" x="100" y="500" class="board_square_empty" id="board_square_1_5" onclick="inspector.board_square_click(1,5)" />
+  <rect width="100" height="100" x="200" y="100" class="board_square_empty" id="board_square_2_1" onclick="inspector.board_square_click(2,1)" />
+  <rect width="100" height="100" x="200" y="200" class="board_square_empty" id="board_square_2_2" onclick="inspector.board_square_click(2,2)" />
+  <rect width="100" height="100" x="200" y="300" class="board_square_empty" id="board_square_2_3" onclick="inspector.board_square_click(2,3)" />
+  <rect width="100" height="100" x="200" y="400" class="board_square_empty" id="board_square_2_4" onclick="inspector.board_square_click(2,4)" />
+  <rect width="100" height="100" x="200" y="500" class="board_square_empty" id="board_square_2_5" onclick="inspector.board_square_click(2,5)" />
+  <rect width="100" height="100" x="300" y="100" class="board_square_empty" id="board_square_3_1" onclick="inspector.board_square_click(3,1)" />
+  <rect width="100" height="100" x="300" y="200" class="board_square_empty" id="board_square_3_2" onclick="inspector.board_square_click(3,2)" />
+  <rect width="100" height="100" x="300" y="400" class="board_square_empty" id="board_square_3_4" onclick="inspector.board_square_click(3,4)" />
+  <rect width="100" height="100" x="300" y="500" class="board_square_empty" id="board_square_3_5" onclick="inspector.board_square_click(3,5)" />
+  <rect width="100" height="100" x="400" y="100" class="board_square_empty" id="board_square_4_1" onclick="inspector.board_square_click(4,1)" />
+  <rect width="100" height="100" x="400" y="200" class="board_square_empty" id="board_square_4_2" onclick="inspector.board_square_click(4,2)" />
+  <rect width="100" height="100" x="400" y="300" class="board_square_empty" id="board_square_4_3" onclick="inspector.board_square_click(4,3)" />
+  <rect width="100" height="100" x="400" y="400" class="board_square_empty" id="board_square_4_4" onclick="inspector.board_square_click(4,4)" />
+  <rect width="100" height="100" x="400" y="500" class="board_square_empty" id="board_square_4_5" onclick="inspector.board_square_click(4,5)" />
+  <rect width="100" height="100" x="500" y="100" class="board_square_empty" id="board_square_5_1" onclick="inspector.board_square_click(5,1)" />
+  <rect width="100" height="100" x="500" y="200" class="board_square_empty" id="board_square_5_2" onclick="inspector.board_square_click(5,2)" />
+  <rect width="100" height="100" x="500" y="300" class="board_square_empty" id="board_square_5_3" onclick="inspector.board_square_click(5,3)" />
+  <rect width="100" height="100" x="500" y="400" class="board_square_empty" id="board_square_5_4" onclick="inspector.board_square_click(5,4)" />
+  <rect width="100" height="100" x="500" y="500" class="board_square_empty" id="board_square_5_5" onclick="inspector.board_square_click(5,5)" />
 </g>
 <g class="board_layer" id="board_layer_1">
   <rect width="100" height="100" x="100" y="100" class="used_time_jump_marker" id="used_time_jump_marker_1_1" visibility="hidden" />
@@ -154,31 +155,31 @@
 <g class="board_layer" id="board_layer_2">
 </g>
 <g class="board_layer" id="board_layer_3">
-  <rect width="100" height="100" x="0" y="0" class="board_square_wall" id="board_square_0_0" onclick="inspector.board_square_click(0,0)" ondblclick="inspector.board_square_double_click(0,0)" />
-  <rect width="100" height="100" x="0" y="100" class="board_square_wall" id="board_square_0_1" onclick="inspector.board_square_click(0,1)" ondblclick="inspector.board_square_double_click(0,1)" />
-  <rect width="100" height="100" x="0" y="200" class="board_square_wall" id="board_square_0_2" onclick="inspector.board_square_click(0,2)" ondblclick="inspector.board_square_double_click(0,2)" />
-  <rect width="100" height="100" x="0" y="300" class="board_square_wall" id="board_square_0_3" onclick="inspector.board_square_click(0,3)" ondblclick="inspector.board_square_double_click(0,3)" />
-  <rect width="100" height="100" x="0" y="400" class="board_square_wall" id="board_square_0_4" onclick="inspector.board_square_click(0,4)" ondblclick="inspector.board_square_double_click(0,4)" />
-  <rect width="100" height="100" x="0" y="500" class="board_square_wall" id="board_square_0_5" onclick="inspector.board_square_click(0,5)" ondblclick="inspector.board_square_double_click(0,5)" />
-  <rect width="100" height="100" x="0" y="600" class="board_square_wall" id="board_square_0_6" onclick="inspector.board_square_click(0,6)" ondblclick="inspector.board_square_double_click(0,6)" />
-  <rect width="100" height="100" x="100" y="0" class="board_square_wall" id="board_square_1_0" onclick="inspector.board_square_click(1,0)" ondblclick="inspector.board_square_double_click(1,0)" />
-  <rect width="100" height="100" x="100" y="600" class="board_square_wall" id="board_square_1_6" onclick="inspector.board_square_click(1,6)" ondblclick="inspector.board_square_double_click(1,6)" />
-  <rect width="100" height="100" x="200" y="0" class="board_square_wall" id="board_square_2_0" onclick="inspector.board_square_click(2,0)" ondblclick="inspector.board_square_double_click(2,0)" />
-  <rect width="100" height="100" x="200" y="600" class="board_square_wall" id="board_square_2_6" onclick="inspector.board_square_click(2,6)" ondblclick="inspector.board_square_double_click(2,6)" />
-  <rect width="100" height="100" x="300" y="0" class="board_square_wall" id="board_square_3_0" onclick="inspector.board_square_click(3,0)" ondblclick="inspector.board_square_double_click(3,0)" />
-  <rect width="100" height="100" x="300" y="300" class="board_square_wall" id="board_square_3_3" onclick="inspector.board_square_click(3,3)" ondblclick="inspector.board_square_double_click(3,3)" />
-  <rect width="100" height="100" x="300" y="600" class="board_square_wall" id="board_square_3_6" onclick="inspector.board_square_click(3,6)" ondblclick="inspector.board_square_double_click(3,6)" />
-  <rect width="100" height="100" x="400" y="0" class="board_square_wall" id="board_square_4_0" onclick="inspector.board_square_click(4,0)" ondblclick="inspector.board_square_double_click(4,0)" />
-  <rect width="100" height="100" x="400" y="600" class="board_square_wall" id="board_square_4_6" onclick="inspector.board_square_click(4,6)" ondblclick="inspector.board_square_double_click(4,6)" />
-  <rect width="100" height="100" x="500" y="0" class="board_square_wall" id="board_square_5_0" onclick="inspector.board_square_click(5,0)" ondblclick="inspector.board_square_double_click(5,0)" />
-  <rect width="100" height="100" x="500" y="600" class="board_square_wall" id="board_square_5_6" onclick="inspector.board_square_click(5,6)" ondblclick="inspector.board_square_double_click(5,6)" />
-  <rect width="100" height="100" x="600" y="0" class="board_square_wall" id="board_square_6_0" onclick="inspector.board_square_click(6,0)" ondblclick="inspector.board_square_double_click(6,0)" />
-  <rect width="100" height="100" x="600" y="100" class="board_square_wall" id="board_square_6_1" onclick="inspector.board_square_click(6,1)" ondblclick="inspector.board_square_double_click(6,1)" />
-  <rect width="100" height="100" x="600" y="200" class="board_square_wall" id="board_square_6_2" onclick="inspector.board_square_click(6,2)" ondblclick="inspector.board_square_double_click(6,2)" />
-  <rect width="100" height="100" x="600" y="300" class="board_square_wall" id="board_square_6_3" onclick="inspector.board_square_click(6,3)" ondblclick="inspector.board_square_double_click(6,3)" />
-  <rect width="100" height="100" x="600" y="400" class="board_square_wall" id="board_square_6_4" onclick="inspector.board_square_click(6,4)" ondblclick="inspector.board_square_double_click(6,4)" />
-  <rect width="100" height="100" x="600" y="500" class="board_square_wall" id="board_square_6_5" onclick="inspector.board_square_click(6,5)" ondblclick="inspector.board_square_double_click(6,5)" />
-  <rect width="100" height="100" x="600" y="600" class="board_square_wall" id="board_square_6_6" onclick="inspector.board_square_click(6,6)" ondblclick="inspector.board_square_double_click(6,6)" />
+  <rect width="100" height="100" x="0" y="0" class="board_square_wall" id="board_square_0_0" onclick="inspector.board_square_click(0,0)" />
+  <rect width="100" height="100" x="0" y="100" class="board_square_wall" id="board_square_0_1" onclick="inspector.board_square_click(0,1)" />
+  <rect width="100" height="100" x="0" y="200" class="board_square_wall" id="board_square_0_2" onclick="inspector.board_square_click(0,2)" />
+  <rect width="100" height="100" x="0" y="300" class="board_square_wall" id="board_square_0_3" onclick="inspector.board_square_click(0,3)" />
+  <rect width="100" height="100" x="0" y="400" class="board_square_wall" id="board_square_0_4" onclick="inspector.board_square_click(0,4)" />
+  <rect width="100" height="100" x="0" y="500" class="board_square_wall" id="board_square_0_5" onclick="inspector.board_square_click(0,5)" />
+  <rect width="100" height="100" x="0" y="600" class="board_square_wall" id="board_square_0_6" onclick="inspector.board_square_click(0,6)" />
+  <rect width="100" height="100" x="100" y="0" class="board_square_wall" id="board_square_1_0" onclick="inspector.board_square_click(1,0)" />
+  <rect width="100" height="100" x="100" y="600" class="board_square_wall" id="board_square_1_6" onclick="inspector.board_square_click(1,6)" />
+  <rect width="100" height="100" x="200" y="0" class="board_square_wall" id="board_square_2_0" onclick="inspector.board_square_click(2,0)" />
+  <rect width="100" height="100" x="200" y="600" class="board_square_wall" id="board_square_2_6" onclick="inspector.board_square_click(2,6)" />
+  <rect width="100" height="100" x="300" y="0" class="board_square_wall" id="board_square_3_0" onclick="inspector.board_square_click(3,0)" />
+  <rect width="100" height="100" x="300" y="300" class="board_square_wall" id="board_square_3_3" onclick="inspector.board_square_click(3,3)" />
+  <rect width="100" height="100" x="300" y="600" class="board_square_wall" id="board_square_3_6" onclick="inspector.board_square_click(3,6)" />
+  <rect width="100" height="100" x="400" y="0" class="board_square_wall" id="board_square_4_0" onclick="inspector.board_square_click(4,0)" />
+  <rect width="100" height="100" x="400" y="600" class="board_square_wall" id="board_square_4_6" onclick="inspector.board_square_click(4,6)" />
+  <rect width="100" height="100" x="500" y="0" class="board_square_wall" id="board_square_5_0" onclick="inspector.board_square_click(5,0)" />
+  <rect width="100" height="100" x="500" y="600" class="board_square_wall" id="board_square_5_6" onclick="inspector.board_square_click(5,6)" />
+  <rect width="100" height="100" x="600" y="0" class="board_square_wall" id="board_square_6_0" onclick="inspector.board_square_click(6,0)" />
+  <rect width="100" height="100" x="600" y="100" class="board_square_wall" id="board_square_6_1" onclick="inspector.board_square_click(6,1)" />
+  <rect width="100" height="100" x="600" y="200" class="board_square_wall" id="board_square_6_2" onclick="inspector.board_square_click(6,2)" />
+  <rect width="100" height="100" x="600" y="300" class="board_square_wall" id="board_square_6_3" onclick="inspector.board_square_click(6,3)" />
+  <rect width="100" height="100" x="600" y="400" class="board_square_wall" id="board_square_6_4" onclick="inspector.board_square_click(6,4)" />
+  <rect width="100" height="100" x="600" y="500" class="board_square_wall" id="board_square_6_5" onclick="inspector.board_square_click(6,5)" />
+  <rect width="100" height="100" x="600" y="600" class="board_square_wall" id="board_square_6_6" onclick="inspector.board_square_click(6,6)" />
 <polyline id="square_highlighter" points="0,0 100,0 100,100 0,100 0,0" display="none"/>
 </g>
 <g class="board_layer" id="board_layer_4">
@@ -232,7 +233,76 @@
   </g>
 </g>
 </g>
+<g id="selection_mode_highlights" width="800" height="700" visibility="hidden">
+  <rect width="100" height="100" x="0" y="0" class="selection_mode_highlight" id="selection_mode_highlight_0_0" />
+  <rect width="100" height="100" x="0" y="100" class="selection_mode_highlight" id="selection_mode_highlight_0_1" />
+  <rect width="100" height="100" x="0" y="200" class="selection_mode_highlight" id="selection_mode_highlight_0_2" />
+  <rect width="100" height="100" x="0" y="300" class="selection_mode_highlight" id="selection_mode_highlight_0_3" />
+  <rect width="100" height="100" x="0" y="400" class="selection_mode_highlight" id="selection_mode_highlight_0_4" />
+  <rect width="100" height="100" x="0" y="500" class="selection_mode_highlight" id="selection_mode_highlight_0_5" />
+  <rect width="100" height="100" x="0" y="600" class="selection_mode_highlight" id="selection_mode_highlight_0_6" />
+  <rect width="100" height="100" x="100" y="0" class="selection_mode_highlight" id="selection_mode_highlight_1_0" />
+  <rect width="100" height="100" x="100" y="100" class="selection_mode_highlight" id="selection_mode_highlight_1_1" />
+  <rect width="100" height="100" x="100" y="200" class="selection_mode_highlight" id="selection_mode_highlight_1_2" />
+  <rect width="100" height="100" x="100" y="300" class="selection_mode_highlight" id="selection_mode_highlight_1_3" />
+  <rect width="100" height="100" x="100" y="400" class="selection_mode_highlight" id="selection_mode_highlight_1_4" />
+  <rect width="100" height="100" x="100" y="500" class="selection_mode_highlight" id="selection_mode_highlight_1_5" />
+  <rect width="100" height="100" x="100" y="600" class="selection_mode_highlight" id="selection_mode_highlight_1_6" />
+  <rect width="100" height="100" x="200" y="0" class="selection_mode_highlight" id="selection_mode_highlight_2_0" />
+  <rect width="100" height="100" x="200" y="100" class="selection_mode_highlight" id="selection_mode_highlight_2_1" />
+  <rect width="100" height="100" x="200" y="200" class="selection_mode_highlight" id="selection_mode_highlight_2_2" />
+  <rect width="100" height="100" x="200" y="300" class="selection_mode_highlight" id="selection_mode_highlight_2_3" />
+  <rect width="100" height="100" x="200" y="400" class="selection_mode_highlight" id="selection_mode_highlight_2_4" />
+  <rect width="100" height="100" x="200" y="500" class="selection_mode_highlight" id="selection_mode_highlight_2_5" />
+  <rect width="100" height="100" x="200" y="600" class="selection_mode_highlight" id="selection_mode_highlight_2_6" />
+  <rect width="100" height="100" x="300" y="0" class="selection_mode_highlight" id="selection_mode_highlight_3_0" />
+  <rect width="100" height="100" x="300" y="100" class="selection_mode_highlight" id="selection_mode_highlight_3_1" />
+  <rect width="100" height="100" x="300" y="200" class="selection_mode_highlight" id="selection_mode_highlight_3_2" />
+  <rect width="100" height="100" x="300" y="300" class="selection_mode_highlight" id="selection_mode_highlight_3_3" />
+  <rect width="100" height="100" x="300" y="400" class="selection_mode_highlight" id="selection_mode_highlight_3_4" />
+  <rect width="100" height="100" x="300" y="500" class="selection_mode_highlight" id="selection_mode_highlight_3_5" />
+  <rect width="100" height="100" x="300" y="600" class="selection_mode_highlight" id="selection_mode_highlight_3_6" />
+  <rect width="100" height="100" x="400" y="0" class="selection_mode_highlight" id="selection_mode_highlight_4_0" />
+  <rect width="100" height="100" x="400" y="100" class="selection_mode_highlight" id="selection_mode_highlight_4_1" />
+  <rect width="100" height="100" x="400" y="200" class="selection_mode_highlight" id="selection_mode_highlight_4_2" />
+  <rect width="100" height="100" x="400" y="300" class="selection_mode_highlight" id="selection_mode_highlight_4_3" />
+  <rect width="100" height="100" x="400" y="400" class="selection_mode_highlight" id="selection_mode_highlight_4_4" />
+  <rect width="100" height="100" x="400" y="500" class="selection_mode_highlight" id="selection_mode_highlight_4_5" />
+  <rect width="100" height="100" x="400" y="600" class="selection_mode_highlight" id="selection_mode_highlight_4_6" />
+  <rect width="100" height="100" x="500" y="0" class="selection_mode_highlight" id="selection_mode_highlight_5_0" />
+  <rect width="100" height="100" x="500" y="100" class="selection_mode_highlight" id="selection_mode_highlight_5_1" />
+  <rect width="100" height="100" x="500" y="200" class="selection_mode_highlight" id="selection_mode_highlight_5_2" />
+  <rect width="100" height="100" x="500" y="300" class="selection_mode_highlight" id="selection_mode_highlight_5_3" />
+  <rect width="100" height="100" x="500" y="400" class="selection_mode_highlight" id="selection_mode_highlight_5_4" />
+  <rect width="100" height="100" x="500" y="500" class="selection_mode_highlight" id="selection_mode_highlight_5_5" />
+  <rect width="100" height="100" x="500" y="600" class="selection_mode_highlight" id="selection_mode_highlight_5_6" />
+  <rect width="100" height="100" x="600" y="0" class="selection_mode_highlight" id="selection_mode_highlight_6_0" />
+  <rect width="100" height="100" x="600" y="100" class="selection_mode_highlight" id="selection_mode_highlight_6_1" />
+  <rect width="100" height="100" x="600" y="200" class="selection_mode_highlight" id="selection_mode_highlight_6_2" />
+  <rect width="100" height="100" x="600" y="300" class="selection_mode_highlight" id="selection_mode_highlight_6_3" />
+  <rect width="100" height="100" x="600" y="400" class="selection_mode_highlight" id="selection_mode_highlight_6_4" />
+  <rect width="100" height="100" x="600" y="500" class="selection_mode_highlight" id="selection_mode_highlight_6_5" />
+  <rect width="100" height="100" x="600" y="600" class="selection_mode_highlight" id="selection_mode_highlight_6_6" />
 </g>
+<g x="0" y="0" width="100" height="100" class="selection_mode_dummy" id="A_tank_dummy" transform-origin="50px 50px" display="none">
+  <g x="0" y="0" width="100" height="100" class="selection_mode_dummy_animation_effects" id="A_tank_dummy_animation_effects" transform-origin="50px 50px">
+    <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
+    <rect x="45" y="10" width="10" height="30" class="A_tank_barrel" />
+    <circle cx="50" cy="50" r="20" class="A_tank_body" />
+  </g>
+</g>
+<g x="0" y="0" width="100" height="100" class="selection_mode_dummy" id="B_tank_dummy" transform-origin="50px 50px" display="none">
+  <g x="0" y="0" width="100" height="100" class="selection_mode_dummy_animation_effects" id="B_tank_dummy_animation_effects" transform-origin="50px 50px">
+    <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
+    <rect x="45" y="10" width="10" height="30" class="B_tank_barrel" />
+    <circle cx="50" cy="50" r="20" class="B_tank_body" />
+  </g>
+</g>
+</g>
+  <polygon points="400.0,40.0 450.0,70.0 350.0,70.0" class="azimuth_indicator" id="azimuth_indicator_0" onclick="inspector.select_azimuth(0)" display="none"/>
+  <polygon points="750.0,350.0 720.0,400.0 720.0,300.0" class="azimuth_indicator" id="azimuth_indicator_1" onclick="inspector.select_azimuth(1)" display="none"/>
+  <polygon points="400.0,660.0 450.0,630.0 350.0,630.0" class="azimuth_indicator" id="azimuth_indicator_2" onclick="inspector.select_azimuth(2)" display="none"/>
+  <polygon points="50.0,350.0 80.0,400.0 80.0,300.0" class="azimuth_indicator" id="azimuth_indicator_3" onclick="inspector.select_azimuth(3)" display="none"/>
 <g id="board_animation_overlay" width="800" height="700" visibility="hidden">
   <rect id="board_animation_overlay_bg" x="0" y="0" width="800" height="700" />
   <text id="board_animation_overlay_text"  x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" >changeme</text>
@@ -264,6 +334,16 @@
   </div>
   <div id="stone_inspector_commands" class="stone_inspector_part">
     <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" id="stone_inspector_commands_svg">
+    </svg>
+    <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" id="stone_inspector_selection_mode_buttons_svg">
+      <g id="abort_selection_button" display="none">
+        <rect x="0" y="0" width="100" height="83" class="stone_command_panel_button" id="abort_selection_button_polygon" onclick="inspector.turn_off_selection_mode()" />
+        <text x="50" y="42" text-anchor="middle" id="abort_selection_button_label" class="button_label">Abort</text>
+      </g>
+      <g id="submit_selection_button" display="none">
+        <rect x="110" y="0" width="100" height="83" class="stone_command_panel_button" id="submit_selection_button_polygon" onclick="inspector.submit_selection()" />
+        <text x="160" y="42" text-anchor="middle" class="button_label">Submit</text>
+      </g>
     </svg>
   </div>
 </div>

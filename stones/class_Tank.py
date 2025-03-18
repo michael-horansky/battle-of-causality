@@ -104,6 +104,7 @@ class Tank(Stone):
                     "command_type" : "spatial_move",
                     "selection_mode" : {
                             "is_required" : True,
+                            "lock_timeslice" : None,
                             "squares" : [{"t" : t + 1, "x" : cur_x, "y" : cur_y, "a" : [cur_a], "swap_effects" : None}]
                         },
                     "azimuths" : None,
@@ -117,6 +118,7 @@ class Tank(Stone):
                     "command_type" : "spatial_move",
                     "selection_mode" : {
                             "is_required" : True,
+                            "lock_timeslice" : None,
                             "squares" : [{"t" : t + 1, "x" : cur_x, "y" : cur_y, "a" : [0, 1, 2, 3], "swap_effects" : None}]
                         },
                     "azimuths" : [0, 1, 2, 3],

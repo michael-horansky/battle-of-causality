@@ -71,6 +71,20 @@ margin: 0;
     stroke-width : 2;
 }
 
+.stone_command_panel_button {
+    fill : pink;
+    fill-opacity : 0.2;
+    stroke : black;
+    stroke-width : 1;
+}
+
+.stone_command_panel_button:hover {
+    fill : pink;
+    fill-opacity : 0.1;
+    stroke : black;
+    stroke-width : 2;
+}
+
 #board_window {
     float : left;
 }
@@ -120,6 +134,23 @@ margin: 0;
     fill : black;
     fill-opacity : 0.9;
     stroke : azure;
+}
+
+.selection_mode_highlight {
+    fill : black;
+    fill-opacity : 0.3;
+    pointer-events : none;
+}
+
+.azimuth_indicator {
+    fill : white;
+    fill-opacity : 0.5;
+    stroke : black;
+    stroke-width : 3;
+}
+
+.azimuth_indicator:hover {
+    fill-opacity : 0.7;
 }
 
 /* ------------ Stones ------------- */

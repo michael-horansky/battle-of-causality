@@ -107,6 +107,7 @@ class HTMLRenderer(Renderer):
         # This means the main script can be global for all the games :)
         self.commit_to_output(f"<script>")
         # ------------------------ General properties -------------------------
+        self.deposit_list("board_static", self.render_object.board_static)
         self.deposit_datum("t_dim", self.render_object.t_dim)
         self.deposit_datum("x_dim", self.render_object.x_dim)
         self.deposit_datum("y_dim", self.render_object.y_dim)
@@ -272,6 +273,59 @@ class HTMLRenderer(Renderer):
     def close_board_window_camera_scope(self):
         self.commit_to_output("</g>")
 
+    def draw_selection_mode_highlights(self):
+        # Highlights
+        selection_mode_highlights = []
+        selection_mode_highlights.append(f"<g id=\"selection_mode_highlights\" width=\"{self.board_window_width}\" height=\"{self.board_window_height}\" visibility=\"hidden\">")
+        for x in range(self.render_object.x_dim):
+            for y in range(self.render_object.y_dim):
+                selection_mode_highlights.append(f"  <rect width=\"{self.board_square_base_side_length}\" height=\"{self.board_square_base_side_length}\" x=\"{x * self.board_square_base_side_length}\" y=\"{y * self.board_square_base_side_length}\" class=\"selection_mode_highlight\" id=\"selection_mode_highlight_{x}_{y}\" />")
+        selection_mode_highlights.append(f"</g>")
+        self.commit_to_output(selection_mode_highlights)
+
+    def draw_selection_mode_dummies(self):
+        # Dummy
+        # We draw one dummy of each type
+        for allegiance in ["A", "B"]:
+            tank_object = []
+            tank_object.append(f"<g x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"selection_mode_dummy\" id=\"{allegiance}_tank_dummy\" transform-origin=\"50px 50px\" display=\"none\">")
+            tank_object.append(f"  <g x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"selection_mode_dummy_animation_effects\" id=\"{allegiance}_tank_dummy_animation_effects\" transform-origin=\"50px 50px\">")
+            tank_object.append(f"    <rect x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"stone_pedestal\" visibility=\"hidden\" />")
+            tank_object.append(f"    <rect x=\"45\" y=\"10\" width=\"10\" height=\"30\" class=\"{allegiance}_tank_barrel\" />")
+            tank_object.append(f"    <circle cx=\"50\" cy=\"50\" r=\"20\" class=\"{allegiance}_tank_body\" />")
+            tank_object.append("  </g>")
+            tank_object.append("</g>")
+            self.commit_to_output(tank_object)
+
+    def draw_selection_mode_azimuth_indicators(self):
+        # Azimuth indicators
+        triangle_width = 100
+        triangle_height = 30
+        triangle_offset = 0.1
+        azimuth_indicator_points = [
+                [[0, -triangle_height], [triangle_width / 2, 0], [-triangle_width / 2, 0]],
+                [[triangle_height, 0], [0, triangle_width / 2], [0, -triangle_width / 2]],
+                [[0, triangle_height], [triangle_width / 2, 0], [-triangle_width / 2, 0]],
+                [[-triangle_height, 0], [0, triangle_width / 2], [0, -triangle_width / 2]]
+            ]
+        azimuth_indicators = []
+        for azimuth in range(4):
+            if azimuth == 0:
+                offset_x = self.board_window_width / 2
+                offset_y = self.board_window_height * triangle_offset
+            elif azimuth == 1:
+                offset_x = self.board_window_width * (1 - triangle_offset)
+                offset_y = self.board_window_height / 2
+            elif azimuth == 2:
+                offset_x = self.board_window_width / 2
+                offset_y = self.board_window_height * (1 - triangle_offset)
+            elif azimuth == 3:
+                offset_x = self.board_window_width * triangle_offset
+                offset_y = self.board_window_height / 2
+            azimuth_indicators.append(f"  <polygon points=\"{self.get_polygon_points(azimuth_indicator_points[azimuth], [offset_x, offset_y])}\" class=\"azimuth_indicator\" id=\"azimuth_indicator_{azimuth}\" onclick=\"inspector.select_azimuth({azimuth})\" display=\"none\"/>")
+        self.commit_to_output(azimuth_indicators)
+
+
     def draw_board_animation_overlay(self):
         animation_overlay = []
         animation_overlay.append(f"<g id=\"board_animation_overlay\" width=\"{self.board_window_width}\" height=\"{self.board_window_height}\" visibility=\"hidden\">")
@@ -295,7 +349,7 @@ class HTMLRenderer(Renderer):
         # ID is position
         # Class is static type
         class_name, z_index = self.encode_board_square_class(x, y)
-        board_square_object = f"  <rect width=\"{self.board_square_base_side_length}\" height=\"{self.board_square_base_side_length}\" x=\"{x * self.board_square_base_side_length}\" y=\"{y * self.board_square_base_side_length}\" class=\"{class_name}\" id=\"{self.encode_board_square_id(x, y)}\" onclick=\"inspector.board_square_click({x},{y})\" ondblclick=\"inspector.board_square_double_click({x},{y})\" />"
+        board_square_object = f"  <rect width=\"{self.board_square_base_side_length}\" height=\"{self.board_square_base_side_length}\" x=\"{x * self.board_square_base_side_length}\" y=\"{y * self.board_square_base_side_length}\" class=\"{class_name}\" id=\"{self.encode_board_square_id(x, y)}\" onclick=\"inspector.board_square_click({x},{y})\" />"
         self.board_layer_structure[z_index].append(board_square_object)
 
         # Draws time jump marker into z-index = 1, with
@@ -349,7 +403,10 @@ class HTMLRenderer(Renderer):
         self.draw_stones()
         self.draw_square_highlighter()
         self.commit_board_layer_structure()
+        self.draw_selection_mode_highlights()
+        self.draw_selection_mode_dummies()
         self.close_board_window_camera_scope()
+        self.draw_selection_mode_azimuth_indicators()
         self.draw_board_animation_overlay()
         self.close_board_window()
 
@@ -394,6 +451,16 @@ class HTMLRenderer(Renderer):
         stone_inspector_object.append("  </div>")
         stone_inspector_object.append("  <div id=\"stone_inspector_commands\" class=\"stone_inspector_part\">")
         stone_inspector_object.append("    <svg width=\"100%\" height=\"100%\" xmlns=\"http://www.w3.org/2000/svg\" id=\"stone_inspector_commands_svg\">")
+        stone_inspector_object.append("    </svg>")
+        stone_inspector_object.append("    <svg width=\"100%\" height=\"100%\" xmlns=\"http://www.w3.org/2000/svg\" id=\"stone_inspector_selection_mode_buttons_svg\">")
+        stone_inspector_object.append("      <g id=\"abort_selection_button\" display=\"none\">")
+        stone_inspector_object.append("        <rect x=\"0\" y=\"0\" width=\"100\" height=\"83\" class=\"stone_command_panel_button\" id=\"abort_selection_button_polygon\" onclick=\"inspector.turn_off_selection_mode()\" />")
+        stone_inspector_object.append("        <text x=\"50\" y=\"42\" text-anchor=\"middle\" id=\"abort_selection_button_label\" class=\"button_label\">Abort</text>")
+        stone_inspector_object.append("      </g>")
+        stone_inspector_object.append("      <g id=\"submit_selection_button\" display=\"none\">")
+        stone_inspector_object.append("        <rect x=\"110\" y=\"0\" width=\"100\" height=\"83\" class=\"stone_command_panel_button\" id=\"submit_selection_button_polygon\" onclick=\"inspector.submit_selection()\" />")
+        stone_inspector_object.append("        <text x=\"160\" y=\"42\" text-anchor=\"middle\" class=\"button_label\">Submit</text>")
+        stone_inspector_object.append("      </g>")
         stone_inspector_object.append("    </svg>")
         stone_inspector_object.append("  </div>")
         stone_inspector_object.append("</div>")
