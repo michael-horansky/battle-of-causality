@@ -432,6 +432,7 @@ animation_manager.play_if_available = function() {
                 switch(current_animation) {
                     case "reset_to_canon":
                         visible_process = "canon";
+                        show_canon_board_slice(visible_round, visible_timeslice);
                         cameraman.apply_tracking();
                 }
                 animation_manager.play_if_available();
@@ -754,15 +755,22 @@ cameraman.apply_camera = function() {
 
 cameraman.apply_tracking = function(tracking_stone_state = null) {
     // tracking_stone_state is used mid-animations
-    if (tracking_stone_state == null) {
-        if (cameraman.tracking_stone != null) {
-            if (stone_trajectories[visible_round][visible_timeslice][visible_process][cameraman.tracking_stone] != null) {
-                cameraman.cx = (stone_trajectories[visible_round][visible_timeslice][visible_process][cameraman.tracking_stone][0] + 0.5) / x_dim;
-                cameraman.cy = (stone_trajectories[visible_round][visible_timeslice][visible_process][cameraman.tracking_stone][1] + 0.5) / y_dim;
-                cameraman.is_tracking_stone_onscreen = true;
-                if (visible_process == "canon") {
-                    inspector.display_square_info(stone_trajectories[visible_round][visible_timeslice][visible_process][cameraman.tracking_stone][0], stone_trajectories[visible_round][visible_timeslice][visible_process][cameraman.tracking_stone][1]);
-                    inspector.display_stone_info(stone_trajectories[visible_round][visible_timeslice][visible_process][cameraman.tracking_stone][0], stone_trajectories[visible_round][visible_timeslice][visible_process][cameraman.tracking_stone][1]);
+    if (!(inspector.selection_mode_enabled)) {
+        if (tracking_stone_state == null) {
+            if (cameraman.tracking_stone != null) {
+                if (stone_trajectories[visible_round][visible_timeslice][visible_process][cameraman.tracking_stone] != null) {
+                    cameraman.cx = (stone_trajectories[visible_round][visible_timeslice][visible_process][cameraman.tracking_stone][0] + 0.5) / x_dim;
+                    cameraman.cy = (stone_trajectories[visible_round][visible_timeslice][visible_process][cameraman.tracking_stone][1] + 0.5) / y_dim;
+                    cameraman.is_tracking_stone_onscreen = true;
+                    if (visible_process == "canon") {
+                        inspector.display_square_info(stone_trajectories[visible_round][visible_timeslice][visible_process][cameraman.tracking_stone][0], stone_trajectories[visible_round][visible_timeslice][visible_process][cameraman.tracking_stone][1]);
+                        inspector.display_stone_info(stone_trajectories[visible_round][visible_timeslice][visible_process][cameraman.tracking_stone][0], stone_trajectories[visible_round][visible_timeslice][visible_process][cameraman.tracking_stone][1]);
+                    }
+                } else {
+                    cameraman.is_tracking_stone_onscreen = false;
+                    if (inspector.highlighted_square != null) {
+                        inspector.display_highlighted_info();
+                    }
                 }
             } else {
                 cameraman.is_tracking_stone_onscreen = false;
@@ -771,15 +779,10 @@ cameraman.apply_tracking = function(tracking_stone_state = null) {
                 }
             }
         } else {
-            cameraman.is_tracking_stone_onscreen = false;
-            if (inspector.highlighted_square != null) {
-                inspector.display_highlighted_info();
-            }
+            cameraman.cx = (tracking_stone_state[0] + 0.5) / x_dim;
+            cameraman.cy = (tracking_stone_state[1] + 0.5) / y_dim;
+            cameraman.is_tracking_stone_onscreen = true;
         }
-    } else {
-        cameraman.cx = (tracking_stone_state[0] + 0.5) / x_dim;
-        cameraman.cy = (tracking_stone_state[1] + 0.5) / y_dim;
-        cameraman.is_tracking_stone_onscreen = true;
     }
     cameraman.apply_camera();
 }
@@ -1082,6 +1085,9 @@ function parse_keyup_event(event) {
 
 function show_next_timeslice(){
     if (timeslice_navigation_enabled && (selected_timeslice < t_dim - 1)) {
+        if (inspector.selection_mode_enabled) {
+            inspector.unselect_square();
+        }
         select_timeslice(selected_timeslice += 1);
         animation_manager.add_to_queue([["change_process", selected_round, selected_timeslice - 1, "canon", false]]);
         for (let process_key_index = 0; process_key_index < process_keys.length - 1; process_key_index++) {
@@ -1093,6 +1099,9 @@ function show_next_timeslice(){
 
 function show_prev_timeslice(){
     if (timeslice_navigation_enabled && (selected_timeslice > 0)) {
+        if (inspector.selection_mode_enabled) {
+            inspector.unselect_square();
+        }
         select_timeslice(selected_timeslice -= 1);
         for (let process_key_index = process_keys.length - 2; process_key_index >= 0; process_key_index--) {
             animation_manager.add_to_queue([["change_process", selected_round, selected_timeslice + 1, process_keys[process_key_index], true]]);
@@ -1105,6 +1114,9 @@ function show_prev_timeslice(){
 function show_active_timeslice(){
     // Always shows the timeslice corresponding to current_turn
     if (timeslice_navigation_enabled) {
+        if (inspector.selection_mode_enabled) {
+            inspector.unselect_square();
+        }
         animation_manager.clear_queue();
         select_timeslice(active_timeslice);
         show_canon_board_slice(selected_round, selected_timeslice);
@@ -1397,6 +1409,12 @@ inspector.turn_on_selection_mode = function(stone_ID, selection_mode_props) {
     }
     document.getElementById("selection_mode_highlights").style.visibility = "visible";
 
+    // Replace trackers with selectors
+    document.getElementById("tracking_inspector").style.display = "none";
+    document.getElementById("square_inspector").style.display = "none";
+    document.getElementById("choice_selector").style.display = "block";
+    document.getElementById("swap_effect_selector").style.display = "block";
+
     if (inspector.selection_mode_options["squares"].length == 1) {
         // The square is chosen automatically
         inspector.select_square(inspector.selection_mode_options["squares"][0]["x"], inspector.selection_mode_options["squares"][0]["y"]);
@@ -1408,7 +1426,7 @@ inspector.turn_on_selection_mode = function(stone_ID, selection_mode_props) {
         stone_inspector_commands_svg.removeChild(stone_inspector_commands_svg.lastChild);
     }
     document.getElementById("stone_inspector_commands_svg").style.display = "none";
-    document.getElementById("abort_selection_button").style.display = "inline";
+    document.getElementById("abort_selection_button").style.display = "block";
 
 
     show_canon_board_slice(selected_round, selected_timeslice);
@@ -1435,7 +1453,16 @@ inspector.turn_off_selection_mode = function() {
     // Hide selection mode buttons
     document.getElementById("abort_selection_button").style.display = "none";
     document.getElementById("submit_selection_button").style.display = "none";
-    document.getElementById("stone_inspector_commands_svg").style.display = "inline";
+    document.getElementById("stone_inspector_commands_svg").style.display = "block";
+
+    // Remove swap effect selection options
+    inspector.unselect_swap_effect();
+
+    // Replace selectors with trackers
+    document.getElementById("choice_selector").style.display = "none";
+    document.getElementById("swap_effect_selector").style.display = "none";
+    document.getElementById("tracking_inspector").style.display = "block";
+    document.getElementById("square_inspector").style.display = "block";
 
 
     inspector.selection_mode_enabled = false;
@@ -1463,10 +1490,59 @@ inspector.toggle_submit_button = function() {
     }
 }
 
+inspector.add_swap_effect_option = function(effect_ID) {
+    let swap_effect_table = document.getElementById("swap_effect_selector_table");
+    let option_id;
+    let option_onclick;
+    let option_button;
+    let option_desc;
+    if (effect_ID == null) {
+        option_id = "swap_effect_option_null";
+        option_onclick = "inspector.select_swap_effect(null)";
+        option_button = "No swap";
+        option_desc = "";
+    } else {
+        option_id = `swap_effect_option_${effect_ID}`;
+        option_onclick = `inspector.select_swap_effect(${effect_ID})`;
+        option_button = "Swap";
+        option_desc = "unknown effect";
+        // Check if active or inactive
+
+        // Active effects
+        for (let effect_i = 0; effect_i < inspector.reverse_causality_flags[selected_round]["effects"]["active"].length; effect_i++) {
+            if (inspector.reverse_causality_flags[selected_round]["effects"]["active"][effect_i] == effect_ID) {
+                // Is active
+                option_desc = inspector.flag_description("effect", "active", effect_ID)
+            }
+        }
+        // Inactive effects
+        for (let effect_i = 0; effect_i < inspector.reverse_causality_flags[selected_round]["effects"]["inactive"].length; effect_i++) {
+            if (inspector.reverse_causality_flags[selected_round]["effects"]["active"][effect_i] == effect_ID) {
+                // Is inactive
+                option_desc = inspector.flag_description("effect", "inactive", effect_ID)
+            }
+        }
+    }
+    let option_row = swap_effect_table.insertRow(-1);
+    option_row.setAttribute("id", option_id);
+    option_row.setAttribute("class", "swap_effect_option");
+    let option_button_element = option_row.insertCell(0);
+    option_button_element.setAttribute("id", `${option_id}_button`);
+    option_button_element.setAttribute("class", "swap_effect_option_button");
+    option_button_element.setAttribute("onclick", option_onclick);
+    option_button_element.innerHTML = option_button;
+    let option_desc_element = option_row.insertCell(1);
+    option_desc_element.setAttribute("id", `${option_id}_description`);
+    option_desc_element.setAttribute("class", "swap_effect_option_description");
+    option_desc_element.innerHTML = option_desc;
+}
+
 inspector.select_square = function(x, y) {
     // We find the correct element of squares
     for (let i = 0; i < inspector.selection_mode_options["squares"].length; i++) {
         if (inspector.selection_mode_options["squares"][i]["t"] == selected_timeslice && inspector.selection_mode_options["squares"][i]["x"] == x && inspector.selection_mode_options["squares"][i]["y"] == y) {
+            animation_manager.clear_queue();
+            show_canon_board_slice(selected_round, selected_timeslice);
             let cur_square = inspector.selection_mode_options["squares"][i];
             inspector.selection["square"] = i;
             inspector.selection_mode_information_level["square"] = false;
@@ -1481,7 +1557,13 @@ inspector.select_square = function(x, y) {
             } else {
                 inspector.select_azimuth(null);
             }
+
+            inspector.unselect_swap_effect();
             if (cur_square["swap_effects"] != null) {
+                for (ind_swap = 0; ind_swap < cur_square["swap_effects"].length; ind_swap++) {
+                    inspector.add_swap_effect_option(cur_square["swap_effects"][ind_swap]);
+                }
+
                 if (cur_square["swap_effects"].length == 1) {
                     inspector.select_swap_effect(cur_square["swap_effects"][0]);
                 } else {
@@ -1489,7 +1571,8 @@ inspector.select_square = function(x, y) {
                     inspector.selection_mode_information_level["swap_effect"] = true;
                 }
             } else {
-                inspector.select_swap_effect(null);
+                inspector.selection["swap_effect"] = null;
+                inspector.selection_mode_information_level["swap_effect"] = false;
             }
 
             inspector.toggle_submit_button();
@@ -1509,12 +1592,33 @@ inspector.select_square = function(x, y) {
                     document.getElementById(`azimuth_indicator_${ind_a}`).style.display = "none";
                 }
             }
-            if (inspector.selection_mode_information_level["swap_effect"]) {
-                console.log("swap effect has to be selected from multiple options!");
-            } else {
-                console.log(`swap effect is known to be ${inspector.selection["swap_effect"]}.`);
-            }
         }
+    }
+}
+
+inspector.unselect_square = function() {
+    inspector.selection["square"] = "NOT_SELECTED";
+    inspector.selection_mode_information_level["square"] = true;
+    inspector.set_square_highlight(null);
+    inspector.unselect_swap_effect();
+    let selection_mode_dummies = document.getElementsByClassName("selection_mode_dummy");
+    for (i = 0; i < selection_mode_dummies.length; i++) {
+        selection_mode_dummies[i].style.display = "none";
+    }
+    inspector.selection["azimuth"] = "NOT_SELECTED";
+    inspector.selection_mode_information_level["azimuth"] = true;
+    inspector.selection["swap_effect"] = "NOT_SELECTED";
+    inspector.selection_mode_information_level["swap_effect"] = true;
+    inspector.toggle_submit_button();
+}
+
+inspector.unselect_swap_effect = function() {
+    // Clears cache, resets swap_effect selector
+    inspector.selection["swap_effect"] = "NOT_SELECTED";
+    inspector.selection_mode_information_level["swap_effect"] = true;
+    let swap_effect_table = document.getElementById("swap_effect_selector_table");
+    while (swap_effect_table.firstChild) {
+        swap_effect_table.removeChild(swap_effect_table.lastChild);
     }
 }
 
@@ -1532,6 +1636,14 @@ inspector.select_swap_effect = function(target_swap_effect) {
     if (target_swap_effect == null || inspector.selection_mode_options["squares"][inspector.selection["square"]]["swap_effects"].includes(target_swap_effect)) {
         inspector.selection["swap_effect"] = target_swap_effect;
         inspector.selection_mode_information_level["swap_effect"] = false;
+
+        // Reset color of all elements, then color the selected element
+        let swap_effect_option_buttons = document.getElementsByClassName("swap_effect_option_button");
+        for (i = 0; i < swap_effect_option_buttons.length; i++) {
+            swap_effect_option_buttons[i].style["background-color"] = "transparent";
+        }
+        document.getElementById(`swap_effect_option_${target_swap_effect}_button`).style["background-color"] = "lightgreen";
+
         inspector.toggle_submit_button();
         console.log(`swap effect is known to be ${inspector.selection["swap_effect"]}.`);
     }

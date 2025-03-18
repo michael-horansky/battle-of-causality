@@ -414,16 +414,6 @@ class HTMLRenderer(Renderer):
 
     def draw_inspector_table(self, which_inspector, table_dict):
         # table_dict["js_value_key"] = "human-readable label"
-        """for table_key, table_label in table_dict.items():
-            table_element = []
-            table_element.append(f"<div id=\"{which_inspector}_info_{table_key}_container\" class=\"inspector_table_container\">")
-            table_element.append(f"  <div id=\"{which_inspector}_info_{table_key}_label\" class=\"inspector_table_label\">")
-            table_element.append(f"    <p>{table_label}</p>")
-            table_element.append(f"  </div>")
-            table_element.append(f"  <div id=\"{which_inspector}_info_{table_key}\" class=\"inspector_table_value\">")
-            table_element.append(f"  </div>")
-            table_element.append(f"</div>")
-            self.commit_to_output(table_element)"""
         self.commit_to_output(f"<table id=\"{which_inspector}_info_table\" class=\"inspector_table\">")
         for table_key, table_label in table_dict.items():
             table_element = []
@@ -441,11 +431,6 @@ class HTMLRenderer(Renderer):
         self.commit_to_output("<div id=\"stone_inspector\" class=\"inspector\">")
         self.commit_to_output("  <h1 id=\"stone_inspector_title\" class=\"inspector_title\"></h1>")
         self.commit_to_output("  <div id=\"stone_inspector_header\" class=\"stone_inspector_part\">")
-        #stone_inspector_object.append("    <p id=\"stone_info_allegiance\"></p>")
-        #stone_inspector_object.append("    <p id=\"stone_info_type\"></p>")
-        #stone_inspector_object.append("    <p id=\"stone_info_startpoint\"></p>")
-        #stone_inspector_object.append("    <p id=\"stone_info_endpoint\"></p>")
-        #stone_inspector_object.append("    <p id=\"stone_info_command\"></p>")
         self.draw_inspector_table("stone", {"allegiance" : "Allegiance", "stone_type" : "Stone type", "startpoint" : "Start-point", "endpoint" : "End-point"})
         stone_inspector_object = []
         stone_inspector_object.append("  </div>")
@@ -504,11 +489,31 @@ class HTMLRenderer(Renderer):
         self.draw_inspector_table("square", {"active_effects" : "Active ante-effects", "activated_causes" : "Activated retro-causes", "inactive_effects" : "Inactive ante-effects", "not_activated_causes" : "Not activated retro-causes"})
         self.commit_to_output("</div>")
 
+    def draw_choice_selector(self):
+        # Replaces tracking_inspector in selection mode
+        choice_selector = []
+        choice_selector.append("<div id=\"choice_selector\" class=\"selector\" style=\"display:none;\">")
+        choice_selector.append("  <svg width=\"100%\" height=\"100%\" xmlns=\"http://www.w3.org/2000/svg\" id=\"choice_selector_buttons_svg\">")
+        choice_selector.append("  </svg>")
+        choice_selector.append("</div>")
+        self.commit_to_output(choice_selector)
+
+    def draw_swap_effect_selector(self):
+        # Replaces tracking_inspector in selection mode
+        choice_selector = []
+        choice_selector.append("<div id=\"swap_effect_selector\" class=\"selector\" style=\"display:none;\">")
+        choice_selector.append("  <table id=\"swap_effect_selector_table\" class=\"selector_table\">")
+        choice_selector.append("  </table>")
+        choice_selector.append("</div>")
+        self.commit_to_output(choice_selector)
+
     def draw_inspectors(self):
         self.open_inspectors()
         self.draw_stone_inspector()
         self.draw_tracking_inspector()
         self.draw_square_inspector()
+        self.draw_choice_selector()
+        self.draw_swap_effect_selector()
         self.close_inspectors()
 
     # ---------------------- Game control panel methods -----------------------

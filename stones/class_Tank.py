@@ -82,7 +82,7 @@ class Tank(Stone):
 
             # Command: timejump
             available_timejump_squares = self.get_available_timejumps(gm, round_number, t, cur_x, cur_y, cur_a)
-            if len(timejump_squares) > 0:
+            if len(available_timejump_squares) > 0:
                 available_commands["commands"].append("timejump")
                 available_commands["command_properties"]["timejump"] = {
                         "command_type" : "timejump",
