@@ -399,12 +399,13 @@ class HTMLRenderer(Renderer):
         stone_object = []
         if stone_ID == "dummy":
             stone_object.append(f"<g x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"selection_mode_dummy\" id=\"{allegiance}_{stone_type}_dummy\" transform-origin=\"50px 50px\" style=\"display:none; pointer-events:none\">")
+            stone_object.append(f"  <g x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"{base_class}_animation_effects\" id=\"{allegiance}_{stone_type}_dummy_animation_effects\" transform-origin=\"50px 50px\">")
+            stone_object.append(f"    <g x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"{base_class}_rotation\" id=\"{allegiance}_{stone_type}_dummy_rotation\" transform-origin=\"50px 50px\">")
         else:
             stone_object.append(f"<g x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"{base_class}\" id=\"{self.encode_stone_ID(stone_ID)}\" transform-origin=\"50px 50px\" style=\"pointer-events:none\">")
-        stone_object.append(f"  <g x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"{base_class}_animation_effects\" id=\"{self.encode_stone_ID(stone_ID)}_animation_effects\" transform-origin=\"50px 50px\">")
-        if stone_ID != "dummy":
+            stone_object.append(f"  <g x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"{base_class}_animation_effects\" id=\"{self.encode_stone_ID(stone_ID)}_animation_effects\" transform-origin=\"50px 50px\">")
             stone_object.append(f"    <polyline id=\"command_marker_{stone_ID}\" class=\"command_marker\" points=\"{self.get_regular_polygon_points(4, 40, (50, 50))}\" display=\"none\"/>")
-        stone_object.append(f"    <g x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"{base_class}_rotation\" id=\"{self.encode_stone_ID(stone_ID)}_rotation\" transform-origin=\"50px 50px\">")
+            stone_object.append(f"    <g x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"{base_class}_rotation\" id=\"{self.encode_stone_ID(stone_ID)}_rotation\" transform-origin=\"50px 50px\">")
         stone_object.append(f"      <rect x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"stone_pedestal\" visibility=\"hidden\" />")
 
         # Now the main body of the stone

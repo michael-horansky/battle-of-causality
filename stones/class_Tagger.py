@@ -36,6 +36,71 @@ class Tagger(Stone):
     # -------------------------- Overridden methods ---------------------------
     # -------------------------------------------------------------------------
 
+    def get_available_commands(self, gm):
+        # Assumes the board is prepared in a proper way and that stone is
+        # causally free in timeslice t corresponding to gm.current_turn_index.
+
+        # This method returns a dictionary commands w/ the following structure:
+        #   {
+        #     "commands" : [list of command keys],
+        #     "command_properties" : {
+        #       "command key" : {
+        #         "command_type" : name of command type as interpreted by Gamemaster,
+        #         "selection_mode" : {
+        #           "lock_timeslice" : t if SM is locked into a t.s., None otherwise,
+        #           "squares" = [list of {
+        #             "t", "x", "y",
+        #             "a" : None or a list of available azimuths,
+        #             "swap_effects" : a list of ante-effects which can be swapped here.
+        #           } objects.]. If length is one, the first element is the default one.
+        #           "choice_keyword": If not None, it's a string defining the key in the command dict,
+        #           "choice_options" : [list of values the user can pick from]
+        #         },
+        #         "label" : human-readable label
+        #       }
+        #     }
+        #   }
+        round_number, t = gm.round_from_turn(gm.current_turn_index)
+        cur_x, cur_y, cur_a = self.history[t]
+        available_commands = {"commands" : [], "command_properties" : {}}
+
+        if t == gm.t_dim - 1:
+            # Final time-slice
+
+            # Command: pass
+            available_commands["commands"].append("pass")
+            available_commands["command_properties"]["pass"] = {
+                    "command_type" : "pass",
+                    "selection_mode" : {
+                            "lock_timeslice" : gm.t_dim - 1,
+                            "squares" : [{"t" : gm.t_dim - 1, "x" : cur_x, "y" : cur_y, "a" : [cur_a], "swap_effects" : None}],
+                            "choice_keyword" : None,
+                        },
+                    "label" : "Pass"
+                }
+
+            # Command: jump
+        else:
+            # Other time-slices
+
+            # Command: wait
+            available_commands["commands"].append("wait")
+            available_commands["command_properties"]["wait"] = {
+                    "command_type" : "spatial_move",
+                    "selection_mode" : {
+                            "lock_timeslice" : None,
+                            "squares" : [{"t" : t + 1, "x" : cur_x, "y" : cur_y, "a" : [cur_a], "swap_effects" : None}],
+                            "choice_keyword" : None
+                        },
+                    "label" : "Wait"
+                }
+
+            # Command: jump
+
+
+            # Command: tag
+        return(available_commands)
+
     # ------------------------ Command parsing methods ------------------------
 
     def parse_move_cmd(self, gm):

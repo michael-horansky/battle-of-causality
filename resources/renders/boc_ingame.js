@@ -227,7 +227,10 @@ function show_canon_board_slice(round_n, timeslice){
         if (inspector.selection_mode_information_level["square"] == false && inspector.selection_mode_information_level["azimuth"] == false) {
             let selected_square = inspector.selection_mode_options["squares"][inspector.selection["square"]];
             let dummy_label = `${stone_properties[inspector.selection_mode_stone_ID]["allegiance"]}_${stone_properties[inspector.selection_mode_stone_ID]["stone_type"]}_dummy`;
-            document.getElementById(dummy_label).style.transform = `translate(${100 * selected_square["x"]}px,${100 * selected_square["y"]}px) rotate(${90 * inspector.selection["azimuth"]}deg)`;
+            document.getElementById(dummy_label).style.transform = `translate(${100 * selected_square["x"]}px,${100 * selected_square["y"]}px)`;
+            if (stone_properties[inspector.selection_mode_stone_ID]["orientable"]) {
+                document.getElementById(`${dummy_label}_rotation`).style.transform = `rotate(${90 * inspector.selection["azimuth"]}deg)`;
+            }
             document.getElementById(dummy_label).style.display = "inline";
         }
     }
@@ -1697,6 +1700,9 @@ inspector.unselect_swap_effect = function() {
 }
 
 inspector.select_azimuth = function(target_azimuth) {
+    if (inspector.selection_mode_options["squares"][inspector.selection["square"]]["a"] == null) {
+        target_azimuth = null;
+    }
     if (target_azimuth == null || inspector.selection_mode_options["squares"][inspector.selection["square"]]["a"].includes(target_azimuth)) {
         inspector.selection["azimuth"] = target_azimuth;
         inspector.selection_mode_information_level["azimuth"] = false;
