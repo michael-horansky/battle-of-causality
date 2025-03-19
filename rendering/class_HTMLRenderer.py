@@ -566,6 +566,9 @@ class HTMLRenderer(Renderer):
                 for default_keyword in Abstract_Output.command_keywords:
                     command_form.append(f"      <input type=\"hidden\" name=\"cmd_{default_keyword}_{stone_ID}\" id=\"cmd_{default_keyword}_{stone_ID}\" >")
                 command_form.append(f"    </fieldset>")
+            command_form.append(f"    <fieldset id=\"command_data_meta\" class=\"command_data_field\">")
+            command_form.append(f"      <input type=\"hidden\" name=\"touch_order\" id=\"touch_order_input\">")
+            command_form.append(f"    </fieldset>")
 
         command_form.append(f"    <input type=\"submit\" value=\"Submit\" id=\"submit_commands_button\">")
         command_form.append(f"  </form>")
