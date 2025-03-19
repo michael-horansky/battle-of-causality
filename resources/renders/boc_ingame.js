@@ -226,8 +226,9 @@ function show_canon_board_slice(round_n, timeslice){
         }
         if (inspector.selection_mode_information_level["square"] == false && inspector.selection_mode_information_level["azimuth"] == false) {
             let selected_square = inspector.selection_mode_options["squares"][inspector.selection["square"]];
-            document.getElementById(`B_tank_dummy`).style.transform = `translate(${100 * selected_square["x"]}px,${100 * selected_square["y"]}px) rotate(${90 * inspector.selection["azimuth"]}deg)`;
-            document.getElementById(`B_tank_dummy`).style.display = "inline";
+            let dummy_label = `${stone_properties[inspector.selection_mode_stone_ID]["allegiance"]}_${stone_properties[inspector.selection_mode_stone_ID]["stone_type"]}_dummy`;
+            document.getElementById(dummy_label).style.transform = `translate(${100 * selected_square["x"]}px,${100 * selected_square["y"]}px) rotate(${90 * inspector.selection["azimuth"]}deg)`;
+            document.getElementById(dummy_label).style.display = "inline";
         }
     }
 }
@@ -279,7 +280,10 @@ function show_stones_at_process(round_n, time, process_key){
             if (stone_state == null) {
                 document.getElementById(`stone_${stone_ID}`).style.display = "none";
             } else {
-                document.getElementById(`stone_${stone_ID}`).style.transform = `translate(${100 * stone_state[0]}px,${100 * stone_state[1]}px) rotate(${90 * stone_state[2]}deg)`;
+                document.getElementById(`stone_${stone_ID}`).style.transform = `translate(${100 * stone_state[0]}px,${100 * stone_state[1]}px)`;
+                if (stone_properties[stone_ID]["orientable"]) {
+                    document.getElementById(`stone_${stone_ID}_rotation`).style.transform = `rotate(${90 * stone_state[2]}deg)`;
+                }
                 document.getElementById(`stone_${stone_ID}_animation_effects`).style.transform = "";
                 document.getElementById(`stone_${stone_ID}_animation_effects`).style.opacity = "1";
                 document.getElementById(`stone_${stone_ID}`).style.display = "inline";
@@ -302,7 +306,10 @@ function show_stones_at_state(local_stone_list, state_matrix, scale = null, opac
         if (stone_state == null) {
             document.getElementById(`stone_${stone_ID}`).style.display = "none";
         } else {
-            document.getElementById(`stone_${stone_ID}`).style.transform = `translate(${100 * stone_state[0]}px,${100 * stone_state[1]}px) rotate(${90 * stone_state[2]}deg)`;
+            document.getElementById(`stone_${stone_ID}`).style.transform = `translate(${100 * stone_state[0]}px,${100 * stone_state[1]}px)`;
+            if (stone_properties[stone_ID]["orientable"]) {
+                document.getElementById(`stone_${stone_ID}_rotation`).style.transform = `rotate(${90 * stone_state[2]}deg)`;
+            }
             if (scale != null) {
                 document.getElementById(`stone_${stone_ID}_animation_effects`).style.transform = `scale(${scale})`;
             }
@@ -355,6 +362,7 @@ animation_manager.current_frame_key = 0;
 animation_manager.default_total_frames = 40;
 animation_manager.default_frame_latency = 5;
 animation_manager.dictionary_of_animations = new Object();
+animation_manager.magic_words = ["reset_to_canon"];
 animation_manager.reset_animation = function() {
     animation_manager.animation_daemon = null;
     animation_manager.is_playing = false;
@@ -427,12 +435,12 @@ animation_manager.play_if_available = function() {
     if (animation_manager.is_playing == false) {
         if (animation_manager.animation_queue.length > 0) {
             let current_animation = animation_manager.animation_queue.shift();
-            if (typeof(current_animation) == 'string') {
+            if (animation_manager.magic_words.includes(current_animation[0])) {
                 // Magic word
-                switch(current_animation) {
+                switch(current_animation[0]) {
                     case "reset_to_canon":
                         visible_process = "canon";
-                        show_canon_board_slice(visible_round, visible_timeslice);
+                        show_canon_board_slice(current_animation[1], current_animation[2]);
                         cameraman.apply_tracking();
                 }
                 animation_manager.play_if_available();
@@ -1093,7 +1101,7 @@ function show_next_timeslice(){
         for (let process_key_index = 0; process_key_index < process_keys.length - 1; process_key_index++) {
             animation_manager.add_to_queue([["change_process", selected_round, selected_timeslice, process_keys[process_key_index], false]]);
         }
-        animation_manager.add_to_queue(["reset_to_canon"]);
+        animation_manager.add_to_queue([["reset_to_canon", selected_round, selected_timeslice]]);
     }
 }
 
@@ -1107,7 +1115,7 @@ function show_prev_timeslice(){
             animation_manager.add_to_queue([["change_process", selected_round, selected_timeslice + 1, process_keys[process_key_index], true]]);
         }
         animation_manager.add_to_queue([["change_process", selected_round, selected_timeslice, "canon", true]]);
-        animation_manager.add_to_queue(["reset_to_canon"]);
+        animation_manager.add_to_queue([["reset_to_canon", selected_round, selected_timeslice]]);
     }
 }
 
@@ -1127,21 +1135,21 @@ function show_active_timeslice(){
 function show_next_round() {
     if (round_navigation_enabled && (selected_round < active_round)) {
         select_round(selected_round += 1);
-        animation_manager.add_to_queue([["change_round", selected_round, selected_timeslice, ">>", "up"], "reset_to_canon"]);
+        animation_manager.add_to_queue([["change_round", selected_round, selected_timeslice, ">>", "up"], ["reset_to_canon", selected_round, selected_timeslice]]);
     }
 }
 
 function show_prev_round() {
     if (round_navigation_enabled && (selected_round > 0)) {
         select_round(selected_round -= 1);
-        animation_manager.add_to_queue([["change_round", selected_round, selected_timeslice, "<<", "down"], "reset_to_canon"]);
+        animation_manager.add_to_queue([["change_round", selected_round, selected_timeslice, "<<", "down"], ["reset_to_canon", selected_round, selected_timeslice]]);
     }
 }
 
 function show_active_round() {
     if (round_navigation_enabled && (selected_round != active_round)) {
         select_round(active_round);
-        animation_manager.add_to_queue([["change_round", selected_round, selected_timeslice, ">|", "up"], "reset_to_canon"]);
+        animation_manager.add_to_queue([["change_round", selected_round, selected_timeslice, ">|", "up"], ["reset_to_canon", selected_round, selected_timeslice]]);
     }
 }
 
@@ -1407,6 +1415,17 @@ inspector.endpoint_description = function(endpoint_event) {
             return "is tag-locked";
         default:
             return "UNKNOWN EVENT";
+    }
+}
+
+inspector.square_type_description = function(board_static_val) {
+    switch(board_static_val) {
+        case " ":
+            return "An empty square";
+        case "X":
+            return "A wall";
+        default:
+            return "UNKNOWN SQUARE";
     }
 }
 
@@ -1934,7 +1953,7 @@ inspector.display_square_info = function(x, y) {
 
     // Highligh square, reset stone highlight
     inspector.set_square_highlight([x, y]);
-    inspector.inspector_elements["square"]["title"].innerHTML = `A SQUARE TYPE selected`;
+    inspector.inspector_elements["square"]["title"].innerHTML = `${inspector.square_type_description(board_static[x][y])} selected`;
     set_stone_highlight(null);
 }
 

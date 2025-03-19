@@ -188,23 +188,29 @@ class HTMLRenderer(Renderer):
 
     # -------------------------- General svg methods --------------------------
 
-    def get_polygon_points(self, point_matrix, offset = [0, 0], scale = 1):
+    def get_polygon_points(self, point_matrix, offset = (0, 0), scale = 1):
         # point_matrix = [[x1, y1], [x2, y2]...]
         # offset = [offset x, offset y]
-        result_string = " ".join(",".join(str(pos[i] * scale + offset[i]) for i in range(len(pos))) for pos in point_matrix)
+        off_x, off_y = offset
+        off_arr = [off_x, off_y]
+        result_string = " ".join(",".join(str(pos[i] * scale + off_arr[i]) for i in range(len(pos))) for pos in point_matrix)
         return(result_string)
 
-    def get_regular_polygon_points(self, N, R, offset = [0, 0], scale = 1, mode = "v"):
+    def get_regular_polygon_points(self, N, R, offset = (0, 0), mode = "v", convert_to_svg = True):
         # mode == "v": vertex right above centre
         # mode == "s" : side right above centre
+        off_x, off_y = offset
         if mode == "v":
             angle_offset = 0
         elif mode == "s":
             angle_offset = np.pi / N
         points = []
-        for n in range(N):
-            points.append([R * np.sin(angle_offset + 2.0 * np.pi * n / N), - R * np.cos(angle_offset + 2.0 * np.pi * n / N)])
-        return(self.get_polygon_points(points, offset, scale))
+        for n in range(N+2):
+            points.append([off_x + R * np.sin(angle_offset + 2.0 * np.pi * n / N), off_y - R * np.cos(angle_offset + 2.0 * np.pi * n / N)])
+        if convert_to_svg:
+            return(self.get_polygon_points(points))
+        else:
+            return(points)
 
 
     # ---------------------- Board control panel methods ----------------------
@@ -217,7 +223,7 @@ class HTMLRenderer(Renderer):
 
         # Next timeslice button
         next_timeslice_button_points = [[0, 20], [80, 20], [80, 0], [130, 50], [80, 100], [80, 80], [0, 80]]
-        next_timeslice_button_polygon = f"<polygon points=\"{self.get_polygon_points(next_timeslice_button_points, [10, 0])}\" class=\"board_control_panel_button\" id=\"next_timeslice_button\" onclick=\"show_next_timeslice()\" />"
+        next_timeslice_button_polygon = f"<polygon points=\"{self.get_polygon_points(next_timeslice_button_points, (10, 0))}\" class=\"board_control_panel_button\" id=\"next_timeslice_button\" onclick=\"show_next_timeslice()\" />"
         next_timeslice_button_text = "<text x=\"16\" y=\"55\" class=\"button_label\" id=\"next_timeslice_button_label\">Next timeslice</text>"
 
         # Active timeslice button
@@ -226,7 +232,7 @@ class HTMLRenderer(Renderer):
 
         # Previous timeslice button
         prev_timeslice_button_points = [[130, 20], [50, 20], [50, 0], [0, 50], [50, 100], [50, 80], [130, 80]]
-        prev_timeslice_button_polygon = f"<polygon points=\"{self.get_polygon_points(prev_timeslice_button_points, [10, 200])}\" class=\"board_control_panel_button\" id=\"prev_timeslice_button\" onclick=\"show_prev_timeslice()\" />"
+        prev_timeslice_button_polygon = f"<polygon points=\"{self.get_polygon_points(prev_timeslice_button_points, (10, 200))}\" class=\"board_control_panel_button\" id=\"prev_timeslice_button\" onclick=\"show_prev_timeslice()\" />"
         prev_timeslice_button_text = "<text x=27 y=255 class=\"button_label\" id=\"prev_timeslice_button_label\">Prev timeslice</text>"
 
         self.commit_to_output([next_timeslice_button_polygon, next_timeslice_button_text, active_timeslice_button_object, active_timeslice_button_text, prev_timeslice_button_polygon, prev_timeslice_button_text])
@@ -310,8 +316,8 @@ class HTMLRenderer(Renderer):
     def draw_selection_mode_dummies(self):
         # Dummy
         # We draw one dummy of each type
-        for allegiance in ["A", "B"]:
-            for stone_type in ["tank"]:
+        for allegiance in self.render_object.factions:
+            for stone_type in self.required_stone_types:
                 self.commit_to_output(self.create_stone(stone_type, allegiance, "dummy"))
 
 
@@ -340,7 +346,7 @@ class HTMLRenderer(Renderer):
             elif azimuth == 3:
                 offset_x = self.board_window_width * triangle_offset
                 offset_y = self.board_window_height / 2
-            azimuth_indicators.append(f"  <polygon points=\"{self.get_polygon_points(azimuth_indicator_points[azimuth], [offset_x, offset_y])}\" class=\"azimuth_indicator\" id=\"azimuth_indicator_{azimuth}\" onclick=\"inspector.select_azimuth({azimuth})\" display=\"none\"/>")
+            azimuth_indicators.append(f"  <polygon points=\"{self.get_polygon_points(azimuth_indicator_points[azimuth], (offset_x, offset_y))}\" class=\"azimuth_indicator\" id=\"azimuth_indicator_{azimuth}\" onclick=\"inspector.select_azimuth({azimuth})\" display=\"none\"/>")
         self.commit_to_output(azimuth_indicators)
 
 
@@ -375,8 +381,6 @@ class HTMLRenderer(Renderer):
         # For efficiency, we omit squares whose main markers are placed above the time jump z index
         if z_index <= 1:
             used_time_jump_marker = f"  <rect width=\"{self.board_square_base_side_length}\" height=\"{self.board_square_base_side_length}\" x=\"{x * self.board_square_base_side_length}\" y=\"{y * self.board_square_base_side_length}\" class=\"used_time_jump_marker\" id=\"{self.encode_used_time_jump_marker_id(x, y)}\" visibility=\"hidden\" />"
-            #unused_time_jump_marker_points = [[0, 0], [100, 0], [100, 100], [0, 100], [0, 20], [20, 20], [20, 80], [80, 80], [80, 20], [0, 20]]
-            #unused_time_jump_marker = f"  <polygon class=\"unused_time_jump_marker\" id=\"{self.encode_unused_time_jump_marker_id(x, y)}\" points=\"{self.get_polygon_points(unused_time_jump_marker_points, [x * self.board_square_base_side_length, y * self.board_square_base_side_length])}\" visibility=\"hidden\" />"
             unused_time_jump_marker = f"  <rect width=\"{self.board_square_base_side_length}\" height=\"{self.board_square_base_side_length}\" x=\"{x * self.board_square_base_side_length}\" y=\"{y * self.board_square_base_side_length}\" class=\"unused_time_jump_marker\" id=\"{self.encode_unused_time_jump_marker_id(x, y)}\" visibility=\"hidden\" clip-path=\"url(#unused_TJ_clip_path)\" />"
             self.board_layer_structure[1] += [used_time_jump_marker, unused_time_jump_marker]
 
@@ -394,21 +398,62 @@ class HTMLRenderer(Renderer):
         base_class = f"{allegiance}_{stone_type}"
         stone_object = []
         if stone_ID == "dummy":
-            stone_object.append(f"<g x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"selection_mode_dummy\" id=\"{allegiance}_{stone_type}_dummy\" transform-origin=\"50px 50px\" style=\"display:none;\">")
+            stone_object.append(f"<g x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"selection_mode_dummy\" id=\"{allegiance}_{stone_type}_dummy\" transform-origin=\"50px 50px\" style=\"display:none; pointer-events:none\">")
         else:
-            stone_object.append(f"<g x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"{base_class}\" id=\"{self.encode_stone_ID(stone_ID)}\" transform-origin=\"50px 50px\">")
+            stone_object.append(f"<g x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"{base_class}\" id=\"{self.encode_stone_ID(stone_ID)}\" transform-origin=\"50px 50px\" style=\"pointer-events:none\">")
         stone_object.append(f"  <g x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"{base_class}_animation_effects\" id=\"{self.encode_stone_ID(stone_ID)}_animation_effects\" transform-origin=\"50px 50px\">")
-        stone_object.append(f"    <rect x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"stone_pedestal\" visibility=\"hidden\" />")
         if stone_ID != "dummy":
-            stone_object.append(f"    <polyline id=\"command_marker_{stone_ID}\" class=\"command_marker\" points=\"{self.get_polygon_points([[50, 10], [90, 50], [50, 90], [10, 50], [50, 10]], [0, 0])}\" display=\"none\"/>")
+            stone_object.append(f"    <polyline id=\"command_marker_{stone_ID}\" class=\"command_marker\" points=\"{self.get_regular_polygon_points(4, 40, (50, 50))}\" display=\"none\"/>")
+        stone_object.append(f"    <g x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"{base_class}_rotation\" id=\"{self.encode_stone_ID(stone_ID)}_rotation\" transform-origin=\"50px 50px\">")
+        stone_object.append(f"      <rect x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"stone_pedestal\" visibility=\"hidden\" />")
 
         # Now the main body of the stone
+        # Playable stone types
         if stone_type == "tank":
-            stone_object.append(f"    <polygon points=\"{self.get_regular_polygon_points(6, 30, [50, 50], 1, "s")}\" class=\"{base_class}_body\" />")
-            stone_object.append(f"    <rect x=\"45\" y=\"10\" width=\"10\" height=\"45\" class=\"{base_class}_barrel\" />")
-            stone_object.append(f"    <circle cx=\"50\" cy=\"50\" r=\"12\" class=\"{base_class}_hatch\" />")
+            stone_object.append(f"      <polygon points=\"{self.get_regular_polygon_points(6, 30, (50, 50), "s")}\" class=\"{base_class}_body\" />")
+            stone_object.append(f"      <rect x=\"45\" y=\"10\" width=\"10\" height=\"45\" class=\"{base_class}_barrel\" />")
+            stone_object.append(f"      <circle cx=\"50\" cy=\"50\" r=\"12\" class=\"{base_class}_hatch\" />")
+        if stone_type == "bombardier":
+            stone_object.append(f"      <polyline points=\"{self.get_polygon_points([[25, 65], [50, 30], [75, 65]])}\" class=\"{base_class}_legs\" />")
+            stone_object.append(f"      <polygon points=\"{self.get_polygon_points([[20, 25], [45, 25], [45, 70]])}\" class=\"{base_class}_left_face\" />")
+            stone_object.append(f"      <polygon points=\"{self.get_polygon_points([[80, 25], [55, 25], [55, 70]])}\" class=\"{base_class}_right_face\" />")
+            stone_object.append(f"      <rect x=\"45\" y=\"15\" width=\"10\" height=\"50\" class=\"{base_class}_welding\" />")
+        if stone_type == "sniper":
+            r = 32
+            l = 7
+            stone_object.append(f"      <line x1=\"{r+l}\" y1=\"{r-l}\" x2=\"{r-l}\" y2=\"{r+l}\" class=\"{base_class}_foot\" />")
+            stone_object.append(f"      <line x1=\"{100-(r+l)}\" y1=\"{r-l}\" x2=\"{100-(r-l)}\" y2=\"{r+l}\" class=\"{base_class}_foot\" />")
+            stone_object.append(f"      <line x1=\"{r+l}\" y1=\"{100-(r-l)}\" x2=\"{r-l}\" y2=\"{100-(r+l)}\" class=\"{base_class}_foot\" />")
+            stone_object.append(f"      <line x1=\"{100-(r+l)}\" y1=\"{100-(r-l)}\" x2=\"{100-(r-l)}\" y2=\"{100-(r+l)}\" class=\"{base_class}_foot\" />")
+            stone_object.append(f"      <polygon points=\"{self.get_polygon_points([[25, 25], [30, 25], [75, 70], [75, 75], [70, 75], [25, 30]])}\" class=\"{base_class}_left_leg\" />")
+            stone_object.append(f"      <polygon points=\"{self.get_polygon_points([[75, 25], [70, 25], [25, 70], [25, 75], [30, 75], [75, 30]])}\" class=\"{base_class}_right_leg\" />")
+            stone_object.append(f"      <line x1=\"50\" y1=\"50\" x2=\"50\" y2=\"20\" class=\"{base_class}_gun\" />")
+            stone_object.append(f"      <rect x=\"40\" y=\"40\" width=\"20\" height=\"20\" class=\"{base_class}_nest\" />")
+        if stone_type == "tagger":
+            pentagon = self.get_regular_polygon_points(5, 30, convert_to_svg = False)
+            stone_object.append(f"      <polygon points=\"{self.get_polygon_points([pentagon[4], pentagon[0], pentagon[1], [0, 0]], (50, 50))}\" class=\"{base_class}_top_face\" />")
+            stone_object.append(f"      <polygon points=\"{self.get_polygon_points([pentagon[1], pentagon[2], [0, 0]], (50, 50))}\" class=\"{base_class}_right_face\" />")
+            stone_object.append(f"      <polygon points=\"{self.get_polygon_points([pentagon[2], pentagon[3], [0, 0]], (50, 50))}\" class=\"{base_class}_bottom_face\" />")
+            stone_object.append(f"      <polygon points=\"{self.get_polygon_points([pentagon[3], pentagon[4], [0, 0]], (50, 50))}\" class=\"{base_class}_left_face\" />")
+            stone_object.append(f"      <polyline points=\"{self.get_polygon_points(pentagon, [50, 50])}\" class=\"{base_class}_outline\" />")
+        if stone_type == "wildcard":
+            r = 30
+            k = 0.8
+            stone_object.append(f"      <circle cx=\"50\" cy=\"50\" r=\"{r}\" class=\"{base_class}_body\" />")
+            stone_object.append(f"      <line x1=\"{50-k*r}\" y1=\"{50-k*r}\" x2=\"{50+k*r}\" y2=\"{50+k*r}\" class=\"{base_class}_halo\" />")
+            stone_object.append(f"      <line x1=\"{50-k*r}\" y1=\"{50+k*r}\" x2=\"{50+k*r}\" y2=\"{50-k*r}\" class=\"{base_class}_halo\" />")
+        # Neutral stone types
+        if stone_type == "box":
+            stone_object.append(f"      <rect x=\"15\" y=\"15\" width=\"70\" height=\"70\" class=\"{base_class}_base\" />")
+            stone_object.append(f"      <line x1=\"15\" y1=\"15\" x2=\"85\" y2=\"85\" class=\"{base_class}_line\" />")
+            stone_object.append(f"      <line x1=\"15\" y1=\"85\" x2=\"85\" y2=\"15\" class=\"{base_class}_line\" />")
+            stone_object.append(f"      <rect x=\"15\" y=\"15\" width=\"70\" height=\"70\" class=\"{base_class}_outline\" />")
+        if stone_type == "mine":
+            stone_object.append(f"      <path d=\"M45,15 L45,25 A20,20,90,0,1,25,45 L15,45 A40,40,0,0,0,15,55 L25,55 A20,20,90,0,1,45,75 L45,85 A40,40,0,0,0,55,85 L55,75 A20,20,90,0,1,75,55 L85,55 A40,40,0,0,0,85,45 L75,45 A20,20,90,0,1,55,25 L55,15 A40,40,0,0,0, 45,15 Z\" class=\"{base_class}_body\" /> ")
+            stone_object.append(f"      <circle cx=\"50\" cy=\"50\" r=\"8\" class=\"{base_class}_button\" />")
 
 
+        stone_object.append("    </g>")
         stone_object.append("  </g>")
         stone_object.append("</g>")
         return(stone_object)
@@ -419,13 +464,13 @@ class HTMLRenderer(Renderer):
         # moved around by JavaScript using the 'transform' attrib1ute.
         # First, we prepare the neutral stones
         for neutral_stone_ID in self.render_object.faction_armies["GM"]:
-            pass
+            self.board_layer_structure[4].append(self.create_stone(self.render_object.stone_properties[neutral_stone_ID]["stone_type"], "GM", neutral_stone_ID))
         for faction in self.render_object.factions:
             for faction_stone_ID in self.render_object.faction_armies[faction]:
                 self.board_layer_structure[4].append(self.create_stone(self.render_object.stone_properties[faction_stone_ID]["stone_type"], faction, faction_stone_ID))
 
     def draw_square_highlighter(self):
-        self.board_layer_structure[3].append(f"<polyline id=\"square_highlighter\" points=\"{self.get_polygon_points([[0, 0], [100, 0], [100, 100], [0, 100], [0, 0]], [0, 0])}\" display=\"none\"/>")
+        self.board_layer_structure[3].append(f"<polyline id=\"square_highlighter\" points=\"{self.get_polygon_points([[0, 0], [100, 0], [100, 100], [0, 100], [0, 0]])}\" display=\"none\"/>")
 
     def draw_board(self):
         self.open_board_window()
@@ -500,12 +545,12 @@ class HTMLRenderer(Renderer):
 
         # Start-point button
         startpoint_button_points = [[130, 20], [50, 20], [50, 0], [0, 50], [50, 100], [50, 80], [130, 80]]
-        startpoint_button_polygon = f"<polygon points=\"{self.get_polygon_points(startpoint_button_points, [10, 10], 0.8)}\" class=\"game_control_panel_button\" id=\"tracking_startpoint_button\" onclick=\"tracking_startpoint()\" />"
+        startpoint_button_polygon = f"<polygon points=\"{self.get_polygon_points(startpoint_button_points, (10, 10), 0.8)}\" class=\"game_control_panel_button\" id=\"tracking_startpoint_button\" onclick=\"tracking_startpoint()\" />"
         startpoint_button_text = "<text x=25 y=55 class=\"button_label\" id=\"tracking_startpoint_button_label\">Start-point</text>"
 
         # End-point button
         endpoint_button_points = [[0, 20], [80, 20], [80, 0], [130, 50], [80, 100], [80, 80], [0, 80]]
-        endpoint_button_polygon = f"<polygon points=\"{self.get_polygon_points(endpoint_button_points, [120, 10], 0.8)}\" class=\"game_control_panel_button\" id=\"tracking_endpoint_button\" onclick=\"tracking_endpoint()\" />"
+        endpoint_button_polygon = f"<polygon points=\"{self.get_polygon_points(endpoint_button_points, (120, 10), 0.8)}\" class=\"game_control_panel_button\" id=\"tracking_endpoint_button\" onclick=\"tracking_endpoint()\" />"
         endpoint_button_text = "<text x=\"128\" y=\"55\" class=\"button_label\" id=\"tracking_endpoint_button_label\">End-point</text>"
 
         # Turn off tracking button
@@ -562,7 +607,7 @@ class HTMLRenderer(Renderer):
 
         # Previous round button
         prev_round_button_points = [[130, 20], [50, 20], [50, 0], [0, 50], [50, 100], [50, 80], [130, 80]]
-        prev_round_button_polygon = f"<polygon points=\"{self.get_polygon_points(prev_round_button_points, [10, 0])}\" class=\"game_control_panel_button\" id=\"prev_round_button\" onclick=\"show_prev_round()\" />"
+        prev_round_button_polygon = f"<polygon points=\"{self.get_polygon_points(prev_round_button_points, (10, 0))}\" class=\"game_control_panel_button\" id=\"prev_round_button\" onclick=\"show_prev_round()\" />"
         prev_round_button_text = "<text x=40 y=55 class=\"button_label\" id=\"prev_round_button_label\">Prev round</text>"
 
         # Active round button
@@ -571,7 +616,7 @@ class HTMLRenderer(Renderer):
 
         # Next round button
         next_round_button_points = [[0, 20], [80, 20], [80, 0], [130, 50], [80, 100], [80, 80], [0, 80]]
-        next_round_button_polygon = f"<polygon points=\"{self.get_polygon_points(next_round_button_points, [270, 0])}\" class=\"game_control_panel_button\" id=\"next_round_button\" onclick=\"show_next_round()\" />"
+        next_round_button_polygon = f"<polygon points=\"{self.get_polygon_points(next_round_button_points, (270, 0))}\" class=\"game_control_panel_button\" id=\"next_round_button\" onclick=\"show_next_round()\" />"
         next_round_button_text = "<text x=\"287\" y=\"55\" class=\"button_label\" id=\"next_round_button_label\">Next round</text>"
 
         self.commit_to_output([prev_round_button_polygon, prev_round_button_text, active_round_button_object, active_round_button_text, next_round_button_polygon, next_round_button_text])

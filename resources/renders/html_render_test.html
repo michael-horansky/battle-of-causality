@@ -7,26 +7,26 @@
 </head>
 <body onkeydown="parse_keydown_event(event)" onkeyup="parse_keyup_event(event)">
 <script>
-  const board_static = [["X", "X", "X", "X", "X", "X", "X"], ["X", " ", " ", " ", " ", " ", "X"], ["X", " ", " ", " ", " ", " ", "X"], ["X", " ", " ", "X", " ", " ", "X"], ["X", " ", " ", " ", " ", " ", "X"], ["X", " ", " ", " ", " ", " ", "X"], ["X", "X", "X", "X", "X", "X", "X"]];
-  const t_dim = 6;
+  const board_static = [["X", "X", "X", "X", "X", "X", "X"], ["X", " ", " ", " ", " ", " ", "X"], ["X", " ", " ", " ", " ", " ", "X"], ["X", " ", " ", " ", " ", " ", "X"], ["X", " ", " ", " ", " ", " ", "X"], ["X", " ", " ", " ", " ", " ", "X"], ["X", "X", "X", "X", "X", "X", "X"]];
+  const t_dim = 5;
   const x_dim = 7;
   const y_dim = 7;
   const factions = ["A", "B"];
-  const faction_armies = {"GM": [], "A": [0, 1, 4], "B": [2, 3, 5, 6]};
-  const stone_properties = JSON.parse('{"0": {"allegiance": "A", "stone_type": "tank", "orientable": true, "opposable": true}, "1": {"allegiance": "A", "stone_type": "tank", "orientable": true, "opposable": true}, "2": {"allegiance": "B", "stone_type": "tank", "orientable": true, "opposable": true}, "3": {"allegiance": "B", "stone_type": "tank", "orientable": true, "opposable": true}, "4": {"allegiance": "A", "stone_type": "tank", "orientable": true, "opposable": true}, "5": {"allegiance": "B", "stone_type": "tank", "orientable": true, "opposable": true}, "6": {"allegiance": "B", "stone_type": "tank", "orientable": true, "opposable": true}}');
+  const faction_armies = {"GM": [5, 8], "A": [0, 2, 4, 7, 10], "B": [1, 3, 6, 9, 11]};
+  const stone_properties = JSON.parse('{"0": {"allegiance": "A", "stone_type": "tank", "orientable": true, "opposable": true}, "1": {"allegiance": "B", "stone_type": "tank", "orientable": true, "opposable": true}, "2": {"allegiance": "A", "stone_type": "bombardier", "orientable": false, "opposable": true}, "3": {"allegiance": "B", "stone_type": "bombardier", "orientable": false, "opposable": true}, "4": {"allegiance": "A", "stone_type": "sniper", "orientable": true, "opposable": true}, "5": {"allegiance": "GM", "stone_type": "box", "orientable": false, "opposable": true}, "6": {"allegiance": "B", "stone_type": "sniper", "orientable": true, "opposable": true}, "7": {"allegiance": "A", "stone_type": "tagger", "orientable": false, "opposable": false}, "8": {"allegiance": "GM", "stone_type": "mine", "orientable": false, "opposable": true}, "9": {"allegiance": "B", "stone_type": "tagger", "orientable": false, "opposable": false}, "10": {"allegiance": "A", "stone_type": "wildcard", "orientable": false, "opposable": false}, "11": {"allegiance": "B", "stone_type": "wildcard", "orientable": false, "opposable": false}}');
   const did_player_finish_turn = false;
-  const stones_to_be_commanded = [2, 5, 6];
-  const available_commands = JSON.parse('{"2": {"commands": ["pass", "timejump"], "command_properties": {"pass": {"command_type": "pass", "selection_mode": {"lock_timeslice": 5, "squares": [{"t": 5, "x": 3, "y": 2, "a": [0], "swap_effects": null}], "choice_keyword": null}, "label": "Pass"}, "timejump": {"command_type": "timejump", "selection_mode": {"lock_timeslice": null, "squares": [{"t": 0, "x": 3, "y": 2, "a": [0], "swap_effects": [null]}, {"t": 1, "x": 3, "y": 2, "a": [0], "swap_effects": [null]}, {"t": 2, "x": 3, "y": 2, "a": [0], "swap_effects": [null]}, {"t": 3, "x": 3, "y": 2, "a": [0], "swap_effects": [null]}, {"t": 4, "x": 3, "y": 2, "a": [0], "swap_effects": [null]}], "choice_keyword": null}, "label": "Timejump"}}}, "5": {"commands": ["pass", "timejump"], "command_properties": {"pass": {"command_type": "pass", "selection_mode": {"lock_timeslice": 5, "squares": [{"t": 5, "x": 2, "y": 5, "a": [3], "swap_effects": null}], "choice_keyword": null}, "label": "Pass"}, "timejump": {"command_type": "timejump", "selection_mode": {"lock_timeslice": null, "squares": [{"t": 0, "x": 2, "y": 5, "a": [3], "swap_effects": [null]}, {"t": 1, "x": 2, "y": 5, "a": [3], "swap_effects": [null]}, {"t": 2, "x": 2, "y": 5, "a": [3], "swap_effects": [null]}, {"t": 3, "x": 2, "y": 5, "a": [3], "swap_effects": [null]}, {"t": 4, "x": 2, "y": 5, "a": [3], "swap_effects": [null]}], "choice_keyword": null}, "label": "Timejump"}}}, "6": {"commands": ["pass", "timejump"], "command_properties": {"pass": {"command_type": "pass", "selection_mode": {"lock_timeslice": 5, "squares": [{"t": 5, "x": 4, "y": 1, "a": [3], "swap_effects": null}], "choice_keyword": null}, "label": "Pass"}, "timejump": {"command_type": "timejump", "selection_mode": {"lock_timeslice": null, "squares": [{"t": 0, "x": 4, "y": 1, "a": [3], "swap_effects": [null, 38]}, {"t": 1, "x": 4, "y": 1, "a": [3], "swap_effects": [null]}, {"t": 2, "x": 4, "y": 1, "a": [3], "swap_effects": [null]}, {"t": 3, "x": 4, "y": 1, "a": [3], "swap_effects": [null]}, {"t": 4, "x": 4, "y": 1, "a": [3], "swap_effects": [null]}], "choice_keyword": null}, "label": "Timejump"}}}}');
-  const stone_trajectories = JSON.parse('[[{"flags": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null, "5": null, "6": null}, "pushes": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null, "5": null, "6": null}, "destructions": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null, "5": null, "6": null}, "tagscreens": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null, "5": null, "6": null}, "canon": {"0": [1, 3, 1], "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null, "5": null, "6": null}}, {"flags": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": null, "6": null}, "pushes": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": null, "6": null}, "destructions": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": null, "6": null}, "tagscreens": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": null, "6": null}, "canon": {"0": [1, 3, 0], "1": [2, 3, 1], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": null, "6": null}}, {"flags": {"0": [1, 2, 1], "1": [2, 3, 0], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": null, "6": null}, "pushes": {"0": [1, 2, 1], "1": [2, 3, 0], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": null, "6": null}, "destructions": {"0": [1, 2, 1], "1": [2, 3, 0], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": null, "6": null}, "tagscreens": {"0": [1, 2, 1], "1": [2, 3, 0], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": null, "6": null}, "canon": {"0": [1, 2, 1], "1": [2, 3, 0], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": null, "6": null}}, {"flags": {"0": [2, 2, 1], "1": [2, 3, 0], "2": [4, 2, 0], "3": [4, 3, 2], "4": null, "5": null, "6": null}, "pushes": {"0": [2, 2, 1], "1": [2, 3, 0], "2": [4, 2, 0], "3": [4, 3, 2], "4": null, "5": null, "6": null}, "destructions": {"0": [2, 2, 1], "1": [2, 3, 0], "2": [4, 2, 0], "3": [4, 3, 2], "4": null, "5": null, "6": null}, "tagscreens": {"0": [2, 2, 1], "1": [2, 3, 0], "2": [4, 2, 0], "3": [4, 3, 2], "4": null, "5": null, "6": null}, "canon": {"0": [2, 2, 1], "1": [2, 3, 0], "2": [4, 2, 0], "3": [4, 3, 2], "4": null, "5": null, "6": null}}, {"flags": {"0": [2, 2, 1], "1": [2, 2, 1], "2": [4, 1, 3], "3": [4, 4, 3], "4": null, "5": null, "6": null}, "pushes": {"0": [2, 1, 1], "1": [2, 2, 1], "2": [4, 1, 3], "3": [4, 4, 3], "4": null, "5": null, "6": null}, "destructions": {"0": [2, 1, 1], "1": [2, 2, 1], "2": [4, 1, 3], "3": [4, 4, 3], "4": null, "5": null, "6": null}, "tagscreens": {"0": [2, 1, 1], "1": [2, 2, 1], "2": [4, 1, 3], "3": [4, 4, 3], "4": null, "5": null, "6": null}, "canon": {"0": [2, 1, 1], "1": [2, 2, 1], "2": null, "3": [4, 4, 3], "4": null, "5": null, "6": null}}, {"flags": {"0": [2, 1, 2], "1": [3, 2, 1], "2": null, "3": [3, 4, 3], "4": null, "5": null, "6": null}, "pushes": {"0": [2, 1, 2], "1": [3, 2, 1], "2": null, "3": [3, 4, 3], "4": null, "5": null, "6": null}, "destructions": {"0": [2, 1, 2], "1": [3, 2, 1], "2": null, "3": [3, 4, 3], "4": null, "5": null, "6": null}, "tagscreens": {"0": [2, 1, 2], "1": [3, 2, 1], "2": null, "3": [3, 4, 3], "4": null, "5": null, "6": null}, "canon": {"0": [2, 1, 2], "1": [3, 2, 1], "2": null, "3": [3, 4, 3], "4": null, "5": null, "6": null}}], [{"flags": {"0": null, "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null, "5": [3, 4, 3], "6": null}, "pushes": {"0": null, "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null, "5": [3, 4, 3], "6": null}, "destructions": {"0": null, "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null, "5": [3, 4, 3], "6": null}, "tagscreens": {"0": null, "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null, "5": [3, 4, 3], "6": null}, "canon": {"0": null, "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null, "5": [3, 4, 3], "6": null}}, {"flags": {"0": null, "1": [2, 3, 1], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": [2, 4, 0], "6": null}, "pushes": {"0": null, "1": [2, 3, 1], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": [2, 4, 0], "6": null}, "destructions": {"0": null, "1": [2, 3, 1], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": [2, 4, 0], "6": null}, "tagscreens": {"0": null, "1": [2, 3, 1], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": [2, 4, 0], "6": null}, "canon": {"0": null, "1": [2, 3, 1], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": [2, 4, 0], "6": null}}, {"flags": {"0": null, "1": [2, 3, 0], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": [2, 4, 0], "6": null}, "pushes": {"0": null, "1": [2, 3, 0], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": [2, 4, 0], "6": null}, "destructions": {"0": null, "1": [2, 3, 0], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": [2, 4, 0], "6": null}, "tagscreens": {"0": null, "1": [2, 3, 0], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": [2, 4, 0], "6": null}, "canon": {"0": null, "1": [2, 3, 0], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": [2, 4, 0], "6": null}}, {"flags": {"0": null, "1": [2, 3, 0], "2": [4, 2, 0], "3": [4, 3, 2], "4": null, "5": [2, 4, 0], "6": null}, "pushes": {"0": null, "1": [2, 3, 0], "2": [4, 2, 0], "3": [4, 3, 2], "4": null, "5": [2, 4, 0], "6": null}, "destructions": {"0": null, "1": [2, 3, 0], "2": [4, 2, 0], "3": [4, 3, 2], "4": null, "5": [2, 4, 0], "6": null}, "tagscreens": {"0": null, "1": [2, 3, 0], "2": [4, 2, 0], "3": [4, 3, 2], "4": null, "5": [2, 4, 0], "6": null}, "canon": {"0": null, "1": [2, 3, 0], "2": [4, 2, 0], "3": [4, 3, 2], "4": null, "5": [2, 4, 0], "6": null}}, {"flags": {"0": null, "1": [2, 2, 1], "2": [4, 1, 3], "3": [4, 4, 3], "4": null, "5": [2, 4, 0], "6": null}, "pushes": {"0": null, "1": [2, 2, 1], "2": [4, 1, 3], "3": [4, 4, 3], "4": null, "5": [2, 4, 0], "6": null}, "destructions": {"0": null, "1": [2, 2, 1], "2": [4, 1, 3], "3": [4, 4, 3], "4": null, "5": [2, 4, 0], "6": null}, "tagscreens": {"0": null, "1": [2, 2, 1], "2": [4, 1, 3], "3": [4, 4, 3], "4": null, "5": [2, 4, 0], "6": null}, "canon": {"0": null, "1": null, "2": [4, 1, 3], "3": [4, 4, 3], "4": null, "5": [2, 4, 0], "6": null}}, {"flags": {"0": null, "1": null, "2": [4, 1, 3], "3": [3, 4, 3], "4": null, "5": [2, 5, 3], "6": null}, "pushes": {"0": null, "1": null, "2": [4, 1, 3], "3": [3, 4, 3], "4": null, "5": [2, 5, 3], "6": null}, "destructions": {"0": null, "1": null, "2": [4, 1, 3], "3": [3, 4, 3], "4": null, "5": [2, 5, 3], "6": null}, "tagscreens": {"0": null, "1": null, "2": [4, 1, 3], "3": [3, 4, 3], "4": null, "5": [2, 5, 3], "6": null}, "canon": {"0": null, "1": null, "2": [4, 1, 3], "3": [3, 4, 3], "4": null, "5": [2, 5, 3], "6": null}}], [{"flags": {"0": null, "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null, "5": [3, 4, 3], "6": [4, 1, 3]}, "pushes": {"0": null, "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null, "5": [3, 4, 3], "6": [4, 1, 3]}, "destructions": {"0": null, "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null, "5": [3, 4, 3], "6": [4, 1, 3]}, "tagscreens": {"0": null, "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null, "5": [3, 4, 3], "6": [4, 1, 3]}, "canon": {"0": null, "1": [2, 3, 1], "2": [4, 3, 3], "3": [5, 3, 3], "4": null, "5": [3, 4, 3], "6": [4, 1, 3]}}, {"flags": {"0": null, "1": [2, 3, 1], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": [2, 4, 0], "6": [3, 1, 3]}, "pushes": {"0": null, "1": [2, 3, 1], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": [2, 4, 0], "6": [3, 1, 3]}, "destructions": {"0": null, "1": [2, 3, 1], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": [2, 4, 0], "6": [3, 1, 3]}, "tagscreens": {"0": null, "1": [2, 3, 1], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": [2, 4, 0], "6": [3, 1, 3]}, "canon": {"0": null, "1": [2, 3, 1], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": [2, 4, 0], "6": [3, 1, 3]}}, {"flags": {"0": null, "1": [2, 3, 0], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": [2, 4, 0], "6": [3, 1, 1]}, "pushes": {"0": null, "1": [2, 3, 0], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": [2, 4, 0], "6": [3, 1, 1]}, "destructions": {"0": null, "1": [2, 3, 0], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": [2, 4, 0], "6": [3, 1, 1]}, "tagscreens": {"0": null, "1": [2, 3, 0], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": [2, 4, 0], "6": [3, 1, 1]}, "canon": {"0": null, "1": [2, 3, 0], "2": [4, 3, 0], "3": [5, 3, 3], "4": null, "5": [2, 4, 0], "6": [3, 1, 1]}}, {"flags": {"0": null, "1": [2, 3, 0], "2": [4, 2, 0], "3": [4, 3, 2], "4": null, "5": [2, 4, 0], "6": [4, 1, 1]}, "pushes": {"0": null, "1": [2, 3, 0], "2": [4, 2, 0], "3": [4, 3, 2], "4": null, "5": [2, 4, 0], "6": [4, 1, 1]}, "destructions": {"0": null, "1": [2, 3, 0], "2": [4, 2, 0], "3": [4, 3, 2], "4": null, "5": [2, 4, 0], "6": [4, 1, 1]}, "tagscreens": {"0": null, "1": [2, 3, 0], "2": [4, 2, 0], "3": [4, 3, 2], "4": null, "5": [2, 4, 0], "6": [4, 1, 1]}, "canon": {"0": null, "1": [2, 3, 0], "2": [4, 2, 0], "3": [4, 3, 2], "4": null, "5": [2, 4, 0], "6": [4, 1, 1]}}, {"flags": {"0": null, "1": [2, 2, 1], "2": [4, 1, 3], "3": [4, 4, 3], "4": null, "5": [2, 4, 0], "6": [4, 1, 3]}, "pushes": {"0": null, "1": [2, 2, 1], "2": [4, 2, 3], "3": [4, 4, 3], "4": null, "5": [2, 4, 0], "6": [4, 1, 3]}, "destructions": {"0": null, "1": [2, 2, 1], "2": [4, 2, 3], "3": [4, 4, 3], "4": null, "5": [2, 4, 0], "6": [4, 1, 3]}, "tagscreens": {"0": null, "1": [2, 2, 1], "2": [4, 2, 3], "3": [4, 4, 3], "4": null, "5": [2, 4, 0], "6": [4, 1, 3]}, "canon": {"0": null, "1": null, "2": [4, 2, 3], "3": [4, 4, 3], "4": null, "5": [2, 4, 0], "6": [4, 1, 3]}}, {"flags": {"0": null, "1": null, "2": [3, 2, 0], "3": [3, 4, 3], "4": null, "5": [2, 5, 3], "6": [4, 1, 3]}, "pushes": {"0": null, "1": null, "2": [3, 2, 0], "3": [3, 4, 3], "4": null, "5": [2, 5, 3], "6": [4, 1, 3]}, "destructions": {"0": null, "1": null, "2": [3, 2, 0], "3": [3, 4, 3], "4": null, "5": [2, 5, 3], "6": [4, 1, 3]}, "tagscreens": {"0": null, "1": null, "2": [3, 2, 0], "3": [3, 4, 3], "4": null, "5": [2, 5, 3], "6": [4, 1, 3]}, "canon": {"0": null, "1": null, "2": [3, 2, 0], "3": [3, 4, 3], "4": null, "5": [2, 5, 3], "6": [4, 1, 3]}}]]');
-  const stone_endpoints = JSON.parse('[{"0": {"start": {"event": "setup", "t": 0, "x": 1, "y": 3}, "end": {"event": "TJO", "t": 5, "x": 2, "y": 1}}, "1": {"start": {"event": "setup", "t": 0, "x": 2, "y": 3}, "end": {"event": "causally_free", "t": 5, "x": 3, "y": 2}}, "2": {"start": {"event": "setup", "t": 0, "x": 4, "y": 3}, "end": {"event": "destruction", "t": 4, "x": 4, "y": 1}}, "3": {"start": {"event": "setup", "t": 0, "x": 5, "y": 3}, "end": {"event": "TJO", "t": 5, "x": 3, "y": 4}}, "4": null, "5": null, "6": null}, {"0": null, "1": {"start": {"event": "setup", "t": 0, "x": 2, "y": 3}, "end": {"event": "destruction", "t": 4, "x": 2, "y": 2}}, "2": {"start": {"event": "setup", "t": 0, "x": 4, "y": 3}, "end": {"event": "TJO", "t": 5, "x": 4, "y": 1}}, "3": {"start": {"event": "setup", "t": 0, "x": 5, "y": 3}, "end": {"event": "TJO", "t": 5, "x": 3, "y": 4}}, "4": null, "5": {"start": {"event": "TJI", "t": 0, "x": 3, "y": 4}, "end": {"event": "causally_free", "t": 5, "x": 2, "y": 5}}, "6": null}, {"0": null, "1": {"start": {"event": "setup", "t": 0, "x": 2, "y": 3}, "end": {"event": "destruction", "t": 4, "x": 2, "y": 2}}, "2": {"start": {"event": "setup", "t": 0, "x": 4, "y": 3}, "end": {"event": "causally_free", "t": 5, "x": 3, "y": 2}}, "3": {"start": {"event": "setup", "t": 0, "x": 5, "y": 3}, "end": {"event": "TJO", "t": 5, "x": 3, "y": 4}}, "4": null, "5": {"start": {"event": "TJI", "t": 0, "x": 3, "y": 4}, "end": {"event": "causally_free", "t": 5, "x": 2, "y": 5}}, "6": {"start": {"event": "TJI", "t": 0, "x": 4, "y": 1}, "end": {"event": "causally_free", "t": 5, "x": 4, "y": 1}}}]');
-  const stone_actions = [[[], [], [["tank", "attack", 4, 3, 4, 0]], [], [["tank", "attack", 2, 1, 4, 1]], []], [[], [], [["tank", "attack", 4, 3, 4, 0]], [], [["tank", "attack", 2, 4, 2, 2]], [["tank", "attack", 4, 1, 0, 1]]], [[], [], [["tank", "attack", 4, 3, 4, 0]], [], [["tank", "attack", 2, 4, 2, 2]], []]];
-  const reverse_causality_flag_properties = JSON.parse('{"24": {"t": 5, "x": 2, "y": 1, "flag_type": "time_jump_out", "stone_ID": 0, "target_effect": 23}, "26": {"t": 5, "x": 3, "y": 4, "flag_type": "time_jump_out", "stone_ID": 3, "target_effect": 25}, "23": {"t": 1, "x": 2, "y": 1, "flag_type": "time_jump_in", "stone_ID": 4, "target_effect": null}, "25": {"t": 0, "x": 3, "y": 4, "flag_type": "time_jump_in", "stone_ID": 5, "target_effect": null}, "39": {"t": 5, "x": 4, "y": 1, "flag_type": "time_jump_out", "stone_ID": 2, "target_effect": 38}, "38": {"t": 0, "x": 4, "y": 1, "flag_type": "time_jump_in", "stone_ID": 6, "target_effect": null}}');
-  const effects = [[23, 25], [38], []];
-  const causes = [[24, 26], [39], []];
-  const activated_buffered_causes = [[24, 26], [39], []];
-  const scenarios = JSON.parse('[{"effect_activity_map": {"23": true, "25": true}, "effect_cause_map": {"23": 24, "25": 26}, "setup_activity_map": {"0": true, "1": true, "2": true, "3": true}, "stone_inheritance": {"0": 4, "3": 5}, "removed_setup_stones": {}}, {"effect_activity_map": {"23": false, "25": true, "38": true}, "effect_cause_map": {"25": 26, "38": 39}, "setup_activity_map": {"0": false, "1": true, "2": true, "3": true}, "stone_inheritance": {"3": 5, "2": 6}, "removed_setup_stones": {}}, {"effect_activity_map": {"23": false, "25": true, "38": true}, "effect_cause_map": {"25": 26, "38": 39}, "setup_activity_map": {"0": false, "1": true, "2": true, "3": true}, "stone_inheritance": {"3": 5, "2": 6}, "removed_setup_stones": {}}]');
-  const time_jumps = JSON.parse('[{"5": {"2": {"1": {"used": "TJO"}}, "3": {"4": {"used": "TJO"}}}}, {"0": {"3": {"4": {"used": "TJI"}}}, "1": {"2": {"1": {"unused": "TJI"}}}, "5": {"2": {"1": {"unused": "TJO"}}, "3": {"4": {"used": "TJO"}}, "4": {"1": {"used": "TJO"}}}}, {"0": {"3": {"4": {"used": "TJI"}}, "4": {"1": {"used": "TJI"}}}, "1": {"2": {"1": {"unused": "TJI"}}}, "5": {"2": {"1": {"unused": "TJO"}}, "3": {"4": {"used": "TJO"}}, "4": {"1": {"unused": "TJO"}}}}]');
-  const current_turn = 18;
+  const stones_to_be_commanded = [1, 3, 6, 9, 11];
+  const available_commands = JSON.parse('{"1": {"commands": ["wait", "turn", "move"], "command_properties": {"wait": {"command_type": "spatial_move", "selection_mode": {"lock_timeslice": null, "squares": [{"t": 3, "x": 5, "y": 1, "a": [3], "swap_effects": null}], "choice_keyword": null}, "label": "Wait"}, "turn": {"command_type": "spatial_move", "selection_mode": {"lock_timeslice": null, "squares": [{"t": 3, "x": 5, "y": 1, "a": [0, 1, 2, 3], "swap_effects": null}], "choice_keyword": null}, "label": "Turn"}, "move": {"command_type": "spatial_move", "selection_mode": {"lock_timeslice": 3, "squares": [{"t": 3, "x": 4, "y": 1, "a": [3, 0, 2], "swap_effects": null}], "choice_keyword": null}, "label": "Move"}}}, "3": {"commands": ["wait", "move", "attack"], "command_properties": {"wait": {"command_type": "spatial_move", "selection_mode": {"lock_timeslice": null, "squares": [{"t": 3, "x": 5, "y": 2, "a": [3], "swap_effects": null}], "choice_keyword": null}, "label": "Wait"}, "move": {"command_type": "spatial_move", "selection_mode": {"lock_timeslice": 3, "squares": [{"t": 3, "x": 5, "y": 1, "a": null, "swap_effects": null}, {"t": 3, "x": 5, "y": 3, "a": null, "swap_effects": null}, {"t": 3, "x": 4, "y": 2, "a": null, "swap_effects": null}], "choice_keyword": null}, "label": "Move"}, "attack": {"command_type": "attack", "selection_mode": {"lock_timeslice": null, "squares": [{"t": 0, "x": 5, "y": 2, "a": null, "swap_effects": null}, {"t": 1, "x": 5, "y": 2, "a": null, "swap_effects": null}], "choice_keyword": null}, "label": "Attack"}}}, "6": {"commands": ["wait", "turn", "timejump"], "command_properties": {"wait": {"command_type": "spatial_move", "selection_mode": {"lock_timeslice": null, "squares": [{"t": 3, "x": 5, "y": 3, "a": [3], "swap_effects": null}], "choice_keyword": null}, "label": "Wait"}, "turn": {"command_type": "spatial_move", "selection_mode": {"lock_timeslice": null, "squares": [{"t": 3, "x": 5, "y": 3, "a": [0, 1, 2, 3], "swap_effects": null}], "choice_keyword": null}, "label": "Turn"}, "timejump": {"command_type": "timejump", "selection_mode": {"lock_timeslice": null, "squares": [{"t": 0, "x": 5, "y": 3, "a": [3], "swap_effects": [null]}, {"t": 1, "x": 5, "y": 3, "a": [3], "swap_effects": [null]}], "choice_keyword": null}, "label": "Timejump"}}}, "9": {"commands": [], "command_properties": {}}, "11": {"commands": [], "command_properties": {}}}');
+  const stone_trajectories = JSON.parse('[[{"flags": {"0": [1, 1, 1], "1": [5, 1, 3], "2": [1, 2, 1], "3": [5, 2, 3], "4": [1, 3, 1], "5": [3, 3, 0], "6": [5, 3, 3], "7": [1, 4, 1], "8": [3, 4, 0], "9": [5, 4, 3], "10": [1, 5, 1], "11": [5, 5, 3]}, "pushes": {"0": [1, 1, 1], "1": [5, 1, 3], "2": [1, 2, 1], "3": [5, 2, 3], "4": [1, 3, 1], "5": [3, 3, 0], "6": [5, 3, 3], "7": [1, 4, 1], "8": [3, 4, 0], "9": [5, 4, 3], "10": [1, 5, 1], "11": [5, 5, 3]}, "destructions": {"0": [1, 1, 1], "1": [5, 1, 3], "2": [1, 2, 1], "3": [5, 2, 3], "4": [1, 3, 1], "5": [3, 3, 0], "6": [5, 3, 3], "7": [1, 4, 1], "8": [3, 4, 0], "9": [5, 4, 3], "10": [1, 5, 1], "11": [5, 5, 3]}, "tagscreens": {"0": [1, 1, 1], "1": [5, 1, 3], "2": [1, 2, 1], "3": [5, 2, 3], "4": [1, 3, 1], "5": [3, 3, 0], "6": [5, 3, 3], "7": [1, 4, 1], "8": [3, 4, 0], "9": [5, 4, 3], "10": [1, 5, 1], "11": [5, 5, 3]}, "canon": {"0": [1, 1, 1], "1": [5, 1, 3], "2": [1, 2, 1], "3": [5, 2, 3], "4": [1, 3, 1], "5": [3, 3, 0], "6": [5, 3, 3], "7": [1, 4, 1], "8": [3, 4, 0], "9": [5, 4, 3], "10": [1, 5, 1], "11": [5, 5, 3]}}, {"flags": {"0": [1, 1, 1], "1": [5, 1, 3], "2": [1, 2, 1], "3": [5, 2, 3], "4": [1, 3, 1], "5": [3, 3, 0], "6": [5, 3, 3], "7": [1, 4, 1], "8": [3, 4, 0], "9": [5, 4, 3], "10": [1, 5, 0], "11": [5, 5, 0]}, "pushes": {"0": [1, 1, 1], "1": [5, 1, 3], "2": [1, 2, 1], "3": [5, 2, 3], "4": [1, 3, 1], "5": [3, 3, 0], "6": [5, 3, 3], "7": [1, 4, 1], "8": [3, 4, 0], "9": [5, 4, 3], "10": [1, 5, 0], "11": [5, 5, 0]}, "destructions": {"0": [1, 1, 1], "1": [5, 1, 3], "2": [1, 2, 1], "3": [5, 2, 3], "4": [1, 3, 1], "5": [3, 3, 0], "6": [5, 3, 3], "7": [1, 4, 1], "8": [3, 4, 0], "9": [5, 4, 3], "10": [1, 5, 0], "11": [5, 5, 0]}, "tagscreens": {"0": [1, 1, 1], "1": [5, 1, 3], "2": [1, 2, 1], "3": [5, 2, 3], "4": [1, 3, 1], "5": [3, 3, 0], "6": [5, 3, 3], "7": [1, 4, 1], "8": [3, 4, 0], "9": [5, 4, 3], "10": [1, 5, 0], "11": [5, 5, 0]}, "canon": {"0": [1, 1, 1], "1": [5, 1, 3], "2": [1, 2, 1], "3": [5, 2, 3], "4": [1, 3, 1], "5": [3, 3, 0], "6": [5, 3, 3], "7": [1, 4, 1], "8": [3, 4, 0], "9": [5, 4, 3], "10": [1, 5, 0], "11": [5, 5, 0]}}, {"flags": {"0": [1, 1, 1], "1": [5, 1, 3], "2": [1, 2, 1], "3": [5, 2, 3], "4": [1, 3, 1], "5": [3, 3, 0], "6": [5, 3, 3], "7": [1, 4, 1], "8": [3, 4, 0], "9": [5, 4, 3], "10": [1, 5, 0], "11": [5, 5, 0]}, "pushes": {"0": [1, 1, 1], "1": [5, 1, 3], "2": [1, 2, 1], "3": [5, 2, 3], "4": [1, 3, 1], "5": [3, 3, 0], "6": [5, 3, 3], "7": [1, 4, 1], "8": [3, 4, 0], "9": [5, 4, 3], "10": [1, 5, 0], "11": [5, 5, 0]}, "destructions": {"0": [1, 1, 1], "1": [5, 1, 3], "2": [1, 2, 1], "3": [5, 2, 3], "4": [1, 3, 1], "5": [3, 3, 0], "6": [5, 3, 3], "7": [1, 4, 1], "8": [3, 4, 0], "9": [5, 4, 3], "10": [1, 5, 0], "11": [5, 5, 0]}, "tagscreens": {"0": [1, 1, 1], "1": [5, 1, 3], "2": [1, 2, 1], "3": [5, 2, 3], "4": [1, 3, 1], "5": [3, 3, 0], "6": [5, 3, 3], "7": [1, 4, 1], "8": [3, 4, 0], "9": [5, 4, 3], "10": [1, 5, 0], "11": [5, 5, 0]}, "canon": {"0": [1, 1, 1], "1": [5, 1, 3], "2": [1, 2, 1], "3": [5, 2, 3], "4": [1, 3, 1], "5": [3, 3, 0], "6": [5, 3, 3], "7": [1, 4, 1], "8": [3, 4, 0], "9": [5, 4, 3], "10": [1, 5, 0], "11": [5, 5, 0]}}, {"flags": {"0": null, "1": null, "2": null, "3": null, "4": null, "5": [3, 3, 0], "6": null, "7": null, "8": [3, 4, 0], "9": null, "10": null, "11": null}, "pushes": {"0": null, "1": null, "2": null, "3": null, "4": null, "5": [3, 3, 0], "6": null, "7": null, "8": [3, 4, 0], "9": null, "10": null, "11": null}, "destructions": {"0": null, "1": null, "2": null, "3": null, "4": null, "5": [3, 3, 0], "6": null, "7": null, "8": [3, 4, 0], "9": null, "10": null, "11": null}, "tagscreens": {"0": null, "1": null, "2": null, "3": null, "4": null, "5": [3, 3, 0], "6": null, "7": null, "8": [3, 4, 0], "9": null, "10": null, "11": null}, "canon": {"0": null, "1": null, "2": null, "3": null, "4": null, "5": [3, 3, 0], "6": null, "7": null, "8": [3, 4, 0], "9": null, "10": null, "11": null}}, {"flags": {"0": null, "1": null, "2": null, "3": null, "4": null, "5": [3, 3, 0], "6": null, "7": null, "8": [3, 4, 0], "9": null, "10": null, "11": null}, "pushes": {"0": null, "1": null, "2": null, "3": null, "4": null, "5": [3, 3, 0], "6": null, "7": null, "8": [3, 4, 0], "9": null, "10": null, "11": null}, "destructions": {"0": null, "1": null, "2": null, "3": null, "4": null, "5": [3, 3, 0], "6": null, "7": null, "8": [3, 4, 0], "9": null, "10": null, "11": null}, "tagscreens": {"0": null, "1": null, "2": null, "3": null, "4": null, "5": [3, 3, 0], "6": null, "7": null, "8": [3, 4, 0], "9": null, "10": null, "11": null}, "canon": {"0": null, "1": null, "2": null, "3": null, "4": null, "5": [3, 3, 0], "6": null, "7": null, "8": [3, 4, 0], "9": null, "10": null, "11": null}}]]');
+  const stone_endpoints = JSON.parse('[{"0": {"start": {"event": "setup", "t": 0, "x": 1, "y": 1}, "end": {"event": "causally_free", "t": 2, "x": 1, "y": 1}}, "1": {"start": {"event": "setup", "t": 0, "x": 5, "y": 1}, "end": {"event": "causally_free", "t": 2, "x": 5, "y": 1}}, "2": {"start": {"event": "setup", "t": 0, "x": 1, "y": 2}, "end": {"event": "causally_free", "t": 2, "x": 1, "y": 2}}, "3": {"start": {"event": "setup", "t": 0, "x": 5, "y": 2}, "end": {"event": "causally_free", "t": 2, "x": 5, "y": 2}}, "4": {"start": {"event": "setup", "t": 0, "x": 1, "y": 3}, "end": {"event": "causally_free", "t": 2, "x": 1, "y": 3}}, "5": {"start": {"event": "setup", "t": 0, "x": 3, "y": 3}}, "6": {"start": {"event": "setup", "t": 0, "x": 5, "y": 3}, "end": {"event": "causally_free", "t": 2, "x": 5, "y": 3}}, "7": {"start": {"event": "setup", "t": 0, "x": 1, "y": 4}, "end": {"event": "causally_free", "t": 2, "x": 1, "y": 4}}, "8": {"start": {"event": "setup", "t": 0, "x": 3, "y": 4}}, "9": {"start": {"event": "setup", "t": 0, "x": 5, "y": 4}, "end": {"event": "causally_free", "t": 2, "x": 5, "y": 4}}, "10": {"start": {"event": "setup", "t": 0, "x": 1, "y": 5}, "end": {"event": "causally_free", "t": 2, "x": 1, "y": 5}}, "11": {"start": {"event": "setup", "t": 0, "x": 5, "y": 5}, "end": {"event": "causally_free", "t": 2, "x": 5, "y": 5}}}]');
+  const stone_actions = [[[], [], [], [], []]];
+  const reverse_causality_flag_properties = JSON.parse('{}');
+  const effects = [[]];
+  const causes = [[]];
+  const activated_buffered_causes = [[]];
+  const scenarios = JSON.parse('[{"effect_activity_map": {}, "effect_cause_map": {}, "setup_activity_map": {"0": true, "1": true, "2": true, "3": true, "4": true, "5": true, "6": true, "7": true, "8": true, "9": true, "10": true, "11": true}, "stone_inheritance": {}, "removed_setup_stones": {}}]');
+  const time_jumps = JSON.parse('[{}]');
+  const current_turn = 3;
 </script>
 <div id="boardside">
 <div id="board_control_panel">
@@ -89,6 +89,7 @@
   <rect width="100" height="100" x="200" y="500" class="board_square_empty" id="board_square_2_5" onclick="inspector.board_square_click(2,5)" />
   <rect width="100" height="100" x="300" y="100" class="board_square_empty" id="board_square_3_1" onclick="inspector.board_square_click(3,1)" />
   <rect width="100" height="100" x="300" y="200" class="board_square_empty" id="board_square_3_2" onclick="inspector.board_square_click(3,2)" />
+  <rect width="100" height="100" x="300" y="300" class="board_square_empty" id="board_square_3_3" onclick="inspector.board_square_click(3,3)" />
   <rect width="100" height="100" x="300" y="400" class="board_square_empty" id="board_square_3_4" onclick="inspector.board_square_click(3,4)" />
   <rect width="100" height="100" x="300" y="500" class="board_square_empty" id="board_square_3_5" onclick="inspector.board_square_click(3,5)" />
   <rect width="100" height="100" x="400" y="100" class="board_square_empty" id="board_square_4_1" onclick="inspector.board_square_click(4,1)" />
@@ -127,6 +128,8 @@
   <rect width="100" height="100" x="300" y="100" class="unused_time_jump_marker" id="unused_time_jump_marker_3_1" visibility="hidden" clip-path="url(#unused_TJ_clip_path)" />
   <rect width="100" height="100" x="300" y="200" class="used_time_jump_marker" id="used_time_jump_marker_3_2" visibility="hidden" />
   <rect width="100" height="100" x="300" y="200" class="unused_time_jump_marker" id="unused_time_jump_marker_3_2" visibility="hidden" clip-path="url(#unused_TJ_clip_path)" />
+  <rect width="100" height="100" x="300" y="300" class="used_time_jump_marker" id="used_time_jump_marker_3_3" visibility="hidden" />
+  <rect width="100" height="100" x="300" y="300" class="unused_time_jump_marker" id="unused_time_jump_marker_3_3" visibility="hidden" clip-path="url(#unused_TJ_clip_path)" />
   <rect width="100" height="100" x="300" y="400" class="used_time_jump_marker" id="used_time_jump_marker_3_4" visibility="hidden" />
   <rect width="100" height="100" x="300" y="400" class="unused_time_jump_marker" id="unused_time_jump_marker_3_4" visibility="hidden" clip-path="url(#unused_TJ_clip_path)" />
   <rect width="100" height="100" x="300" y="500" class="used_time_jump_marker" id="used_time_jump_marker_3_5" visibility="hidden" />
@@ -167,7 +170,6 @@
   <rect width="100" height="100" x="200" y="0" class="board_square_wall" id="board_square_2_0" onclick="inspector.board_square_click(2,0)" />
   <rect width="100" height="100" x="200" y="600" class="board_square_wall" id="board_square_2_6" onclick="inspector.board_square_click(2,6)" />
   <rect width="100" height="100" x="300" y="0" class="board_square_wall" id="board_square_3_0" onclick="inspector.board_square_click(3,0)" />
-  <rect width="100" height="100" x="300" y="300" class="board_square_wall" id="board_square_3_3" onclick="inspector.board_square_click(3,3)" />
   <rect width="100" height="100" x="300" y="600" class="board_square_wall" id="board_square_3_6" onclick="inspector.board_square_click(3,6)" />
   <rect width="100" height="100" x="400" y="0" class="board_square_wall" id="board_square_4_0" onclick="inspector.board_square_click(4,0)" />
   <rect width="100" height="100" x="400" y="600" class="board_square_wall" id="board_square_4_6" onclick="inspector.board_square_click(4,6)" />
@@ -183,67 +185,152 @@
 <polyline id="square_highlighter" points="0,0 100,0 100,100 0,100 0,0" display="none"/>
 </g>
 <g class="board_layer" id="board_layer_4">
-<g x="0" y="0" width="100" height="100" class="A_tank" id="stone_0" transform-origin="50px 50px">
+<g x="0" y="0" width="100" height="100" class="GM_box" id="stone_5" transform-origin="50px 50px" style="pointer-events:none">
+  <g x="0" y="0" width="100" height="100" class="GM_box_animation_effects" id="stone_5_animation_effects" transform-origin="50px 50px">
+    <polyline id="command_marker_5" class="command_marker" points="50.0,10.0 90.0,50.0 50.00000000000001,90.0 10.0,50.00000000000001 49.99999999999999,10.0 90.0,49.999999999999986" display="none"/>
+    <g x="0" y="0" width="100" height="100" class="GM_box_rotation" id="stone_5_rotation" transform-origin="50px 50px">
+      <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
+      <rect x="15" y="15" width="70" height="70" class="GM_box_base" />
+      <line x1="15" y1="15" x2="85" y2="85" class="GM_box_line" />
+      <line x1="15" y1="85" x2="85" y2="15" class="GM_box_line" />
+      <rect x="15" y="15" width="70" height="70" class="GM_box_outline" />
+    </g>
+  </g>
+</g>
+<g x="0" y="0" width="100" height="100" class="GM_mine" id="stone_8" transform-origin="50px 50px" style="pointer-events:none">
+  <g x="0" y="0" width="100" height="100" class="GM_mine_animation_effects" id="stone_8_animation_effects" transform-origin="50px 50px">
+    <polyline id="command_marker_8" class="command_marker" points="50.0,10.0 90.0,50.0 50.00000000000001,90.0 10.0,50.00000000000001 49.99999999999999,10.0 90.0,49.999999999999986" display="none"/>
+    <g x="0" y="0" width="100" height="100" class="GM_mine_rotation" id="stone_8_rotation" transform-origin="50px 50px">
+      <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
+      <path d="M45,15 L45,25 A20,20,90,0,1,25,45 L15,45 A40,40,0,0,0,15,55 L25,55 A20,20,90,0,1,45,75 L45,85 A40,40,0,0,0,55,85 L55,75 A20,20,90,0,1,75,55 L85,55 A40,40,0,0,0,85,45 L75,45 A20,20,90,0,1,55,25 L55,15 A40,40,0,0,0, 45,15 Z" class="GM_mine_body" /> 
+      <circle cx="50" cy="50" r="8" class="GM_mine_button" />
+    </g>
+  </g>
+</g>
+<g x="0" y="0" width="100" height="100" class="A_tank" id="stone_0" transform-origin="50px 50px" style="pointer-events:none">
   <g x="0" y="0" width="100" height="100" class="A_tank_animation_effects" id="stone_0_animation_effects" transform-origin="50px 50px">
-    <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
-    <polyline id="command_marker_0" class="command_marker" points="50,10 90,50 50,90 10,50 50,10" display="none"/>
-    <polygon points="65.0,24.01923788646684 80.0,50.0 65.00000000000001,75.98076211353316 35.00000000000001,75.98076211353316 20.0,50.00000000000001 35.000000000000014,24.019237886466836" class="A_tank_body" />
-    <rect x="45" y="10" width="10" height="45" class="A_tank_barrel" />
-    <circle cx="50" cy="50" r="12" class="A_tank_hatch" />
+    <polyline id="command_marker_0" class="command_marker" points="50.0,10.0 90.0,50.0 50.00000000000001,90.0 10.0,50.00000000000001 49.99999999999999,10.0 90.0,49.999999999999986" display="none"/>
+    <g x="0" y="0" width="100" height="100" class="A_tank_rotation" id="stone_0_rotation" transform-origin="50px 50px">
+      <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
+      <polygon points="65.0,24.01923788646684 80.0,50.0 65.00000000000001,75.98076211353316 35.00000000000001,75.98076211353316 20.0,50.00000000000001 35.000000000000014,24.019237886466836 65.0,24.019237886466843 80.0,49.99999999999999" class="A_tank_body" />
+      <rect x="45" y="10" width="10" height="45" class="A_tank_barrel" />
+      <circle cx="50" cy="50" r="12" class="A_tank_hatch" />
+    </g>
   </g>
 </g>
-<g x="0" y="0" width="100" height="100" class="A_tank" id="stone_1" transform-origin="50px 50px">
-  <g x="0" y="0" width="100" height="100" class="A_tank_animation_effects" id="stone_1_animation_effects" transform-origin="50px 50px">
-    <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
-    <polyline id="command_marker_1" class="command_marker" points="50,10 90,50 50,90 10,50 50,10" display="none"/>
-    <polygon points="65.0,24.01923788646684 80.0,50.0 65.00000000000001,75.98076211353316 35.00000000000001,75.98076211353316 20.0,50.00000000000001 35.000000000000014,24.019237886466836" class="A_tank_body" />
-    <rect x="45" y="10" width="10" height="45" class="A_tank_barrel" />
-    <circle cx="50" cy="50" r="12" class="A_tank_hatch" />
+<g x="0" y="0" width="100" height="100" class="A_bombardier" id="stone_2" transform-origin="50px 50px" style="pointer-events:none">
+  <g x="0" y="0" width="100" height="100" class="A_bombardier_animation_effects" id="stone_2_animation_effects" transform-origin="50px 50px">
+    <polyline id="command_marker_2" class="command_marker" points="50.0,10.0 90.0,50.0 50.00000000000001,90.0 10.0,50.00000000000001 49.99999999999999,10.0 90.0,49.999999999999986" display="none"/>
+    <g x="0" y="0" width="100" height="100" class="A_bombardier_rotation" id="stone_2_rotation" transform-origin="50px 50px">
+      <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
+      <polyline points="25,65 50,30 75,65" class="A_bombardier_legs" />
+      <polygon points="20,25 45,25 45,70" class="A_bombardier_left_face" />
+      <polygon points="80,25 55,25 55,70" class="A_bombardier_right_face" />
+      <rect x="45" y="15" width="10" height="50" class="A_bombardier_welding" />
+    </g>
   </g>
 </g>
-<g x="0" y="0" width="100" height="100" class="A_tank" id="stone_4" transform-origin="50px 50px">
-  <g x="0" y="0" width="100" height="100" class="A_tank_animation_effects" id="stone_4_animation_effects" transform-origin="50px 50px">
-    <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
-    <polyline id="command_marker_4" class="command_marker" points="50,10 90,50 50,90 10,50 50,10" display="none"/>
-    <polygon points="65.0,24.01923788646684 80.0,50.0 65.00000000000001,75.98076211353316 35.00000000000001,75.98076211353316 20.0,50.00000000000001 35.000000000000014,24.019237886466836" class="A_tank_body" />
-    <rect x="45" y="10" width="10" height="45" class="A_tank_barrel" />
-    <circle cx="50" cy="50" r="12" class="A_tank_hatch" />
+<g x="0" y="0" width="100" height="100" class="A_sniper" id="stone_4" transform-origin="50px 50px" style="pointer-events:none">
+  <g x="0" y="0" width="100" height="100" class="A_sniper_animation_effects" id="stone_4_animation_effects" transform-origin="50px 50px">
+    <polyline id="command_marker_4" class="command_marker" points="50.0,10.0 90.0,50.0 50.00000000000001,90.0 10.0,50.00000000000001 49.99999999999999,10.0 90.0,49.999999999999986" display="none"/>
+    <g x="0" y="0" width="100" height="100" class="A_sniper_rotation" id="stone_4_rotation" transform-origin="50px 50px">
+      <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
+      <line x1="39" y1="25" x2="25" y2="39" class="A_sniper_foot" />
+      <line x1="61" y1="25" x2="75" y2="39" class="A_sniper_foot" />
+      <line x1="39" y1="75" x2="25" y2="61" class="A_sniper_foot" />
+      <line x1="61" y1="75" x2="75" y2="61" class="A_sniper_foot" />
+      <polygon points="25,25 30,25 75,70 75,75 70,75 25,30" class="A_sniper_left_leg" />
+      <polygon points="75,25 70,25 25,70 25,75 30,75 75,30" class="A_sniper_right_leg" />
+      <line x1="50" y1="50" x2="50" y2="20" class="A_sniper_gun" />
+      <rect x="40" y="40" width="20" height="20" class="A_sniper_nest" />
+    </g>
   </g>
 </g>
-<g x="0" y="0" width="100" height="100" class="B_tank" id="stone_2" transform-origin="50px 50px">
-  <g x="0" y="0" width="100" height="100" class="B_tank_animation_effects" id="stone_2_animation_effects" transform-origin="50px 50px">
-    <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
-    <polyline id="command_marker_2" class="command_marker" points="50,10 90,50 50,90 10,50 50,10" display="none"/>
-    <polygon points="65.0,24.01923788646684 80.0,50.0 65.00000000000001,75.98076211353316 35.00000000000001,75.98076211353316 20.0,50.00000000000001 35.000000000000014,24.019237886466836" class="B_tank_body" />
-    <rect x="45" y="10" width="10" height="45" class="B_tank_barrel" />
-    <circle cx="50" cy="50" r="12" class="B_tank_hatch" />
+<g x="0" y="0" width="100" height="100" class="A_tagger" id="stone_7" transform-origin="50px 50px" style="pointer-events:none">
+  <g x="0" y="0" width="100" height="100" class="A_tagger_animation_effects" id="stone_7_animation_effects" transform-origin="50px 50px">
+    <polyline id="command_marker_7" class="command_marker" points="50.0,10.0 90.0,50.0 50.00000000000001,90.0 10.0,50.00000000000001 49.99999999999999,10.0 90.0,49.999999999999986" display="none"/>
+    <g x="0" y="0" width="100" height="100" class="A_tagger_rotation" id="stone_7_rotation" transform-origin="50px 50px">
+      <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
+      <polygon points="21.46830451114539,40.72949016875158 50.0,20.0 78.53169548885461,40.729490168751575 50,50" class="A_tagger_top_face" />
+      <polygon points="78.53169548885461,40.729490168751575 67.6335575687742,74.27050983124842 50,50" class="A_tagger_right_face" />
+      <polygon points="67.6335575687742,74.27050983124842 32.366442431225806,74.27050983124843 50,50" class="A_tagger_bottom_face" />
+      <polygon points="32.366442431225806,74.27050983124843 21.46830451114539,40.72949016875158 50,50" class="A_tagger_left_face" />
+      <polyline points="50.0,20.0 78.53169548885461,40.729490168751575 67.6335575687742,74.27050983124842 32.366442431225806,74.27050983124843 21.46830451114539,40.72949016875158 49.99999999999999,20.0 78.53169548885461,40.72949016875157" class="A_tagger_outline" />
+    </g>
   </g>
 </g>
-<g x="0" y="0" width="100" height="100" class="B_tank" id="stone_3" transform-origin="50px 50px">
-  <g x="0" y="0" width="100" height="100" class="B_tank_animation_effects" id="stone_3_animation_effects" transform-origin="50px 50px">
-    <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
-    <polyline id="command_marker_3" class="command_marker" points="50,10 90,50 50,90 10,50 50,10" display="none"/>
-    <polygon points="65.0,24.01923788646684 80.0,50.0 65.00000000000001,75.98076211353316 35.00000000000001,75.98076211353316 20.0,50.00000000000001 35.000000000000014,24.019237886466836" class="B_tank_body" />
-    <rect x="45" y="10" width="10" height="45" class="B_tank_barrel" />
-    <circle cx="50" cy="50" r="12" class="B_tank_hatch" />
+<g x="0" y="0" width="100" height="100" class="A_wildcard" id="stone_10" transform-origin="50px 50px" style="pointer-events:none">
+  <g x="0" y="0" width="100" height="100" class="A_wildcard_animation_effects" id="stone_10_animation_effects" transform-origin="50px 50px">
+    <polyline id="command_marker_10" class="command_marker" points="50.0,10.0 90.0,50.0 50.00000000000001,90.0 10.0,50.00000000000001 49.99999999999999,10.0 90.0,49.999999999999986" display="none"/>
+    <g x="0" y="0" width="100" height="100" class="A_wildcard_rotation" id="stone_10_rotation" transform-origin="50px 50px">
+      <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
+      <circle cx="50" cy="50" r="30" class="A_wildcard_body" />
+      <line x1="26.0" y1="26.0" x2="74.0" y2="74.0" class="A_wildcard_halo" />
+      <line x1="26.0" y1="74.0" x2="74.0" y2="26.0" class="A_wildcard_halo" />
+    </g>
   </g>
 </g>
-<g x="0" y="0" width="100" height="100" class="B_tank" id="stone_5" transform-origin="50px 50px">
-  <g x="0" y="0" width="100" height="100" class="B_tank_animation_effects" id="stone_5_animation_effects" transform-origin="50px 50px">
-    <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
-    <polyline id="command_marker_5" class="command_marker" points="50,10 90,50 50,90 10,50 50,10" display="none"/>
-    <polygon points="65.0,24.01923788646684 80.0,50.0 65.00000000000001,75.98076211353316 35.00000000000001,75.98076211353316 20.0,50.00000000000001 35.000000000000014,24.019237886466836" class="B_tank_body" />
-    <rect x="45" y="10" width="10" height="45" class="B_tank_barrel" />
-    <circle cx="50" cy="50" r="12" class="B_tank_hatch" />
+<g x="0" y="0" width="100" height="100" class="B_tank" id="stone_1" transform-origin="50px 50px" style="pointer-events:none">
+  <g x="0" y="0" width="100" height="100" class="B_tank_animation_effects" id="stone_1_animation_effects" transform-origin="50px 50px">
+    <polyline id="command_marker_1" class="command_marker" points="50.0,10.0 90.0,50.0 50.00000000000001,90.0 10.0,50.00000000000001 49.99999999999999,10.0 90.0,49.999999999999986" display="none"/>
+    <g x="0" y="0" width="100" height="100" class="B_tank_rotation" id="stone_1_rotation" transform-origin="50px 50px">
+      <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
+      <polygon points="65.0,24.01923788646684 80.0,50.0 65.00000000000001,75.98076211353316 35.00000000000001,75.98076211353316 20.0,50.00000000000001 35.000000000000014,24.019237886466836 65.0,24.019237886466843 80.0,49.99999999999999" class="B_tank_body" />
+      <rect x="45" y="10" width="10" height="45" class="B_tank_barrel" />
+      <circle cx="50" cy="50" r="12" class="B_tank_hatch" />
+    </g>
   </g>
 </g>
-<g x="0" y="0" width="100" height="100" class="B_tank" id="stone_6" transform-origin="50px 50px">
-  <g x="0" y="0" width="100" height="100" class="B_tank_animation_effects" id="stone_6_animation_effects" transform-origin="50px 50px">
-    <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
-    <polyline id="command_marker_6" class="command_marker" points="50,10 90,50 50,90 10,50 50,10" display="none"/>
-    <polygon points="65.0,24.01923788646684 80.0,50.0 65.00000000000001,75.98076211353316 35.00000000000001,75.98076211353316 20.0,50.00000000000001 35.000000000000014,24.019237886466836" class="B_tank_body" />
-    <rect x="45" y="10" width="10" height="45" class="B_tank_barrel" />
-    <circle cx="50" cy="50" r="12" class="B_tank_hatch" />
+<g x="0" y="0" width="100" height="100" class="B_bombardier" id="stone_3" transform-origin="50px 50px" style="pointer-events:none">
+  <g x="0" y="0" width="100" height="100" class="B_bombardier_animation_effects" id="stone_3_animation_effects" transform-origin="50px 50px">
+    <polyline id="command_marker_3" class="command_marker" points="50.0,10.0 90.0,50.0 50.00000000000001,90.0 10.0,50.00000000000001 49.99999999999999,10.0 90.0,49.999999999999986" display="none"/>
+    <g x="0" y="0" width="100" height="100" class="B_bombardier_rotation" id="stone_3_rotation" transform-origin="50px 50px">
+      <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
+      <polyline points="25,65 50,30 75,65" class="B_bombardier_legs" />
+      <polygon points="20,25 45,25 45,70" class="B_bombardier_left_face" />
+      <polygon points="80,25 55,25 55,70" class="B_bombardier_right_face" />
+      <rect x="45" y="15" width="10" height="50" class="B_bombardier_welding" />
+    </g>
+  </g>
+</g>
+<g x="0" y="0" width="100" height="100" class="B_sniper" id="stone_6" transform-origin="50px 50px" style="pointer-events:none">
+  <g x="0" y="0" width="100" height="100" class="B_sniper_animation_effects" id="stone_6_animation_effects" transform-origin="50px 50px">
+    <polyline id="command_marker_6" class="command_marker" points="50.0,10.0 90.0,50.0 50.00000000000001,90.0 10.0,50.00000000000001 49.99999999999999,10.0 90.0,49.999999999999986" display="none"/>
+    <g x="0" y="0" width="100" height="100" class="B_sniper_rotation" id="stone_6_rotation" transform-origin="50px 50px">
+      <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
+      <line x1="39" y1="25" x2="25" y2="39" class="B_sniper_foot" />
+      <line x1="61" y1="25" x2="75" y2="39" class="B_sniper_foot" />
+      <line x1="39" y1="75" x2="25" y2="61" class="B_sniper_foot" />
+      <line x1="61" y1="75" x2="75" y2="61" class="B_sniper_foot" />
+      <polygon points="25,25 30,25 75,70 75,75 70,75 25,30" class="B_sniper_left_leg" />
+      <polygon points="75,25 70,25 25,70 25,75 30,75 75,30" class="B_sniper_right_leg" />
+      <line x1="50" y1="50" x2="50" y2="20" class="B_sniper_gun" />
+      <rect x="40" y="40" width="20" height="20" class="B_sniper_nest" />
+    </g>
+  </g>
+</g>
+<g x="0" y="0" width="100" height="100" class="B_tagger" id="stone_9" transform-origin="50px 50px" style="pointer-events:none">
+  <g x="0" y="0" width="100" height="100" class="B_tagger_animation_effects" id="stone_9_animation_effects" transform-origin="50px 50px">
+    <polyline id="command_marker_9" class="command_marker" points="50.0,10.0 90.0,50.0 50.00000000000001,90.0 10.0,50.00000000000001 49.99999999999999,10.0 90.0,49.999999999999986" display="none"/>
+    <g x="0" y="0" width="100" height="100" class="B_tagger_rotation" id="stone_9_rotation" transform-origin="50px 50px">
+      <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
+      <polygon points="21.46830451114539,40.72949016875158 50.0,20.0 78.53169548885461,40.729490168751575 50,50" class="B_tagger_top_face" />
+      <polygon points="78.53169548885461,40.729490168751575 67.6335575687742,74.27050983124842 50,50" class="B_tagger_right_face" />
+      <polygon points="67.6335575687742,74.27050983124842 32.366442431225806,74.27050983124843 50,50" class="B_tagger_bottom_face" />
+      <polygon points="32.366442431225806,74.27050983124843 21.46830451114539,40.72949016875158 50,50" class="B_tagger_left_face" />
+      <polyline points="50.0,20.0 78.53169548885461,40.729490168751575 67.6335575687742,74.27050983124842 32.366442431225806,74.27050983124843 21.46830451114539,40.72949016875158 49.99999999999999,20.0 78.53169548885461,40.72949016875157" class="B_tagger_outline" />
+    </g>
+  </g>
+</g>
+<g x="0" y="0" width="100" height="100" class="B_wildcard" id="stone_11" transform-origin="50px 50px" style="pointer-events:none">
+  <g x="0" y="0" width="100" height="100" class="B_wildcard_animation_effects" id="stone_11_animation_effects" transform-origin="50px 50px">
+    <polyline id="command_marker_11" class="command_marker" points="50.0,10.0 90.0,50.0 50.00000000000001,90.0 10.0,50.00000000000001 49.99999999999999,10.0 90.0,49.999999999999986" display="none"/>
+    <g x="0" y="0" width="100" height="100" class="B_wildcard_rotation" id="stone_11_rotation" transform-origin="50px 50px">
+      <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
+      <circle cx="50" cy="50" r="30" class="B_wildcard_body" />
+      <line x1="26.0" y1="26.0" x2="74.0" y2="74.0" class="B_wildcard_halo" />
+      <line x1="26.0" y1="74.0" x2="74.0" y2="26.0" class="B_wildcard_halo" />
+    </g>
   </g>
 </g>
 </g>
@@ -298,20 +385,160 @@
   <rect width="100" height="100" x="600" y="500" class="selection_mode_highlight" id="selection_mode_highlight_6_5" />
   <rect width="100" height="100" x="600" y="600" class="selection_mode_highlight" id="selection_mode_highlight_6_6" />
 </g>
-<g x="0" y="0" width="100" height="100" class="selection_mode_dummy" id="A_tank_dummy" transform-origin="50px 50px" style="display:none;">
-  <g x="0" y="0" width="100" height="100" class="A_tank_animation_effects" id="stone_dummy_animation_effects" transform-origin="50px 50px">
-    <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
-    <polygon points="65.0,24.01923788646684 80.0,50.0 65.00000000000001,75.98076211353316 35.00000000000001,75.98076211353316 20.0,50.00000000000001 35.000000000000014,24.019237886466836" class="A_tank_body" />
-    <rect x="45" y="10" width="10" height="45" class="A_tank_barrel" />
-    <circle cx="50" cy="50" r="12" class="A_tank_hatch" />
+<g x="0" y="0" width="100" height="100" class="selection_mode_dummy" id="A_box_dummy" transform-origin="50px 50px" style="display:none; pointer-events:none">
+  <g x="0" y="0" width="100" height="100" class="A_box_animation_effects" id="stone_dummy_animation_effects" transform-origin="50px 50px">
+    <g x="0" y="0" width="100" height="100" class="A_box_rotation" id="stone_dummy_rotation" transform-origin="50px 50px">
+      <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
+      <rect x="15" y="15" width="70" height="70" class="A_box_base" />
+      <line x1="15" y1="15" x2="85" y2="85" class="A_box_line" />
+      <line x1="15" y1="85" x2="85" y2="15" class="A_box_line" />
+      <rect x="15" y="15" width="70" height="70" class="A_box_outline" />
+    </g>
   </g>
 </g>
-<g x="0" y="0" width="100" height="100" class="selection_mode_dummy" id="B_tank_dummy" transform-origin="50px 50px" style="display:none;">
+<g x="0" y="0" width="100" height="100" class="selection_mode_dummy" id="A_mine_dummy" transform-origin="50px 50px" style="display:none; pointer-events:none">
+  <g x="0" y="0" width="100" height="100" class="A_mine_animation_effects" id="stone_dummy_animation_effects" transform-origin="50px 50px">
+    <g x="0" y="0" width="100" height="100" class="A_mine_rotation" id="stone_dummy_rotation" transform-origin="50px 50px">
+      <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
+      <path d="M45,15 L45,25 A20,20,90,0,1,25,45 L15,45 A40,40,0,0,0,15,55 L25,55 A20,20,90,0,1,45,75 L45,85 A40,40,0,0,0,55,85 L55,75 A20,20,90,0,1,75,55 L85,55 A40,40,0,0,0,85,45 L75,45 A20,20,90,0,1,55,25 L55,15 A40,40,0,0,0, 45,15 Z" class="A_mine_body" /> 
+      <circle cx="50" cy="50" r="8" class="A_mine_button" />
+    </g>
+  </g>
+</g>
+<g x="0" y="0" width="100" height="100" class="selection_mode_dummy" id="A_tank_dummy" transform-origin="50px 50px" style="display:none; pointer-events:none">
+  <g x="0" y="0" width="100" height="100" class="A_tank_animation_effects" id="stone_dummy_animation_effects" transform-origin="50px 50px">
+    <g x="0" y="0" width="100" height="100" class="A_tank_rotation" id="stone_dummy_rotation" transform-origin="50px 50px">
+      <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
+      <polygon points="65.0,24.01923788646684 80.0,50.0 65.00000000000001,75.98076211353316 35.00000000000001,75.98076211353316 20.0,50.00000000000001 35.000000000000014,24.019237886466836 65.0,24.019237886466843 80.0,49.99999999999999" class="A_tank_body" />
+      <rect x="45" y="10" width="10" height="45" class="A_tank_barrel" />
+      <circle cx="50" cy="50" r="12" class="A_tank_hatch" />
+    </g>
+  </g>
+</g>
+<g x="0" y="0" width="100" height="100" class="selection_mode_dummy" id="A_bombardier_dummy" transform-origin="50px 50px" style="display:none; pointer-events:none">
+  <g x="0" y="0" width="100" height="100" class="A_bombardier_animation_effects" id="stone_dummy_animation_effects" transform-origin="50px 50px">
+    <g x="0" y="0" width="100" height="100" class="A_bombardier_rotation" id="stone_dummy_rotation" transform-origin="50px 50px">
+      <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
+      <polyline points="25,65 50,30 75,65" class="A_bombardier_legs" />
+      <polygon points="20,25 45,25 45,70" class="A_bombardier_left_face" />
+      <polygon points="80,25 55,25 55,70" class="A_bombardier_right_face" />
+      <rect x="45" y="15" width="10" height="50" class="A_bombardier_welding" />
+    </g>
+  </g>
+</g>
+<g x="0" y="0" width="100" height="100" class="selection_mode_dummy" id="A_sniper_dummy" transform-origin="50px 50px" style="display:none; pointer-events:none">
+  <g x="0" y="0" width="100" height="100" class="A_sniper_animation_effects" id="stone_dummy_animation_effects" transform-origin="50px 50px">
+    <g x="0" y="0" width="100" height="100" class="A_sniper_rotation" id="stone_dummy_rotation" transform-origin="50px 50px">
+      <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
+      <line x1="39" y1="25" x2="25" y2="39" class="A_sniper_foot" />
+      <line x1="61" y1="25" x2="75" y2="39" class="A_sniper_foot" />
+      <line x1="39" y1="75" x2="25" y2="61" class="A_sniper_foot" />
+      <line x1="61" y1="75" x2="75" y2="61" class="A_sniper_foot" />
+      <polygon points="25,25 30,25 75,70 75,75 70,75 25,30" class="A_sniper_left_leg" />
+      <polygon points="75,25 70,25 25,70 25,75 30,75 75,30" class="A_sniper_right_leg" />
+      <line x1="50" y1="50" x2="50" y2="20" class="A_sniper_gun" />
+      <rect x="40" y="40" width="20" height="20" class="A_sniper_nest" />
+    </g>
+  </g>
+</g>
+<g x="0" y="0" width="100" height="100" class="selection_mode_dummy" id="A_tagger_dummy" transform-origin="50px 50px" style="display:none; pointer-events:none">
+  <g x="0" y="0" width="100" height="100" class="A_tagger_animation_effects" id="stone_dummy_animation_effects" transform-origin="50px 50px">
+    <g x="0" y="0" width="100" height="100" class="A_tagger_rotation" id="stone_dummy_rotation" transform-origin="50px 50px">
+      <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
+      <polygon points="21.46830451114539,40.72949016875158 50.0,20.0 78.53169548885461,40.729490168751575 50,50" class="A_tagger_top_face" />
+      <polygon points="78.53169548885461,40.729490168751575 67.6335575687742,74.27050983124842 50,50" class="A_tagger_right_face" />
+      <polygon points="67.6335575687742,74.27050983124842 32.366442431225806,74.27050983124843 50,50" class="A_tagger_bottom_face" />
+      <polygon points="32.366442431225806,74.27050983124843 21.46830451114539,40.72949016875158 50,50" class="A_tagger_left_face" />
+      <polyline points="50.0,20.0 78.53169548885461,40.729490168751575 67.6335575687742,74.27050983124842 32.366442431225806,74.27050983124843 21.46830451114539,40.72949016875158 49.99999999999999,20.0 78.53169548885461,40.72949016875157" class="A_tagger_outline" />
+    </g>
+  </g>
+</g>
+<g x="0" y="0" width="100" height="100" class="selection_mode_dummy" id="A_wildcard_dummy" transform-origin="50px 50px" style="display:none; pointer-events:none">
+  <g x="0" y="0" width="100" height="100" class="A_wildcard_animation_effects" id="stone_dummy_animation_effects" transform-origin="50px 50px">
+    <g x="0" y="0" width="100" height="100" class="A_wildcard_rotation" id="stone_dummy_rotation" transform-origin="50px 50px">
+      <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
+      <circle cx="50" cy="50" r="30" class="A_wildcard_body" />
+      <line x1="26.0" y1="26.0" x2="74.0" y2="74.0" class="A_wildcard_halo" />
+      <line x1="26.0" y1="74.0" x2="74.0" y2="26.0" class="A_wildcard_halo" />
+    </g>
+  </g>
+</g>
+<g x="0" y="0" width="100" height="100" class="selection_mode_dummy" id="B_box_dummy" transform-origin="50px 50px" style="display:none; pointer-events:none">
+  <g x="0" y="0" width="100" height="100" class="B_box_animation_effects" id="stone_dummy_animation_effects" transform-origin="50px 50px">
+    <g x="0" y="0" width="100" height="100" class="B_box_rotation" id="stone_dummy_rotation" transform-origin="50px 50px">
+      <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
+      <rect x="15" y="15" width="70" height="70" class="B_box_base" />
+      <line x1="15" y1="15" x2="85" y2="85" class="B_box_line" />
+      <line x1="15" y1="85" x2="85" y2="15" class="B_box_line" />
+      <rect x="15" y="15" width="70" height="70" class="B_box_outline" />
+    </g>
+  </g>
+</g>
+<g x="0" y="0" width="100" height="100" class="selection_mode_dummy" id="B_mine_dummy" transform-origin="50px 50px" style="display:none; pointer-events:none">
+  <g x="0" y="0" width="100" height="100" class="B_mine_animation_effects" id="stone_dummy_animation_effects" transform-origin="50px 50px">
+    <g x="0" y="0" width="100" height="100" class="B_mine_rotation" id="stone_dummy_rotation" transform-origin="50px 50px">
+      <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
+      <path d="M45,15 L45,25 A20,20,90,0,1,25,45 L15,45 A40,40,0,0,0,15,55 L25,55 A20,20,90,0,1,45,75 L45,85 A40,40,0,0,0,55,85 L55,75 A20,20,90,0,1,75,55 L85,55 A40,40,0,0,0,85,45 L75,45 A20,20,90,0,1,55,25 L55,15 A40,40,0,0,0, 45,15 Z" class="B_mine_body" /> 
+      <circle cx="50" cy="50" r="8" class="B_mine_button" />
+    </g>
+  </g>
+</g>
+<g x="0" y="0" width="100" height="100" class="selection_mode_dummy" id="B_tank_dummy" transform-origin="50px 50px" style="display:none; pointer-events:none">
   <g x="0" y="0" width="100" height="100" class="B_tank_animation_effects" id="stone_dummy_animation_effects" transform-origin="50px 50px">
-    <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
-    <polygon points="65.0,24.01923788646684 80.0,50.0 65.00000000000001,75.98076211353316 35.00000000000001,75.98076211353316 20.0,50.00000000000001 35.000000000000014,24.019237886466836" class="B_tank_body" />
-    <rect x="45" y="10" width="10" height="45" class="B_tank_barrel" />
-    <circle cx="50" cy="50" r="12" class="B_tank_hatch" />
+    <g x="0" y="0" width="100" height="100" class="B_tank_rotation" id="stone_dummy_rotation" transform-origin="50px 50px">
+      <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
+      <polygon points="65.0,24.01923788646684 80.0,50.0 65.00000000000001,75.98076211353316 35.00000000000001,75.98076211353316 20.0,50.00000000000001 35.000000000000014,24.019237886466836 65.0,24.019237886466843 80.0,49.99999999999999" class="B_tank_body" />
+      <rect x="45" y="10" width="10" height="45" class="B_tank_barrel" />
+      <circle cx="50" cy="50" r="12" class="B_tank_hatch" />
+    </g>
+  </g>
+</g>
+<g x="0" y="0" width="100" height="100" class="selection_mode_dummy" id="B_bombardier_dummy" transform-origin="50px 50px" style="display:none; pointer-events:none">
+  <g x="0" y="0" width="100" height="100" class="B_bombardier_animation_effects" id="stone_dummy_animation_effects" transform-origin="50px 50px">
+    <g x="0" y="0" width="100" height="100" class="B_bombardier_rotation" id="stone_dummy_rotation" transform-origin="50px 50px">
+      <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
+      <polyline points="25,65 50,30 75,65" class="B_bombardier_legs" />
+      <polygon points="20,25 45,25 45,70" class="B_bombardier_left_face" />
+      <polygon points="80,25 55,25 55,70" class="B_bombardier_right_face" />
+      <rect x="45" y="15" width="10" height="50" class="B_bombardier_welding" />
+    </g>
+  </g>
+</g>
+<g x="0" y="0" width="100" height="100" class="selection_mode_dummy" id="B_sniper_dummy" transform-origin="50px 50px" style="display:none; pointer-events:none">
+  <g x="0" y="0" width="100" height="100" class="B_sniper_animation_effects" id="stone_dummy_animation_effects" transform-origin="50px 50px">
+    <g x="0" y="0" width="100" height="100" class="B_sniper_rotation" id="stone_dummy_rotation" transform-origin="50px 50px">
+      <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
+      <line x1="39" y1="25" x2="25" y2="39" class="B_sniper_foot" />
+      <line x1="61" y1="25" x2="75" y2="39" class="B_sniper_foot" />
+      <line x1="39" y1="75" x2="25" y2="61" class="B_sniper_foot" />
+      <line x1="61" y1="75" x2="75" y2="61" class="B_sniper_foot" />
+      <polygon points="25,25 30,25 75,70 75,75 70,75 25,30" class="B_sniper_left_leg" />
+      <polygon points="75,25 70,25 25,70 25,75 30,75 75,30" class="B_sniper_right_leg" />
+      <line x1="50" y1="50" x2="50" y2="20" class="B_sniper_gun" />
+      <rect x="40" y="40" width="20" height="20" class="B_sniper_nest" />
+    </g>
+  </g>
+</g>
+<g x="0" y="0" width="100" height="100" class="selection_mode_dummy" id="B_tagger_dummy" transform-origin="50px 50px" style="display:none; pointer-events:none">
+  <g x="0" y="0" width="100" height="100" class="B_tagger_animation_effects" id="stone_dummy_animation_effects" transform-origin="50px 50px">
+    <g x="0" y="0" width="100" height="100" class="B_tagger_rotation" id="stone_dummy_rotation" transform-origin="50px 50px">
+      <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
+      <polygon points="21.46830451114539,40.72949016875158 50.0,20.0 78.53169548885461,40.729490168751575 50,50" class="B_tagger_top_face" />
+      <polygon points="78.53169548885461,40.729490168751575 67.6335575687742,74.27050983124842 50,50" class="B_tagger_right_face" />
+      <polygon points="67.6335575687742,74.27050983124842 32.366442431225806,74.27050983124843 50,50" class="B_tagger_bottom_face" />
+      <polygon points="32.366442431225806,74.27050983124843 21.46830451114539,40.72949016875158 50,50" class="B_tagger_left_face" />
+      <polyline points="50.0,20.0 78.53169548885461,40.729490168751575 67.6335575687742,74.27050983124842 32.366442431225806,74.27050983124843 21.46830451114539,40.72949016875158 49.99999999999999,20.0 78.53169548885461,40.72949016875157" class="B_tagger_outline" />
+    </g>
+  </g>
+</g>
+<g x="0" y="0" width="100" height="100" class="selection_mode_dummy" id="B_wildcard_dummy" transform-origin="50px 50px" style="display:none; pointer-events:none">
+  <g x="0" y="0" width="100" height="100" class="B_wildcard_animation_effects" id="stone_dummy_animation_effects" transform-origin="50px 50px">
+    <g x="0" y="0" width="100" height="100" class="B_wildcard_rotation" id="stone_dummy_rotation" transform-origin="50px 50px">
+      <rect x="0" y="0" width="100" height="100" class="stone_pedestal" visibility="hidden" />
+      <circle cx="50" cy="50" r="30" class="B_wildcard_body" />
+      <line x1="26.0" y1="26.0" x2="74.0" y2="74.0" class="B_wildcard_halo" />
+      <line x1="26.0" y1="74.0" x2="74.0" y2="26.0" class="B_wildcard_halo" />
+    </g>
   </g>
 </g>
 </g>
@@ -429,33 +656,33 @@
 </div>
 <div id="command_form_div">
   <form id="command_form" class="submission_form" method="POST">
-    <fieldset id="command_data_2" class="command_data_field">
-      <input type="hidden" name="cmd_stone_ID_2" id="cmd_stone_ID_2" >
-      <input type="hidden" name="cmd_type_2" id="cmd_type_2" >
-      <input type="hidden" name="cmd_t_2" id="cmd_t_2" >
-      <input type="hidden" name="cmd_x_2" id="cmd_x_2" >
-      <input type="hidden" name="cmd_y_2" id="cmd_y_2" >
-      <input type="hidden" name="cmd_a_2" id="cmd_a_2" >
-      <input type="hidden" name="cmd_target_t_2" id="cmd_target_t_2" >
-      <input type="hidden" name="cmd_target_x_2" id="cmd_target_x_2" >
-      <input type="hidden" name="cmd_target_y_2" id="cmd_target_y_2" >
-      <input type="hidden" name="cmd_target_a_2" id="cmd_target_a_2" >
-      <input type="hidden" name="cmd_swap_effect_2" id="cmd_swap_effect_2" >
-      <input type="hidden" name="cmd_choice_keyword_2" id="cmd_choice_keyword_2" >
+    <fieldset id="command_data_1" class="command_data_field">
+      <input type="hidden" name="cmd_stone_ID_1" id="cmd_stone_ID_1" >
+      <input type="hidden" name="cmd_type_1" id="cmd_type_1" >
+      <input type="hidden" name="cmd_t_1" id="cmd_t_1" >
+      <input type="hidden" name="cmd_x_1" id="cmd_x_1" >
+      <input type="hidden" name="cmd_y_1" id="cmd_y_1" >
+      <input type="hidden" name="cmd_a_1" id="cmd_a_1" >
+      <input type="hidden" name="cmd_target_t_1" id="cmd_target_t_1" >
+      <input type="hidden" name="cmd_target_x_1" id="cmd_target_x_1" >
+      <input type="hidden" name="cmd_target_y_1" id="cmd_target_y_1" >
+      <input type="hidden" name="cmd_target_a_1" id="cmd_target_a_1" >
+      <input type="hidden" name="cmd_swap_effect_1" id="cmd_swap_effect_1" >
+      <input type="hidden" name="cmd_choice_keyword_1" id="cmd_choice_keyword_1" >
     </fieldset>
-    <fieldset id="command_data_5" class="command_data_field">
-      <input type="hidden" name="cmd_stone_ID_5" id="cmd_stone_ID_5" >
-      <input type="hidden" name="cmd_type_5" id="cmd_type_5" >
-      <input type="hidden" name="cmd_t_5" id="cmd_t_5" >
-      <input type="hidden" name="cmd_x_5" id="cmd_x_5" >
-      <input type="hidden" name="cmd_y_5" id="cmd_y_5" >
-      <input type="hidden" name="cmd_a_5" id="cmd_a_5" >
-      <input type="hidden" name="cmd_target_t_5" id="cmd_target_t_5" >
-      <input type="hidden" name="cmd_target_x_5" id="cmd_target_x_5" >
-      <input type="hidden" name="cmd_target_y_5" id="cmd_target_y_5" >
-      <input type="hidden" name="cmd_target_a_5" id="cmd_target_a_5" >
-      <input type="hidden" name="cmd_swap_effect_5" id="cmd_swap_effect_5" >
-      <input type="hidden" name="cmd_choice_keyword_5" id="cmd_choice_keyword_5" >
+    <fieldset id="command_data_3" class="command_data_field">
+      <input type="hidden" name="cmd_stone_ID_3" id="cmd_stone_ID_3" >
+      <input type="hidden" name="cmd_type_3" id="cmd_type_3" >
+      <input type="hidden" name="cmd_t_3" id="cmd_t_3" >
+      <input type="hidden" name="cmd_x_3" id="cmd_x_3" >
+      <input type="hidden" name="cmd_y_3" id="cmd_y_3" >
+      <input type="hidden" name="cmd_a_3" id="cmd_a_3" >
+      <input type="hidden" name="cmd_target_t_3" id="cmd_target_t_3" >
+      <input type="hidden" name="cmd_target_x_3" id="cmd_target_x_3" >
+      <input type="hidden" name="cmd_target_y_3" id="cmd_target_y_3" >
+      <input type="hidden" name="cmd_target_a_3" id="cmd_target_a_3" >
+      <input type="hidden" name="cmd_swap_effect_3" id="cmd_swap_effect_3" >
+      <input type="hidden" name="cmd_choice_keyword_3" id="cmd_choice_keyword_3" >
     </fieldset>
     <fieldset id="command_data_6" class="command_data_field">
       <input type="hidden" name="cmd_stone_ID_6" id="cmd_stone_ID_6" >
@@ -470,6 +697,34 @@
       <input type="hidden" name="cmd_target_a_6" id="cmd_target_a_6" >
       <input type="hidden" name="cmd_swap_effect_6" id="cmd_swap_effect_6" >
       <input type="hidden" name="cmd_choice_keyword_6" id="cmd_choice_keyword_6" >
+    </fieldset>
+    <fieldset id="command_data_9" class="command_data_field">
+      <input type="hidden" name="cmd_stone_ID_9" id="cmd_stone_ID_9" >
+      <input type="hidden" name="cmd_type_9" id="cmd_type_9" >
+      <input type="hidden" name="cmd_t_9" id="cmd_t_9" >
+      <input type="hidden" name="cmd_x_9" id="cmd_x_9" >
+      <input type="hidden" name="cmd_y_9" id="cmd_y_9" >
+      <input type="hidden" name="cmd_a_9" id="cmd_a_9" >
+      <input type="hidden" name="cmd_target_t_9" id="cmd_target_t_9" >
+      <input type="hidden" name="cmd_target_x_9" id="cmd_target_x_9" >
+      <input type="hidden" name="cmd_target_y_9" id="cmd_target_y_9" >
+      <input type="hidden" name="cmd_target_a_9" id="cmd_target_a_9" >
+      <input type="hidden" name="cmd_swap_effect_9" id="cmd_swap_effect_9" >
+      <input type="hidden" name="cmd_choice_keyword_9" id="cmd_choice_keyword_9" >
+    </fieldset>
+    <fieldset id="command_data_11" class="command_data_field">
+      <input type="hidden" name="cmd_stone_ID_11" id="cmd_stone_ID_11" >
+      <input type="hidden" name="cmd_type_11" id="cmd_type_11" >
+      <input type="hidden" name="cmd_t_11" id="cmd_t_11" >
+      <input type="hidden" name="cmd_x_11" id="cmd_x_11" >
+      <input type="hidden" name="cmd_y_11" id="cmd_y_11" >
+      <input type="hidden" name="cmd_a_11" id="cmd_a_11" >
+      <input type="hidden" name="cmd_target_t_11" id="cmd_target_t_11" >
+      <input type="hidden" name="cmd_target_x_11" id="cmd_target_x_11" >
+      <input type="hidden" name="cmd_target_y_11" id="cmd_target_y_11" >
+      <input type="hidden" name="cmd_target_a_11" id="cmd_target_a_11" >
+      <input type="hidden" name="cmd_swap_effect_11" id="cmd_swap_effect_11" >
+      <input type="hidden" name="cmd_choice_keyword_11" id="cmd_choice_keyword_11" >
     </fieldset>
     <fieldset id="command_data_meta" class="command_data_field">
       <input type="hidden" name="touch_order" id="touch_order_input">

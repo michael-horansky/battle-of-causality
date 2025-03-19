@@ -167,13 +167,6 @@ margin: 0;
 
 /* ------------ Stones ------------- */
 
-.A_tank {
-    pointer-events : none;
-}
-
-.B_tank {
-    pointer-events : none;
-}
 
 .A_tank_body {
     position : absolute;
@@ -214,6 +207,231 @@ margin: 0;
     position : absolute;
     fill : grey;
     stroke : black;
+    stroke-width : 3;
+}
+
+.A_bombardier_legs {
+    stroke : black;
+    stroke-width : 5;
+    fill : none;
+}
+
+.A_bombardier_left_face {
+    stroke : black;
+    stroke-width : 5;
+    fill : #1F7D53;
+}
+
+.A_bombardier_right_face {
+    stroke : black;
+    stroke-width : 5;
+    fill : #255F38;
+}
+
+.A_bombardier_welding {
+    fill : white;
+    stroke : black;
+    stroke-width : 5;
+
+}
+
+.B_bombardier_legs {
+    stroke : black;
+    stroke-width : 5;
+    fill : none;
+}
+
+.B_bombardier_left_face {
+    stroke : black;
+    stroke-width : 5;
+    fill : #D76C82;
+}
+
+.B_bombardier_right_face {
+    stroke : black;
+    stroke-width : 5;
+    fill : #B03052;
+}
+
+.B_bombardier_welding {
+    fill : white;
+    stroke : black;
+    stroke-width : 5;
+
+}
+
+.A_sniper_foot {
+    stroke : black;
+    stroke-width : 5;
+}
+
+.A_sniper_left_leg {
+    stroke : black;
+    stroke-width : 2;
+    fill : #1F7D53;
+}
+
+.A_sniper_right_leg {
+    stroke : black;
+    stroke-width : 2;
+    fill : #255F38;
+}
+
+.A_sniper_gun {
+    stroke : black;
+    stroke-width : 5;
+}
+
+.A_sniper_nest {
+    stroke : black;
+    stroke-width : 2;
+    fill : #18230F;
+}
+
+.B_sniper_foot {
+    stroke : black;
+    stroke-width : 5;
+}
+
+.B_sniper_left_leg {
+    stroke : black;
+    stroke-width : 2;
+    fill : #D76C82;
+}
+
+.B_sniper_right_leg {
+    stroke : black;
+    stroke-width : 2;
+    fill : #B03052;
+}
+
+.B_sniper_gun {
+    stroke : black;
+    stroke-width : 5;
+}
+
+.B_sniper_nest {
+    stroke : black;
+    stroke-width : 2;
+    fill : #B03052;
+}
+
+.A_tagger_top_face {
+    stroke : black;
+    stroke-width : 5;
+    fill : #1F7D53;
+    stroke-linejoin : round;
+}
+
+.A_tagger_right_face {
+    stroke : black;
+    stroke-width : 5;
+    fill : #008664;
+    stroke-linejoin : round;
+}
+
+.A_tagger_bottom_face {
+    stroke : black;
+    stroke-width : 5;
+    fill : #006cbc;
+    stroke-linejoin : round;
+}
+
+.A_tagger_left_face {
+    stroke : black;
+    stroke-width : 5;
+    fill : #cf0006;
+    stroke-linejoin : round;
+}
+
+.A_tagger_outline {
+    stroke : #255F38;
+    stroke-width : 5;
+    fill : none;
+}
+
+.B_tagger_top_face {
+    stroke : black;
+    stroke-width : 5;
+    fill : #D76C82;
+    stroke-linejoin : round;
+}
+
+.B_tagger_right_face {
+    stroke : black;
+    stroke-width : 5;
+    fill : #008664;
+    stroke-linejoin : round;
+}
+
+.B_tagger_bottom_face {
+    stroke : black;
+    stroke-width : 5;
+    fill : #006cbc;
+    stroke-linejoin : round;
+}
+
+.B_tagger_left_face {
+    stroke : black;
+    stroke-width : 5;
+    fill : #cf0006;
+    stroke-linejoin : round;
+}
+
+.B_tagger_outline {
+    stroke : #B03052;
+    stroke-width : 5;
+    fill : none;
+}
+
+.A_wildcard_body {
+    stroke : black;
+    stroke-width : 5;
+    fill : #1F7D53;
+}
+
+.A_wildcard_halo {
+    stroke : #27391C;
+    stroke-width : 10;
+    stroke-linecap : round;
+}
+
+.B_wildcard_body {
+    stroke : black;
+    stroke-width : 5;
+    fill : #D76C82;
+}
+
+.B_wildcard_halo {
+    stroke : #3D0301;
+    stroke-width : 10;
+    stroke-linecap : round;
+}
+
+.GM_box_base {
+    fill : #8a6955;
+}
+
+.GM_box_line {
+    stroke : #4b3929;
+    stroke-width : 7;
+}
+
+.GM_box_outline {
+    fill : none;
+    stroke : #25190d;
+    stroke-width : 5;
+}
+
+.GM_mine_body {
+    fill : #d13427;
+    stroke : #881e20;
+    stroke-width : 5;
+}
+
+.GM_mine_button {
+    fill : #642723;
+    stroke : #e3cca3;
     stroke-width : 3;
 }
 

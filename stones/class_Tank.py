@@ -136,12 +136,10 @@ class Tank(Stone):
                 available_commands["command_properties"]["move"] = {
                         "command_type" : "spatial_move",
                         "selection_mode" : {
-                                "is_required" : True,
                                 "lock_timeslice" : t + 1,
-                                "squares" : available_move_squares
+                                "squares" : available_move_squares,
+                                "choice_keyword" : None,
                             },
-                        "azimuths" : None,
-                        "choice_keyword" : None,
                         "label" : "Move"
                     }
         return(available_commands)

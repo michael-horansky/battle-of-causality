@@ -1,9 +1,8 @@
 5
-XXXXXXXX
-X W    X
-X C  M X
-XYT@ L X
-X    Z X
-X ST   X
-X      X
-XXXXXXXX
+XXXXXXX
+XT   LX
+XY   VX
+XS # ZX
+XC @ GX
+XW   MX
+XXXXXXX
