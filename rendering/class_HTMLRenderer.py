@@ -6,6 +6,7 @@
 # A hidden form is dynamically altered by user interaction, and can be resolved
 # on submission, serverside.
 
+import numpy as np
 
 import json
 
@@ -38,6 +39,16 @@ class HTMLRenderer(Renderer):
 
         # Board structure
         self.board_square_base_side_length = 100
+
+        # Stone types
+        self.required_stone_types = []
+        for neutral_stone_ID in self.render_object.faction_armies["GM"]:
+            if (self.render_object.stone_properties[neutral_stone_ID]["stone_type"] not in self.required_stone_types):
+                self.required_stone_types.append(self.render_object.stone_properties[neutral_stone_ID]["stone_type"])
+        for faction in self.render_object.factions:
+            for faction_stone_ID in self.render_object.faction_armies[faction]:
+                if (self.render_object.stone_properties[faction_stone_ID]["stone_type"] not in self.required_stone_types):
+                    self.required_stone_types.append(self.render_object.stone_properties[faction_stone_ID]["stone_type"])
 
     # ------------------- Output file communication methods -------------------
 
@@ -183,6 +194,18 @@ class HTMLRenderer(Renderer):
         result_string = " ".join(",".join(str(pos[i] * scale + offset[i]) for i in range(len(pos))) for pos in point_matrix)
         return(result_string)
 
+    def get_regular_polygon_points(self, N, R, offset = [0, 0], scale = 1, mode = "v"):
+        # mode == "v": vertex right above centre
+        # mode == "s" : side right above centre
+        if mode == "v":
+            angle_offset = 0
+        elif mode == "s":
+            angle_offset = np.pi / N
+        points = []
+        for n in range(N):
+            points.append([R * np.sin(angle_offset + 2.0 * np.pi * n / N), - R * np.cos(angle_offset + 2.0 * np.pi * n / N)])
+        return(self.get_polygon_points(points, offset, scale))
+
 
     # ---------------------- Board control panel methods ----------------------
 
@@ -288,15 +311,9 @@ class HTMLRenderer(Renderer):
         # Dummy
         # We draw one dummy of each type
         for allegiance in ["A", "B"]:
-            tank_object = []
-            tank_object.append(f"<g x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"selection_mode_dummy\" id=\"{allegiance}_tank_dummy\" transform-origin=\"50px 50px\" display=\"none\">")
-            tank_object.append(f"  <g x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"selection_mode_dummy_animation_effects\" id=\"{allegiance}_tank_dummy_animation_effects\" transform-origin=\"50px 50px\">")
-            tank_object.append(f"    <rect x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"stone_pedestal\" visibility=\"hidden\" />")
-            tank_object.append(f"    <rect x=\"45\" y=\"10\" width=\"10\" height=\"30\" class=\"{allegiance}_tank_barrel\" />")
-            tank_object.append(f"    <circle cx=\"50\" cy=\"50\" r=\"20\" class=\"{allegiance}_tank_body\" />")
-            tank_object.append("  </g>")
-            tank_object.append("</g>")
-            self.commit_to_output(tank_object)
+            for stone_type in ["tank"]:
+                self.commit_to_output(self.create_stone(stone_type, allegiance, "dummy"))
+
 
     def draw_selection_mode_azimuth_indicators(self):
         # Azimuth indicators
@@ -372,17 +389,30 @@ class HTMLRenderer(Renderer):
         #self.commit_to_output("</g>")
 
     # Stone type particulars
-    def draw_tank(self, allegiance, stone_ID):
-        tank_object = []
-        tank_object.append(f"<g x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"{allegiance}_tank\" id=\"{self.encode_stone_ID(stone_ID)}\" transform-origin=\"50px 50px\">")
-        tank_object.append(f"  <g x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"{allegiance}_tank_animation_effects\" id=\"{self.encode_stone_ID(stone_ID)}_animation_effects\" transform-origin=\"50px 50px\">")
-        tank_object.append(f"    <rect x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"stone_pedestal\" visibility=\"hidden\" />")
-        tank_object.append(f"    <polyline id=\"command_marker_{stone_ID}\" class=\"command_marker\" points=\"{self.get_polygon_points([[50, 10], [90, 50], [50, 90], [10, 50], [50, 10]], [0, 0])}\" display=\"none\"/>")
-        tank_object.append(f"    <rect x=\"45\" y=\"10\" width=\"10\" height=\"30\" class=\"{allegiance}_tank_barrel\" />")
-        tank_object.append(f"    <circle cx=\"50\" cy=\"50\" r=\"20\" class=\"{allegiance}_tank_body\" />")
-        tank_object.append("  </g>")
-        tank_object.append("</g>")
-        self.board_layer_structure[4].append(tank_object)
+    def create_stone(self, stone_type, allegiance, stone_ID):
+        # Stone_ID can be set to "dummy" for the selection mode dummies
+        base_class = f"{allegiance}_{stone_type}"
+        stone_object = []
+        if stone_ID == "dummy":
+            stone_object.append(f"<g x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"selection_mode_dummy\" id=\"{allegiance}_{stone_type}_dummy\" transform-origin=\"50px 50px\" style=\"display:none;\">")
+        else:
+            stone_object.append(f"<g x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"{base_class}\" id=\"{self.encode_stone_ID(stone_ID)}\" transform-origin=\"50px 50px\">")
+        stone_object.append(f"  <g x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"{base_class}_animation_effects\" id=\"{self.encode_stone_ID(stone_ID)}_animation_effects\" transform-origin=\"50px 50px\">")
+        stone_object.append(f"    <rect x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"stone_pedestal\" visibility=\"hidden\" />")
+        if stone_ID != "dummy":
+            stone_object.append(f"    <polyline id=\"command_marker_{stone_ID}\" class=\"command_marker\" points=\"{self.get_polygon_points([[50, 10], [90, 50], [50, 90], [10, 50], [50, 10]], [0, 0])}\" display=\"none\"/>")
+
+        # Now the main body of the stone
+        if stone_type == "tank":
+            stone_object.append(f"    <polygon points=\"{self.get_regular_polygon_points(6, 30, [50, 50], 1, "s")}\" class=\"{base_class}_body\" />")
+            stone_object.append(f"    <rect x=\"45\" y=\"10\" width=\"10\" height=\"45\" class=\"{base_class}_barrel\" />")
+            stone_object.append(f"    <circle cx=\"50\" cy=\"50\" r=\"12\" class=\"{base_class}_hatch\" />")
+
+
+        stone_object.append("  </g>")
+        stone_object.append("</g>")
+        return(stone_object)
+
 
     def draw_stones(self):
         # These are drawn on the x=0,y=0 square with display:none, and will be
@@ -392,7 +422,7 @@ class HTMLRenderer(Renderer):
             pass
         for faction in self.render_object.factions:
             for faction_stone_ID in self.render_object.faction_armies[faction]:
-                self.draw_tank(faction, faction_stone_ID)
+                self.board_layer_structure[4].append(self.create_stone(self.render_object.stone_properties[faction_stone_ID]["stone_type"], faction, faction_stone_ID))
 
     def draw_square_highlighter(self):
         self.board_layer_structure[3].append(f"<polyline id=\"square_highlighter\" points=\"{self.get_polygon_points([[0, 0], [100, 0], [100, 100], [0, 100], [0, 0]], [0, 0])}\" display=\"none\"/>")

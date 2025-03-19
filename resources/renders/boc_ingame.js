@@ -1184,7 +1184,7 @@ commander.update_meta_inputs = function() {
 }
 
 commander.toggle_form_submission = function() {
-    if (commander.command_checklist.length > 0) {
+    if (commander.command_checklist.length > 0 || did_player_finish_turn) {
         document.getElementById("submit_commands_button").style.display = "none";
     } else {
         commander.update_meta_inputs();

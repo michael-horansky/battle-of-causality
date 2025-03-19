@@ -189,6 +189,13 @@ margin: 0;
     stroke-width : 5;
 }
 
+.A_tank_hatch {
+    position : absolute;
+    fill : grey;
+    stroke : black;
+    stroke-width : 3;
+}
+
 .B_tank_body {
     position : absolute;
     fill : #B03052;
@@ -201,6 +208,13 @@ margin: 0;
     fill : #EBE8DB;
     stroke : #D76C82;
     stroke-width : 5;
+}
+
+.B_tank_hatch {
+    position : absolute;
+    fill : grey;
+    stroke : black;
+    stroke-width : 3;
 }
 
 /* - Temporary animation elements -- */
