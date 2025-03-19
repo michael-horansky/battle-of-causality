@@ -48,17 +48,15 @@ class Tank(Stone):
         #       "command key" : {
         #         "command_type" : name of command type as interpreted by Gamemaster,
         #         "selection_mode" : {
-        #           "is_required" : True or False,
         #           "lock_timeslice" : t if SM is locked into a t.s., None otherwise,
         #           "squares" = [list of {
         #             "t", "x", "y",
         #             "a" : None or a list of available azimuths,
-        #             "swap_effects" : a list of ante-effects which can be swapped here. Can be empty.
+        #             "swap_effects" : a list of ante-effects which can be swapped here.
         #           } objects.]. If length is one, the first element is the default one.
+        #           "choice_keyword": If not None, it's a string defining the key in the command dict,
+        #           "choice_options" : [list of values the user can pick from]
         #         },
-        #         "azimuths" : None if azimuth argument not required or provided by selecion mode, a list of available azimuths otherwise,
-        #         "choice_keyword": If not None, it's a string defining the key in the command dict,
-        #         "choice_options" : [list of values the user can pick from],
         #         "label" : human-readable label
         #       }
         #     }
@@ -74,9 +72,11 @@ class Tank(Stone):
             available_commands["commands"].append("pass")
             available_commands["command_properties"]["pass"] = {
                     "command_type" : "pass",
-                    "selection_mode" : {"is_required" : False},
-                    "azimuths" : None,
-                    "choice_keyword" : None,
+                    "selection_mode" : {
+                            "lock_timeslice" : gm.t_dim - 1,
+                            "squares" : [{"t" : gm.t_dim - 1, "x" : cur_x, "y" : cur_y, "a" : [cur_a], "swap_effects" : None}],
+                            "choice_keyword" : None,
+                        },
                     "label" : "Pass"
                 }
 
@@ -87,12 +87,10 @@ class Tank(Stone):
                 available_commands["command_properties"]["timejump"] = {
                         "command_type" : "timejump",
                         "selection_mode" : {
-                                "is_required" : True,
                                 "lock_timeslice" : None,
-                                "squares" : available_timejump_squares
+                                "squares" : available_timejump_squares,
+                                "choice_keyword" : None
                             },
-                        "azimuths" : None,
-                        "choice_keyword" : None,
                         "label" : "Timejump"
                     }
         else:
@@ -103,12 +101,10 @@ class Tank(Stone):
             available_commands["command_properties"]["wait"] = {
                     "command_type" : "spatial_move",
                     "selection_mode" : {
-                            "is_required" : True,
                             "lock_timeslice" : None,
-                            "squares" : [{"t" : t + 1, "x" : cur_x, "y" : cur_y, "a" : [cur_a], "swap_effects" : None}]
+                            "squares" : [{"t" : t + 1, "x" : cur_x, "y" : cur_y, "a" : [cur_a], "swap_effects" : None}],
+                            "choice_keyword" : None
                         },
-                    "azimuths" : None,
-                    "choice_keyword" : None,
                     "label" : "Wait"
                 }
 
@@ -117,12 +113,10 @@ class Tank(Stone):
             available_commands["command_properties"]["turn"] = {
                     "command_type" : "spatial_move",
                     "selection_mode" : {
-                            "is_required" : True,
                             "lock_timeslice" : None,
-                            "squares" : [{"t" : t + 1, "x" : cur_x, "y" : cur_y, "a" : [0, 1, 2, 3], "swap_effects" : None}]
+                            "squares" : [{"t" : t + 1, "x" : cur_x, "y" : cur_y, "a" : [0, 1, 2, 3], "swap_effects" : None}],
+                            "choice_keyword" : None
                         },
-                    "azimuths" : [0, 1, 2, 3],
-                    "choice_keyword" : None,
                     "label" : "Turn"
                 }
 

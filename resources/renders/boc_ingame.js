@@ -1145,6 +1145,42 @@ function show_active_round() {
     }
 }
 
+
+// -------------------------------- Commander ---------------------------------
+// Commander makes sure submission of commands is only possible once every c.f.
+// stone has had a command specified, and marks stones to be commanded.
+// Stones to be commanded: red square below. Commanded circles: green square.
+
+const commander = new Object();
+commander.command_checklist = [];
+commander.initialise_command_checklist = function() {
+    for (i = 0; i < stones_to_be_commanded.length; i++) {
+        commander.add_to_checklist(stones_to_be_commanded[i]);
+    }
+    commander.toggle_form_submission();
+}
+
+commander.add_to_checklist = function(stone_ID) {
+    commander.command_checklist.push(stone_ID);
+    document.getElementById(`command_marker_${stone_ID}`).style.stroke = "red";
+    document.getElementById(`command_marker_${stone_ID}`).style.display = "block";
+    commander.toggle_form_submission();
+}
+
+commander.mark_as_checked = function(stone_ID) {
+    commander.command_checklist.splice(commander.command_checklist.indexOf(stone_ID), 1);
+    document.getElementById(`command_marker_${stone_ID}`).style.stroke = "green";
+    commander.toggle_form_submission();
+}
+
+commander.toggle_form_submission = function() {
+    if (commander.command_checklist.length > 0) {
+        document.getElementById("submit_commands_button").style.display = "none";
+    } else {
+        document.getElementById("submit_commands_button").style.display = "block";
+    }
+}
+
 // -------------------------------- Inspector ---------------------------------
 
 const inspector = new Object();
@@ -1376,15 +1412,23 @@ inspector.selection = {"square" : "NOT_SELECTED", "azimuth" : "NOT_SELECTED", "s
 inspector.selection_submission = null;
 
 inspector.selection_mode_options = new Object();
-inspector.selection_mode_options["lock_timeslice"] = null;
-inspector.selection_mode_options["squares"] = null;
+
+inspector.selection_keywords = ["stone_ID",
+            "type",
+            "t",
+            "x",
+            "y",
+            "a",
+            "target_t",
+            "target_x",
+            "target_y",
+            "target_a",
+            "swap_effect"];
 
 inspector.turn_on_selection_mode = function(stone_ID, selection_mode_props) {
     cameraman.track_stone(null);
     inspector.selection_mode_enabled = true;
     // Commit current selection options to cache
-    //inspector.selection_mode_options["lock_timeslice"] = selection_mode_props["lock_timeslice"];
-    //inspector.selection_mode_options["squares"] = selection_mode_props["squares"];
     inspector.selection_mode_options = selection_mode_props;
     inspector.selection_mode_stone_ID = stone_ID;
 
@@ -1655,17 +1699,37 @@ inspector.submit_selection = function() {
     inspector.selection_submission["target_t"] = inspector.selection_mode_options["squares"][inspector.selection["square"]]["t"];
     inspector.selection_submission["target_x"] = inspector.selection_mode_options["squares"][inspector.selection["square"]]["x"];
     inspector.selection_submission["target_y"] = inspector.selection_mode_options["squares"][inspector.selection["square"]]["y"];
-    if (inspector.selection["azimuth"] != null) {
-        inspector.selection_submission["target_a"] = inspector.selection["azimuth"];
+    inspector.selection_submission["target_a"] = inspector.selection["azimuth"];
+    inspector.selection_submission["swap_effect"] = inspector.selection["swap_effect"];
+
+    for (i = 0; i < inspector.selection_keywords.length; i++) {
+        document.getElementById(`cmd_${inspector.selection_keywords[i]}_${inspector.selection_mode_stone_ID}`).value = inspector.selection_submission[inspector.selection_keywords[i]];
     }
-    if (inspector.selection["swap_effect"] != null) {
-        inspector.selection_submission["swap_effect"] = inspector.selection["swap_effect"];
+    if (inspector.selection_mode_options["choice_keyword"] != null) {
+        document.getElementById(`cmd_choice_keyword_${inspector.selection_mode_stone_ID}`).name = inspector.selection_mode_options["choice_keyword"];
+        document.getElementById(`cmd_choice_keyword_${inspector.selection_mode_stone_ID}`).value = inspector.selection_submission["choice_keyword"];
     }
-    console.log("Submission not saved bc HTML missing!");
+
+    commander.mark_as_checked(inspector.selection_mode_stone_ID);
+
     inspector.turn_off_selection_mode();
 
 }
 
+
+inspector.undo_command = function() {
+    let stone_ID = find_stone_at_pos(inspector.highlighted_square[0], inspector.highlighted_square[1]);
+
+    // Delete the values from the form
+    for (i = 0; i < inspector.selection_keywords.length; i++) {
+        document.getElementById(`cmd_${inspector.selection_keywords[i]}_${stone_ID}`).value = null;
+    }
+    document.getElementById(`cmd_choice_keyword_${stone_ID}`).name = `cmd_choice_keyword_${stone_ID}`;
+    document.getElementById(`cmd_choice_keyword_${stone_ID}`).value = null;
+
+    commander.add_to_checklist(stone_ID);
+    inspector.display_stone_info(inspector.highlighted_square[0], inspector.highlighted_square[1]);
+}
 
 // Stone commands
 
@@ -1683,17 +1747,13 @@ inspector.prepare_command = function(stone_ID, command_key) {
     inspector.selection_submission["y"] = stone_trajectories[selected_round][selected_timeslice]["canon"][stone_ID][1];
     inspector.selection_submission["a"] = stone_trajectories[selected_round][selected_timeslice]["canon"][stone_ID][2];
 
-
-    // First, is selection mode required?
-
-    if (cur_cmd_props["selection_mode"]["is_required"]) {
-        // This means the "target_t", "target_x", "target_y", "target_a", "swap_effect" keywords may be required
-        inspector.turn_on_selection_mode(stone_ID, cur_cmd_props["selection_mode"]);
-    }
+    inspector.turn_on_selection_mode(stone_ID, cur_cmd_props["selection_mode"]);
 
 }
 
 inspector.display_stone_commands = function(stone_ID) {
+    document.getElementById("undo_command_button_svg").style.display = "none";
+    document.getElementById("stone_inspector_commands_svg").style.display = "block";
     // if stone_ID = null, hides stone commands
     let stone_inspector_commands_svg = document.getElementById("stone_inspector_commands_svg");
     if (stone_ID == null) {
@@ -1736,6 +1796,11 @@ inspector.display_stone_commands = function(stone_ID) {
     }
 }
 
+inspector.display_undo_button = function() {
+    document.getElementById("stone_inspector_commands_svg").style.display = "none";
+    document.getElementById("undo_command_button_svg").style.display = "block";
+}
+
 
 
 // General stone properties
@@ -1753,8 +1818,12 @@ inspector.display_stone_info = function(x, y) {
 
         // Check if can be commanded
         if (stones_to_be_commanded.includes(stone_ID) && selected_round == active_round && selected_timeslice == active_timeslice && arrays_equal(stone_trajectories[selected_round][selected_timeslice]["canon"][stone_ID].slice(0, 2), [x, y])) {
-            // Display commands
-            inspector.display_stone_commands(stone_ID);
+            if (commander.command_checklist.includes(stone_ID)) {
+                // Display commands
+                inspector.display_stone_commands(stone_ID);
+            } else {
+                inspector.display_undo_button();
+            }
         } else {
             inspector.display_stone_commands(null);
         }
@@ -2138,6 +2207,9 @@ var selection_mode = false;
 // Set up the camera
 cameraman.put_down_tripod();
 cameraman.reset_camera();
+
+// Set up commander
+commander.initialise_command_checklist();
 
 // Set up inspector
 inspector.organise_reverse_causality_flags();

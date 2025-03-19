@@ -244,17 +244,15 @@ class Stone():
         #       "command key" : {
         #         "command_type" : name of command type as interpreted by Gamemaster,
         #         "selection_mode" : {
-        #           "is_required" : True or False,
         #           "lock_timeslice" : t if SM is locked into a t.s., None otherwise,
         #           "squares" = [list of {
         #             "t", "x", "y",
         #             "a" : None or a list of available azimuths,
-        #             "swap_effects" : a list of ante-effects which can be swapped here. Can be empty.
-        #           } objects.]
+        #             "swap_effects" : a list of ante-effects which can be swapped here.
+        #           } objects.]. If length is one, the first element is the default one.
+        #           "choice_keyword": If not None, it's a string defining the key in the command dict,
+        #           "choice_options" : [list of values the user can pick from]
         #         },
-        #         "azimuths" : None if azimuth argument not required or provided by selecion mode, a list of available azimuths otherwise,
-        #         "choice_keyword": If not None, it's a string defining the key in the command dict,
-        #         "choice_options" : [list of values the user can pick from],
         #         "label" : human-readable label
         #       }
         #     }

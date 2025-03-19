@@ -10,6 +10,7 @@
 import json
 
 from rendering.class_Renderer import Renderer
+from rendering.class_Abstract_Output import Abstract_Output
 
 
 class HTMLRenderer(Renderer):
@@ -376,6 +377,7 @@ class HTMLRenderer(Renderer):
         tank_object.append(f"<g x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"{allegiance}_tank\" id=\"{self.encode_stone_ID(stone_ID)}\" transform-origin=\"50px 50px\">")
         tank_object.append(f"  <g x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"{allegiance}_tank_animation_effects\" id=\"{self.encode_stone_ID(stone_ID)}_animation_effects\" transform-origin=\"50px 50px\">")
         tank_object.append(f"    <rect x=\"0\" y=\"0\" width=\"100\" height=\"100\" class=\"stone_pedestal\" visibility=\"hidden\" />")
+        tank_object.append(f"    <polyline id=\"command_marker_{stone_ID}\" class=\"command_marker\" points=\"{self.get_polygon_points([[50, 10], [90, 50], [50, 90], [10, 50], [50, 10]], [0, 0])}\" display=\"none\"/>")
         tank_object.append(f"    <rect x=\"45\" y=\"10\" width=\"10\" height=\"30\" class=\"{allegiance}_tank_barrel\" />")
         tank_object.append(f"    <circle cx=\"50\" cy=\"50\" r=\"20\" class=\"{allegiance}_tank_body\" />")
         tank_object.append("  </g>")
@@ -437,6 +439,12 @@ class HTMLRenderer(Renderer):
         stone_inspector_object.append("  <div id=\"stone_inspector_commands\" class=\"stone_inspector_part\">")
         stone_inspector_object.append("    <svg width=\"100%\" height=\"100%\" xmlns=\"http://www.w3.org/2000/svg\" id=\"stone_inspector_commands_svg\">")
         stone_inspector_object.append("    </svg>")
+        stone_inspector_object.append("    <svg width=\"100%\" height=\"100%\" xmlns=\"http://www.w3.org/2000/svg\" id=\"undo_command_button_svg\" style=\"display:none;\">")
+        stone_inspector_object.append("      <g id=\"undo_command_button\">")
+        stone_inspector_object.append("        <rect x=\"0\" y=\"0\" width=\"100\" height=\"83\" class=\"stone_command_panel_button\" id=\"undo_command_button_polygon\" onclick=\"inspector.undo_command()\" />")
+        stone_inspector_object.append("        <text x=\"50\" y=\"42\" text-anchor=\"middle\" id=\"undo_command_button_label\" class=\"button_label\">Undo</text>")
+        stone_inspector_object.append("      </g>")
+        stone_inspector_object.append("    </svg>")
         stone_inspector_object.append("    <svg width=\"100%\" height=\"100%\" xmlns=\"http://www.w3.org/2000/svg\" id=\"stone_inspector_selection_mode_buttons_svg\">")
         stone_inspector_object.append("      <g id=\"abort_selection_button\" display=\"none\">")
         stone_inspector_object.append("        <rect x=\"0\" y=\"0\" width=\"100\" height=\"83\" class=\"stone_command_panel_button\" id=\"abort_selection_button_polygon\" onclick=\"inspector.turn_off_selection_mode()\" />")
@@ -484,8 +492,6 @@ class HTMLRenderer(Renderer):
         square_inspector_object = []
         self.commit_to_output("<div id=\"square_inspector\" class=\"inspector\">")
         self.commit_to_output("  <h1 id=\"square_inspector_title\" class=\"inspector_title\"></h1>")
-        #square_inspector_object.append("  <p id=\"square_info_used_tp\"></p>")
-        #square_inspector_object.append("  <p id=\"square_info_unused_tp\"></p>")
         self.draw_inspector_table("square", {"active_effects" : "Active ante-effects", "activated_causes" : "Activated retro-causes", "inactive_effects" : "Inactive ante-effects", "not_activated_causes" : "Not activated retro-causes"})
         self.commit_to_output("</div>")
 
@@ -539,17 +545,32 @@ class HTMLRenderer(Renderer):
         next_round_button_text = "<text x=\"287\" y=\"55\" class=\"button_label\" id=\"next_round_button_label\">Next round</text>"
 
         self.commit_to_output([prev_round_button_polygon, prev_round_button_text, active_round_button_object, active_round_button_text, next_round_button_polygon, next_round_button_text])
-
         self.commit_to_output("</svg>\n</div>")
 
     # --------------------------- Game log methods ----------------------------
 
     def draw_game_log(self):
         self.commit_to_output(f"<div width=\"{self.game_log_width}px\" height=\"{self.game_log_height}px\" id=\"game_log\">")
-
         self.commit_to_output(f"  <p id=\"navigation_label\"></p>")
-
         self.commit_to_output("</div>")
+
+    # ------------------------- Command form methods --------------------------
+
+    def draw_command_form(self):
+        command_form = []
+        command_form.append(f"<div id=\"command_form_div\">")
+        command_form.append(f"  <form id=\"command_form\" class=\"submission_form\" method=\"POST\">")
+        if not self.render_object.did_player_finish_turn:
+            for stone_ID in self.render_object.stones_to_be_commanded:
+                command_form.append(f"    <fieldset id=\"command_data_{stone_ID}\" class=\"command_data_field\">")
+                for default_keyword in Abstract_Output.command_keywords:
+                    command_form.append(f"      <input type=\"hidden\" name=\"cmd_{default_keyword}_{stone_ID}\" id=\"cmd_{default_keyword}_{stone_ID}\" >")
+                command_form.append(f"    </fieldset>")
+
+        command_form.append(f"    <input type=\"submit\" value=\"Submit\" id=\"submit_commands_button\">")
+        command_form.append(f"  </form>")
+        command_form.append(f"</div>")
+        self.commit_to_output(command_form)
 
 
     # ---------------------------- Global methods -----------------------------
@@ -580,6 +601,7 @@ class HTMLRenderer(Renderer):
 
         self.draw_game_control_panel()
         self.draw_game_log()
+        self.draw_command_form()
 
         # Close gameside
         self.close_gameside()

@@ -24,6 +24,21 @@ class Abstract_Output():
             "canon"         # State of board after stone and board actions (e.g. attacks)
         ]
 
+    command_keywords = [
+            "stone_ID",
+            "type",
+            "t",
+            "x",
+            "y",
+            "a",
+            "target_t",
+            "target_x",
+            "target_y",
+            "target_a",
+            "swap_effect",
+            "choice_keyword"
+        ]
+
     def shift_process(cur_process, delta_index):
         return Abstract_Output.process_list[(Abstract_Output.process_list.index(cur_process) + delta_index) % len(Abstract_Output.process_list)]
 

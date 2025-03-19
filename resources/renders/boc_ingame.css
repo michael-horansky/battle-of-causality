@@ -225,6 +225,13 @@ margin: 0;
     pointer-events : none;
 }
 
+.command_marker {
+    stroke : red;
+    stroke-width : 5;
+    fill : none;
+    stroke-opacity : 0.5;
+}
+
 /* --------------------------------- */
 /* -------- Inspector style -------- */
 /* --------------------------------- */
@@ -356,4 +363,13 @@ margin: 0;
     fill : none;
 }
 
+
+/* --------------------------------- */
+/* ------ Command form style ------- */
+/* --------------------------------- */
+
+
+.command_data_field {
+    display : none;
+}
 

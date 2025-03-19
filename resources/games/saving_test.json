@@ -62,6 +62,19 @@
             "B": "[{\"type\": \"spatial_move\", \"new_x\": 3, \"new_y\": 1, \"new_a\": 3, \"stone_ID\": 6, \"t\": 0, \"x\": 4, \"y\": 1}]"
         },
         {
+            "A": "[]",
+            "B": "[{\"type\": \"spatial_move\", \"new_x\": 3, \"new_y\": 1, \"new_a\": 1, \"stone_ID\": 6, \"t\": 1, \"x\": 3, \"y\": 1}]"
+        },
+        {
+            "B": "[{\"type\": \"spatial_move\", \"new_x\": 4, \"new_y\": 1, \"new_a\": 1, \"stone_ID\": 6, \"t\": 2, \"x\": 3, \"y\": 1}]",
+            "A": "[]"
+        },
+        {
+            "B": "[{\"type\": \"spatial_move\", \"new_x\": 4, \"new_y\": 1, \"new_a\": 3, \"stone_ID\": 6, \"t\": 3, \"x\": 4, \"y\": 1}]",
+            "A": "[]"
+        },
+        {
+            "B": "[{\"type\": \"spatial_move\", \"new_x\": 3, \"new_y\": 2, \"new_a\": 0, \"stone_ID\": 2, \"t\": 4, \"x\": 4, \"y\": 2}, {\"type\": \"spatial_move\", \"new_x\": 4, \"new_y\": 1, \"new_a\": 3, \"stone_ID\": 6, \"t\": 4, \"x\": 4, \"y\": 1}]",
             "A": "[]"
         }
     ]
