@@ -10,6 +10,7 @@ from stones.class_Stone import Stone
 # -----------------------------------------------------------------------------
 
 class Tagger(Stone):
+    delta_pos_list = [[1, 1, -2], [1, 2, -1], [1, 2, 1], [1, 1, 2], [1, -1, 2], [1, -2, 1], [1, -2, -1], [1, -1, -2], [0, 0, -2], [0, 2, 0], [0, 0, 2], [0, -2, 0], [-1, 0, -1], [-1, 1, 0], [-1, 0, 1], [-1, -1, 0]]
     # --- Constructors, destructors, descriptors ---
     def __init__(self, stone_ID, progenitor_flag_ID, player_faction, t_dim):
 
@@ -51,7 +52,8 @@ class Tagger(Stone):
         #           "squares" = [list of {
         #             "t", "x", "y",
         #             "a" : None or a list of available azimuths,
-        #             "swap_effects" : a list of ante-effects which can be swapped here.
+        #             "swap_effects" : a list of ante-effects which can be swapped here,
+        #             "override_cmd_type" : if not None, this command type is used instead.
         #           } objects.]. If length is one, the first element is the default one.
         #           "choice_keyword": If not None, it's a string defining the key in the command dict,
         #           "choice_options" : [list of values the user can pick from]
@@ -79,7 +81,6 @@ class Tagger(Stone):
                     "label" : "Pass"
                 }
 
-            # Command: jump
         else:
             # Other time-slices
 
@@ -99,8 +100,36 @@ class Tagger(Stone):
 
 
             # Command: tag
+
+        # Command: jump
+        available_jump_squares = []
+        # First we check the 8 horse-move jumps
+        for delta_pos in Tagger.delta_pos_list:
+            target_t = t + delta_pos[0]
+            target_x = cur_x + delta_pos[1]
+            target_y = cur_y + delta_pos[2]
+            if 0 <= target_t and target_t < gm.t_dim and gm.is_square_available(target_x, target_y):
+                new_square_element = {"t" : target_t, "x" : target_x, "y" : target_y, "a" : None, "swap_effects" : None}
+                if delta_pos[0] <= 0:
+                    new_square_element["override_cmd_type"] = "timejump"
+                    new_square_element["swap_effects"] = [None] + self.get_available_timejump_swaps(gm, round_number, target_t, target_x, target_y)
+                available_jump_squares.append(new_square_element)
+        if len(available_jump_squares) > 0:
+            available_commands["commands"].append("jump")
+            available_commands["command_properties"]["jump"] = {
+                    "command_type" : "spatial_move",
+                    "selection_mode" : {
+                            "lock_timeslice" : None,
+                            "squares" : available_jump_squares,
+                            "choice_keyword" : None,
+                        },
+                    "label" : "Jump"
+                }
+
+
         return(available_commands)
 
+    # ---------------- LEGACY FEATURE: LOCAL TUI COMPATIBILITY ----------------
     # ------------------------ Command parsing methods ------------------------
 
     def parse_move_cmd(self, gm):

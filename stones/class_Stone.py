@@ -203,13 +203,35 @@ class Stone():
                     return(Message(False, "Specified time-jump-in has been added only this round, and thus hasn't been realised yet."))
         return(Message(True))
 
+    def get_available_timejump_swaps(self, gm, round_number, target_t, target_x, target_y, target_a = None):
+        result = []
+        for prev_round in range(round_number):
+            for effect_ID in gm.effects_by_round[prev_round]:
+                if gm.flags[effect_ID].flag_type != "time_jump_in":
+                    # not a TJI
+                    continue
+                if not (gm.flags[effect_ID].pos.t == target_t - 1 and gm.flags[effect_ID].pos.x == target_x and gm.flags[effect_ID].pos.y == target_y):
+                    # Not on the specified square
+                    continue
+                if self.player_faction != gm.stones[gm.flags[effect_ID].stone_ID].player_faction:
+                    # Not the same faction
+                    continue
+                if self.stone_type not in [gm.stones[gm.flags[effect_ID].stone_ID].stone_type, "wildcard"]:
+                    # Not a compatible stone type
+                    continue
+                if self.orientable and gm.flags[effect_ID].flag_args[1] != target_a:
+                    # Incorrect azimuth
+                    continue
+                result.append(effect_ID)
+        return(result)
+
     def get_available_timejumps(self, gm, round_number, old_t, old_x, old_y, old_a):
         # For timejumps of the static variety
         timejump_squares = []
         if (not self.has_been_tag_locked) and gm.is_square_available(old_x, old_y):
             for t_prev in range(old_t):
                 timejump_squares.append({"t" : t_prev, "x" : old_x, "y" : old_y, "a" : [old_a], "swap_effects" : [None]})
-                for prev_round in range(round_number):
+                """for prev_round in range(round_number):
                     for effect_ID in gm.effects_by_round[prev_round]:
                         if gm.flags[effect_ID].flag_type != "time_jump_in":
                             # not a TJI
@@ -226,7 +248,8 @@ class Stone():
                         if self.orientable and gm.flags[effect_ID].flag_args[1] != old_a:
                             # Incorrect azimuth
                             continue
-                        timejump_squares[t_prev]["swap_effects"].append(effect_ID)
+                        timejump_squares[t_prev]["swap_effects"].append(effect_ID)"""
+                timejump_squares[t_prev]["swap_effects"] += self.get_available_timejump_swaps(gm, round_number, t_prev, old_x, old_y, old_a)
         return(timejump_squares)
 
     # -------------------------------------------------------------------------

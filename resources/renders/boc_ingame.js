@@ -1483,6 +1483,8 @@ inspector.turn_on_selection_mode = function(stone_ID, selection_mode_props) {
     } else if (inspector.selection_mode_options["squares"].length == 1) {
         set_timeslice_navigation(false);
         select_timeslice(inspector.selection_mode_options["squares"][0]["t"]);
+    } else if (inspector.selection_submission["type"] == "spatial_move" && selected_timeslice < t_dim - 1) {
+        select_timeslice(selected_timeslice + 1);
     }
     document.getElementById("selection_mode_highlights").style.visibility = "visible";
 
@@ -1744,6 +1746,12 @@ inspector.submit_selection = function() {
     if (inspector.selection_mode_options["choice_keyword"] != null) {
         document.getElementById(`cmd_choice_keyword_${inspector.selection_mode_stone_ID}`).name = inspector.selection_mode_options["choice_keyword"];
         document.getElementById(`cmd_choice_keyword_${inspector.selection_mode_stone_ID}`).value = inspector.selection_submission["choice_keyword"];
+    }
+
+    if (inspector.selection_mode_options["squares"][inspector.selection["square"]]["override_cmd_type"] != undefined) {
+        if (inspector.selection_mode_options["squares"][inspector.selection["square"]]["override_cmd_type"] != null) {
+            document.getElementById(`cmd_type_${inspector.selection_mode_stone_ID}`).value = inspector.selection_mode_options["squares"][inspector.selection["square"]]["override_cmd_type"];
+        }
     }
 
     commander.mark_as_checked(inspector.selection_mode_stone_ID);
