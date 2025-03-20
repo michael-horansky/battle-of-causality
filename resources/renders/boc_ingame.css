@@ -85,6 +85,20 @@ margin: 0;
     stroke-width : 2;
 }
 
+.choice_option_button {
+    fill : pink;
+    fill-opacity : 0.2;
+    stroke : black;
+    stroke-width : 1;
+}
+
+.choice_option_button:hover {
+    fill : green;
+    fill-opacity : 0.1;
+    stroke : black;
+    stroke-width : 2;
+}
+
 #board_window {
     float : left;
 }

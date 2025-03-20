@@ -56,7 +56,8 @@ class Tagger(Stone):
         #             "override_cmd_type" : if not None, this command type is used instead.
         #           } objects.]. If length is one, the first element is the default one.
         #           "choice_keyword": If not None, it's a string defining the key in the command dict,
-        #           "choice_options" : [list of values the user can pick from]
+        #           "choice_options" : "value",
+        #           "choice_labels" : "label"
         #         },
         #         "label" : human-readable label
         #       }
@@ -75,7 +76,7 @@ class Tagger(Stone):
                     "command_type" : "pass",
                     "selection_mode" : {
                             "lock_timeslice" : gm.t_dim - 1,
-                            "squares" : [{"t" : gm.t_dim - 1, "x" : cur_x, "y" : cur_y, "a" : [cur_a], "swap_effects" : None}],
+                            "squares" : [{"t" : gm.t_dim - 1, "x" : cur_x, "y" : cur_y, "a" : None, "swap_effects" : None}],
                             "choice_keyword" : None,
                         },
                     "label" : "Pass"
@@ -90,16 +91,31 @@ class Tagger(Stone):
                     "command_type" : "spatial_move",
                     "selection_mode" : {
                             "lock_timeslice" : None,
-                            "squares" : [{"t" : t + 1, "x" : cur_x, "y" : cur_y, "a" : [cur_a], "swap_effects" : None}],
+                            "squares" : [{"t" : t + 1, "x" : cur_x, "y" : cur_y, "a" : None, "swap_effects" : None}],
                             "choice_keyword" : None
                         },
                     "label" : "Wait"
                 }
 
-            # Command: jump
-
 
             # Command: tag
+            available_tag_options = ["lock", "unlock"]
+            available_tag_labels = ["Causal lock", "Causal unlock"]
+            if t < gm.t_dim - 2:
+                available_tag_options.append("hide")
+                available_tag_labels.append("Smokescreen")
+            available_commands["commands"].append("tag")
+            available_commands["command_properties"]["tag"] = {
+                    "command_type" : "tag",
+                    "selection_mode" : {
+                            "lock_timeslice" : t + 1,
+                            "squares" : [{"t" : t + 1, "x" : cur_x, "y" : cur_y, "a" : None, "swap_effects" : None}],
+                            "choice_keyword" : "tag_type",
+                            "choice_options" : available_tag_options,
+                            "choice_labels" : available_tag_labels
+                        },
+                    "label" : "Tag"
+                }
 
         # Command: jump
         available_jump_squares = []

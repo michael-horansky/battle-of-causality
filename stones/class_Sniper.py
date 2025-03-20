@@ -78,20 +78,6 @@ class Sniper(Stone):
                         },
                     "label" : "Pass"
                 }
-
-            # Command: timejump
-            available_timejump_squares = self.get_available_timejumps(gm, round_number, t, cur_x, cur_y, cur_a)
-            if len(available_timejump_squares) > 0:
-                available_commands["commands"].append("timejump")
-                available_commands["command_properties"]["timejump"] = {
-                        "command_type" : "timejump",
-                        "selection_mode" : {
-                                "lock_timeslice" : None,
-                                "squares" : available_timejump_squares,
-                                "choice_keyword" : None
-                            },
-                        "label" : "Timejump"
-                    }
         else:
             # Other time-slices
 
@@ -119,19 +105,21 @@ class Sniper(Stone):
                     "label" : "Turn"
                 }
 
-            # Command: timejump
-            available_timejump_squares = self.get_available_timejumps(gm, round_number, t, cur_x, cur_y, cur_a)
-            if len(available_timejump_squares) > 0:
-                available_commands["commands"].append("timejump")
-                available_commands["command_properties"]["timejump"] = {
-                        "command_type" : "timejump",
-                        "selection_mode" : {
-                                "lock_timeslice" : None,
-                                "squares" : available_timejump_squares,
-                                "choice_keyword" : None
-                            },
-                        "label" : "Timejump"
-                    }
+        # Any timeslice
+
+        # Command: timejump
+        available_timejump_squares = self.get_available_timejumps(gm, round_number, t, cur_x, cur_y, cur_a)
+        if len(available_timejump_squares) > 0:
+            available_commands["commands"].append("timejump")
+            available_commands["command_properties"]["timejump"] = {
+                    "command_type" : "timejump",
+                    "selection_mode" : {
+                            "lock_timeslice" : None,
+                            "squares" : available_timejump_squares,
+                            "choice_keyword" : None
+                        },
+                    "label" : "Timejump"
+                }
 
         return(available_commands)
 

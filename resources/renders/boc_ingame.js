@@ -7,6 +7,10 @@ const board_window_height = 700;
 
 const stone_command_btn_width = 100;
 const stone_command_btn_height = 83;
+
+const choice_option_btn_width = 120;
+const choice_option_btn_height = 83;
+
 // ----------------------------------------------------------------------------
 // --------------------------- HTML DOM management ----------------------------
 // ----------------------------------------------------------------------------
@@ -60,11 +64,11 @@ function is_flag_at_pos(flag_ID, t, x, y) {
 }
 
 function find_stone_at_pos(x, y) {
-    for (let faction_i = 0; faction_i < factions.length; faction_i++) {
-        for (let stone_i = 0; stone_i < faction_armies[factions[faction_i]].length; stone_i++) {
-            if (stone_trajectories[selected_round][visible_timeslice]["canon"][faction_armies[factions[faction_i]][stone_i]] != null) {
-                if (arrays_equal(stone_trajectories[selected_round][visible_timeslice]["canon"][faction_armies[factions[faction_i]][stone_i]].slice(0,2), [x, y])) {
-                    return faction_armies[factions[faction_i]][stone_i];
+    for (let faction_i = 0; faction_i < all_factions.length; faction_i++) {
+        for (let stone_i = 0; stone_i < faction_armies[all_factions[faction_i]].length; stone_i++) {
+            if (stone_trajectories[selected_round][visible_timeslice]["canon"][faction_armies[all_factions[faction_i]][stone_i]] != null) {
+                if (arrays_equal(stone_trajectories[selected_round][visible_timeslice]["canon"][faction_armies[all_factions[faction_i]][stone_i]].slice(0,2), [x, y])) {
+                    return faction_armies[all_factions[faction_i]][stone_i];
                 }
             }
         }
@@ -1416,6 +1420,8 @@ inspector.endpoint_description = function(endpoint_event) {
             return "becomes causally free";
         case "tag_locked":
             return "is tag-locked";
+        case "unharmed":
+            return "remains unharmed";
         default:
             return "UNKNOWN EVENT";
     }
@@ -1440,8 +1446,8 @@ inspector.square_type_description = function(board_static_val) {
 // the corresponding arg key before submitting the command and exiting sel. m.
 inspector.selection_mode_enabled = false;
 inspector.selection_mode_stone_ID = null;
-inspector.selection_mode_information_level = {"square" : false, "azimuth" : false, "swap_effect" : false};
-inspector.selection = {"square" : "NOT_SELECTED", "azimuth" : "NOT_SELECTED", "swap_effect" : "NOT_SELECTED"};
+inspector.selection_mode_information_level = {"square" : false, "azimuth" : false, "swap_effect" : false, "choice_option" : false};
+inspector.selection = {"square" : "NOT_SELECTED", "azimuth" : "NOT_SELECTED", "swap_effect" : "NOT_SELECTED", "choice_option" : "NOT_SELECTED"};
 inspector.selection_submission = null;
 
 inspector.selection_mode_options = new Object();
@@ -1468,9 +1474,11 @@ inspector.turn_on_selection_mode = function(stone_ID, selection_mode_props) {
     inspector.selection_mode_information_level["square"] = true;
     inspector.selection_mode_information_level["azimuth"] = true;
     inspector.selection_mode_information_level["swap_effect"] = true;
+    inspector.selection_mode_information_level["choice_option"] = true;
     inspector.selection_mode_information_level["square"] = "NOT_SELECTED";
     inspector.selection_mode_information_level["azimuth"] = "NOT_SELECTED";
     inspector.selection_mode_information_level["swap_effect"] = "NOT_SELECTED";
+    inspector.selection_mode_information_level["choice_option"] = "NOT_SELECTED";
 
     // Interrupt animations, disable tracking, force active round, disable round navigation, show selection highlights
     animation_manager.clear_queue();
@@ -1493,6 +1501,13 @@ inspector.turn_on_selection_mode = function(stone_ID, selection_mode_props) {
     document.getElementById("square_inspector").style.display = "none";
     document.getElementById("choice_selector").style.display = "block";
     document.getElementById("swap_effect_selector").style.display = "block";
+
+    if (inspector.selection_mode_options["choice_keyword"] == null) {
+        inspector.select_choice_option(null);
+    } else {
+        // Create choice buttons in choice selector
+        inspector.prepare_choice_selection();
+    }
 
     if (inspector.selection_mode_options["squares"].length == 1) {
         // The square is chosen automatically
@@ -1534,6 +1549,12 @@ inspector.turn_off_selection_mode = function() {
     document.getElementById("submit_selection_button").style.display = "none";
     document.getElementById("stone_inspector_commands_svg").style.display = "block";
 
+    // Remove choice selector buttons
+    let choice_selector_svg = document.getElementById("choice_selector_buttons_svg");
+    while (choice_selector_svg.firstChild) {
+        choice_selector_svg.removeChild(choice_selector_svg.lastChild);
+    }
+
     // Remove swap effect selection options
     inspector.unselect_swap_effect();
 
@@ -1561,8 +1582,37 @@ inspector.turn_off_selection_mode = function() {
 
 }
 
+inspector.prepare_choice_selection = function() {
+    let choice_selector_svg = document.getElementById("choice_selector_buttons_svg");
+    offset_x = 10;
+    offset_y = 8;
+    for (let i = 0; i < inspector.selection_mode_options["choice_options"].length; i++) {
+        let new_button = make_SVG_element("rect", {
+            class : "choice_option_button",
+            id : `choice_option_${inspector.selection_mode_options["choice_options"][i]}`,
+            onclick : `inspector.select_choice_option(\"${inspector.selection_mode_options["choice_options"][i]}\")`,
+            x : offset_x,
+            y : offset_y,
+            width : choice_option_btn_width,
+            height : choice_option_btn_height
+        });
+        let new_button_label = make_SVG_element("text", {
+            class : "button_label",
+            id : `choice_option_${inspector.selection_mode_options["choice_options"][i]}_label`,
+            x : offset_x + choice_option_btn_width / 2,
+            y : offset_y + choice_option_btn_height / 2,
+            "text-anchor" : "middle"
+        });
+        new_button_label.textContent = inspector.selection_mode_options["choice_labels"][i];
+        choice_selector_svg.appendChild(new_button);
+        choice_selector_svg.appendChild(new_button_label);
+        offset_x += choice_option_btn_width + 10;
+
+    }
+}
+
 inspector.toggle_submit_button = function() {
-    if (inspector.selection_mode_information_level["square"] == false && inspector.selection_mode_information_level["azimuth"] == false && inspector.selection_mode_information_level["swap_effect"] == false) {
+    if (inspector.selection_mode_information_level["square"] == false && inspector.selection_mode_information_level["azimuth"] == false && inspector.selection_mode_information_level["swap_effect"] == false && inspector.selection_mode_information_level["choice_option"] == false) {
         document.getElementById("submit_selection_button").style.display = "inline";
     } else {
         document.getElementById("submit_selection_button").style.display = "none";
@@ -1731,6 +1781,23 @@ inspector.select_swap_effect = function(target_swap_effect) {
     }
 }
 
+inspector.select_choice_option = function(selected_choice_option) {
+    inspector.selection["choice_option"] = selected_choice_option;
+    inspector.selection_mode_information_level["choice_option"] = false;
+    // Reset highlight of option button
+    if (inspector.selection_mode_options["choice_keyword"] != null) {
+        for (let i = 0; i < inspector.selection_mode_options["choice_options"].length; i++) {
+            document.getElementById(`choice_option_${inspector.selection_mode_options["choice_options"][i]}`).style.fill = "pink";
+            document.getElementById(`choice_option_${inspector.selection_mode_options["choice_options"][i]}`).style["fill-opacity"] = "0.2";
+        }
+        if (selected_choice_option != null) {
+            document.getElementById(`choice_option_${selected_choice_option}`).style.fill = "green";
+            document.getElementById(`choice_option_${selected_choice_option}`).style["fill-opacity"] = "0.5";
+            inspector.toggle_submit_button();
+        }
+    }
+}
+
 inspector.submit_selection = function() {
     // onclick of the submit selection button
     // stores the command object in a hidden HTML dataform
@@ -1739,13 +1806,14 @@ inspector.submit_selection = function() {
     inspector.selection_submission["target_y"] = inspector.selection_mode_options["squares"][inspector.selection["square"]]["y"];
     inspector.selection_submission["target_a"] = inspector.selection["azimuth"];
     inspector.selection_submission["swap_effect"] = inspector.selection["swap_effect"];
+    inspector.selection_submission["choice_option"] = inspector.selection["choice_option"];
 
     for (i = 0; i < inspector.selection_keywords.length; i++) {
         document.getElementById(`cmd_${inspector.selection_keywords[i]}_${inspector.selection_mode_stone_ID}`).value = inspector.selection_submission[inspector.selection_keywords[i]];
     }
     if (inspector.selection_mode_options["choice_keyword"] != null) {
         document.getElementById(`cmd_choice_keyword_${inspector.selection_mode_stone_ID}`).name = inspector.selection_mode_options["choice_keyword"];
-        document.getElementById(`cmd_choice_keyword_${inspector.selection_mode_stone_ID}`).value = inspector.selection_submission["choice_keyword"];
+        document.getElementById(`cmd_choice_keyword_${inspector.selection_mode_stone_ID}`).value = inspector.selection_submission["choice_option"];
     }
 
     if (inspector.selection_mode_options["squares"][inspector.selection["square"]]["override_cmd_type"] != undefined) {

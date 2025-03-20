@@ -1724,6 +1724,9 @@ class Gamemaster():
                             if t < self.t_dim - 1:
                                 new_x, new_y, new_props = self.stones[stone_ID].find_next_default_position(self, t, x, y, self.board_dynamic[t][x][y].stone_properties[stone_ID])
                                 self.place_stone_on_board(STPos(t+1, new_x, new_y), stone_ID, new_props)
+                            elif save_to_output:
+                                # This neutral stone reached the end of its trajectory unharmed
+                                self.rendering_output.add_stone_endpoint(rendering_round, stone_ID, "end", "unharmed", STPos(t, x, y))
                             continue
 
 
