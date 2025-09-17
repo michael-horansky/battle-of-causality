@@ -2,6 +2,7 @@
 \usepackage[a4paper, total={6.5in, 8in}]{geometry}
 \usepackage{xargs}
 \usepackage{amsmath,amssymb}
+\usepackage{physics}
 
 
 \begin{document}
@@ -163,7 +164,7 @@ where $P_A(R_A - R_B)$ is the probability player $A$ wins the game\footnote{Equi
 	\begin{equation} \label{beta_dist}
 	P(\hat{p},p)=\frac{\Gamma(N+2)}{\Gamma(N\hat{p}+1)\Gamma(N(1-\hat{p})+1)}p^{N\hat{p}}(1-p)^{N(1-\hat{p})}
 	\end{equation}
-	We have measured the value of $\hat{p}$ and are interested in the likelihood of a given value of the true probability $b$. Since Eq. (\ref{beta_dist}) is already normalized with respect to $p$ for a fixed $\hat{p}$ (as $N\to\infty$), we can interpret it directly as the probability density function of $p$. 
+	We have measured the value of $\hat{p}$ and are interested in the likelihood of a given value of the true probability $p$. Since Eq. (\ref{beta_dist}) is already normalized with respect to $p$ for a fixed $\hat{p}$ (as $N\to\infty$), we can interpret it directly as the probability density function of $p$. 
 	
 	We are interested in the probability distribution $P_\kappa$ of the $\kappa=\frac{2\hat{p}}{1-\hat{p}}$ parameter. For this, we employ the rule for transforming probability distributions:
 	\begin{equation}\label{lotus}
@@ -229,8 +230,181 @@ where $P_A(R_A - R_B)$ is the probability player $A$ wins the game\footnote{Equi
 	\item We update the expected handicap value for the board in the aggregate dataset using the new posterior: $\langle h\rangle=\iint hP(h,\kappa\mid\text{data})\text{d}h\text{d}\kappa$. This value will be used to calculate the priors for games played only on other boards, not this one.
 	\end{enumerate}
 	
+	\section{Implementing retroactive rating on a large-scale dataset}
 	
-
+	The aforementioned algorithm produces a "correct" statistic in the sense that its repeated application converges to the true values of player rating and board handicap. However, it is massively inefficient on a large scale (in terms of player/board/game count), because it is applied retroactively to all the games played on the affected board and, implicitly, to all the other games played at a later date than any of the recalculated games, since retroactively changing the rating of a game affects the ratings going into all subsequent games for the affected players. Hence, in this short section, we propose a "good-enough" algorithm which is designed with these features in mind as the top priorities:
+	\begin{itemize}
+	\item \textbf{Correctness}: Applying this algorithm will lead to the same results as applying the full-scale recalculation with the correct statistic.
+	\item \textbf{Efficiency}: This algorithm is largely inexpensive, and only requires one expensive calculation per a fixed time interval.
+	\item \textbf{Responsiveness}: Using this algorithm means that, after submitting a new concluded game, the rating of the engaged players and the handicap of the used board are updated immediately.
+	\item \textbf{Symmetry}: When recalculating player rating adjustments for games on a single board, they all take the same step size and values of $h,\kappa$, which means their time-ordering does not matter in the approximating limit of small step size, where the rating adjustments can be taken to commute.
+	\end{itemize}
+	The algorithm is sectioned into two parellel processes:
+	\begin{enumerate}
+	\item \textbf{Immediate updates}: On submitting a new concluded game, the rating and handicap update is calculated according to the full statistic and applied to the "hot" values of these parameters for the players and the board. However, no retrospective recalculation is applied across the dataset. The date of the earliest game played on the affected board is stored; next time this happens, only the earlier of the two dates is stored.
+	\item \textbf{Housekeeping}: At regular intervals (e.g. nightly), a recalculation for all games which have occured later than the date stored is performed, and the "hot" values of ratings and handicaps are adjusted to match the fully correct statistic.
+	\end{enumerate}
+	The downside of this algorithm is that the "hot" values only approximate the correct statistic; however, they are constantly adjusted by the housekeeping process, and so they remain largely correct. The upside is that large-scale recalculation, which has to happen at least sometimes if we require our model to be correct with regard to the statistic, does not occur based on user input, and thus its overall demand on computing power does not scale with the user base.
+	
+	Another method to limit the time complexity of the housekeeping process, which in theory makes it independent on the number of boards, is to stop updating the handicap value on any given board once a specific condition is satisfied (accurate: if the handicap has not changed by a significant amount for the last $N$ new datapoints; approximate: once the number of datapoints exceeds $N$, with $N$ being arbitrary for both approaches). This means that, in theory, as new boards are added, old boards either "solidify" and no longer warrant retroactive recalculation (so that playing on such a board simply updates the rating but does not store its earliest game date), or stop being used for games, and thus no longer enlarge the scale of housekeeping recalculation. This second approximation is useful to be implemented on large-scale userbases, but before doing that, ensure you have enough data to estimate reasonable values of the parameter $N$ for the handicap-calculation-freezing condition.
+	
+	\subsection{Implementation}
+	The following is a mockup on how to implement the Elo-Davidson-Horanský rating system in your game, assuming your database has relational tables USER, BOARD, and GAME.
+	\subsubsection{Approaches to forming priors}
+	If we formed the prior on $\kappa$ based on all the games played, we would need to recalculate every single game ever played for every housekeeping procedure. It would be better and more accurate to only form the prior from the data for the specific board, as different boards will have different values of $kappa$. For small dataset values, the prior should be informed mostly by the initial estimate $\kappa_0$ (and the corresponding initial estimate of the drawing probability $\hat{p}_0$), and as the number of games played on the board ($N$) grows, the prior will be more and more informed by the measured value of $\hat{p}=N_d/N$. This can be achieved e.g. with the following formula:
+	\begin{equation}
+	\hat{p}^\text{prior}=\frac{\hat{p}_0+\frac{N}{\nu_p}\hat{p}}{1+\frac{N}{\nu_p}}=\frac{\nu_p\hat{p}_0+N_d}{\nu_p+N}
+	\end{equation}
+	where $\nu_p$ is an arbitrary parameter which determines how quickly the measured value of $\hat{p}$ overtakes the initial estimate as the dataset on the board grows. Specifically, for $N=\nu_p$ games measured on the board, the value $\hat{p}^\text{prior}$ is exactly the arithmetic average of the initial and the measured value.
+	
+	The same issue holds for estimating the prior on $h$, which is determined by its expected value $\langle h\rangle$ and its standard deviation $\sigma_h$, as it is modelled as a normal distribution. We do not want to assume that even the prior for the handicap depends on the handicaps of other boards (which would also make the model less numerically stable and more complex), so we use similar techniques for estimating these parameters for the prior depending only on the initial estimates and the hot values:
+	\begin{eqnarray}
+	\langle h\rangle^\text{prior} &=& \frac{\frac{N}{\nu_h}\langle h\rangle^\text{hot}}{1+\frac{N}{\nu_h}}=\frac{N\langle h\rangle^\text{hot}}{\nu_h+N}\\
+	\sigma_h^\text{prior}&=&\frac{\sigma_{h,0}+\frac{N}{\nu_h}\sigma_h^\text{hot}}{1+\frac{N}{\nu_h}}
+	\end{eqnarray}
+	with $\nu_h$ having an analogous meaning to $\nu_p$.
+	
+	There is no reason why we should two different scales for the priors on $h$ and $p$, so we can take $\nu_p=\nu_h=\nu$, where $\nu$ is the rigidity of the model.
+	
+	\subsubsection{Database requirements}
+	Table USER has a column RATING\_HOT, which is the hot value of the user's rating. Similarly, table BOARD has columns HANDICAP\_HOT, STD\_HANDICAP\_HOT, which are the hot values of the board's handicap and its standard deviation, column KAPPA\_HOT, which is the hot value of the draw parameter $\kappa$, and column STEP\_SIZE, which is the hot value of the step size $K$. Finally, table GAME has column R\_A\_ADJUSTMENT, which is the adjustment to player $A$'s rating due to that game.
+	
+	As the model has a few arbitrary parameters, it is useful to have a table PARAMETERS: KEY, VALUE, in which we store the following values:
+	\begin{itemize}
+	\item Initial rating of a new player, $R_0$ (in my application $100$)
+	\item The rating difference scale, $s$ (in my application $400$)
+	\item Initial estimate of $\hat{p}_0$ (in my application $1/10$)
+	\item Initial estimate of $\sigma_{h,0}$ (in my application $120$)
+	\item Rating adjustment step scale $K_0$ (in my application $32$)
+	\item Game count scale for estimating $\hat{p}_\text{prior}, h_\text{prior}, \sigma_{h,\text{prior}}$, i.e. the model rigidity $\nu$ (in my application $10$)
+	\item Condition on dataset size for a board to stop updating its handicap, $N_\text{freeze}$. (Can be set to NULL to prevent handicap freezing.)
+	\item The volatile value of the earliest datapoint scheduled for recalculation. By default, this is NULL (i.e. unknown).
+	\end{itemize}
+	
+	To oversee the housekeeping process, it is also useful to have a table HOUSEKEEPING\_LOGS: D\_INITIATED, TIME\_TAKEN, GAMES\_AFFECTED, USERS\_AFFECTED, BOARDS\_AFFECTED, GAMES\_TOTAL, USERS\_TOTAL, BOARDS\_TOTAL, which records the state of the total dataset and the dataset's fraction subject to recalculation, and allows the administrator to monitor trends in demand on the server's computation time.
+	
+	\subsubsection{Realisation of efficient algorithm}
+	The algorithm constitutes two processes: immediate updates and housekeeping. Immediate updates are triggered on every submission of a new concluded game, where a particular game is characterised by the two engaged players, the outcome (winning player or draw), and the board utilised. Housekeeping is triggered at specific intervals, or manually by administrator, and does \textit{not} adjust handicap and draw-parameter values, only player ratings.
+	
+	\begin{itemize}
+	\item \textbf{Immediate updates}. On new submission of a concluded game:
+		\begin{enumerate}
+		\item Consider the hot handicap for the board, $h^\text{hot}$, its hot standard deviation, $\sigma_h^\text{hot}$, and the hot ratings for each of the two players, $R_{A/B}^\text{hot}$, as well as the total number of games played on this board $N$ and total number of drawn games on this board $N_d$ (both excluding the newly submitted datapoint).
+		\item Find the prior estimate for the probability of drawing a game on this board, $\hat{p}^\text{prior}$, and the prior estimate for the handicap and its standard deviation for this board, $\sigma_h^\text{prior}$, using the model parameters and considered values like so:
+		\begin{eqnarray}
+		\hat{p}^\text{prior}&=&\frac{\nu_p\hat{p}_0+N_d}{\nu_p+N}\\
+		\langle h\rangle^\text{prior} &=&\frac{N\langle h\rangle^\text{hot}}{\nu_h+N}\\
+	\sigma_h^\text{prior}&=&\frac{\sigma_{h,0}+\frac{N}{\nu_h}\sigma_h^\text{hot}}{1+\frac{N}{\nu_h}}
+		\end{eqnarray}
+		\item Then, the prior $P(h, \kappa)$ is like so:
+		\begin{align*}
+		P(h,\kappa) =& \frac{1}{\sigma_h^\text{prior}\sqrt{2\pi}}\exp\left[-\frac{1}{2}\left(\frac{h-h^\text{prior}}{\sigma_h^\text{prior}}\right)^2\right]\\
+		&\cdot\frac{\Gamma(N+2)}{\Gamma(N\hat{p}^\text{prior}+1)\Gamma(N(1-\hat{p}^\text{prior})+1)}\frac{2^{N(1-\hat{p}^\text{prior})+1}\kappa^{N\hat{p}^\text{prior}}}{(2+\kappa)^{N+2}}
+		\end{align*}
+		We can omit the normalisation factors, as the posterior will be renormalised explicitly, and thus the effective log prior is
+		\begin{align*}
+		\log{P(h,\kappa)} = \text{cons.}-\frac{1}{2}\left(\frac{h-h^\text{prior}}{\sigma_h^\text{prior}}\right)^2+N\hat{p}^\text{prior}\log{\kappa}-(N+2)\log(\kappa+2)
+		\end{align*}
+		\item The log-likelihood function for the board (evaluated on all games including the one just submitted) is like so:
+		\begin{equation}
+		\log{L(\text{data}\mid h,\kappa)}=\sum_{i\text{th game}}\log{P_G(\Delta R_i, \text{ outcome} \mid h, \kappa)}
+		\end{equation}
+		where $\Delta R_i=R_{A,i}-R_{B,i}$ and the single game log-probability function is
+		\begin{equation}
+		\log{P_G(\Delta R_i,\text{ outcome}\mid h,\kappa)} = \begin{cases}
+			\log{\sigma(\Delta R + h, \kappa)} & \text{if player }A\text{ won}\\
+			\log{\sigma(-\Delta R - h, \kappa)} & \text{if player }B\text{ won}\\
+			\begin{aligned}
+   				\log \kappa + \tfrac{1}{2}\bigl(
+        			\log \sigma(\Delta R + h, \kappa) \\
+        			+ \log \sigma(-\Delta R - h, \kappa)
+     			\bigr)
+  			\end{aligned}
+  				& \text{if draw}
+		\end{cases}
+		\end{equation}
+		which can be explicitly expressed as
+		\begin{equation}
+		P_G(...)= -\log(10^{\frac{\Delta R+h}{s}}+10^{-\frac{\Delta R+h}{s}}+\kappa)+\begin{cases}
+			\frac{\Delta R+h}{s}\log{10} & \text{if player }A\text{ won}\\
+			-\frac{\Delta R+h}{s}\log{10} & \text{if player }B\text{ won}\\
+			+0 & \text{if draw}
+		\end{cases}
+		\end{equation}
+		\item Then the unnormalised posterior becomes
+		\begin{equation}
+		P(h,\kappa\mid\text{data})\propto\exp(\log{P(h,\kappa)}+\log{L(\text{data}\mid h,\kappa)})
+		\end{equation}
+		Evaluate this explicitly without cancelling the logarithms, because numerical evaluation of $\log{P(h,\kappa)},\log{L(\text{data}\mid h,\kappa)}$ does not suffer from the possibility of numerical underflow.
+		\item Normalise the posterior with $\frac{1}{Z}$ by numerically integrating
+		\begin{equation}
+		Z = \int_{h=-\infty}^{\infty}\int_{\kappa=0}^{\infty} \exp(\log{P(h,\kappa)}+\log{L(\text{data}\mid h,\kappa)}) \dd h\dd\kappa
+		\end{equation}
+		\item Calculate the step-size for ratings, $K=K_0\frac{N}{\nu+N}$.
+		\item Calculate the probability of player $A$ winning and probability of a draw:
+		\begin{eqnarray*}
+		P(A\text{ wins}) &=& \frac{1}{Z}\int_{h=-\infty}^{\infty}\int_{\kappa=0}^{\infty} \sigma(\Delta R+h,\kappa)\exp(\log{P(h,\kappa)}+\log{L(\text{data}\mid h,\kappa)}) \dd h\dd\kappa\\
+		P(\text{draw}) &=& \iint \kappa\sqrt{\sigma(\Delta R+h,\kappa)\sigma(-\Delta R-h,\kappa)}P(h,\kappa\mid\text{data}) \dd h\dd\kappa
+		\end{eqnarray*}
+		Then, calculate player $A$'s expected score:
+		\begin{equation*}
+		\langle S_A \rangle = P(A\text{ wins}) + \frac{1}{2}P(\text{draw})
+		\end{equation*}
+		Then, calculate the rating adjustment for both players:
+		\begin{eqnarray*}
+		\delta R_A &=& S_A-\langle S_A \rangle\qq{where}S_A =
+			\begin{cases}
+			1 & \text{if player }A\text{ won}\\
+			0 & \text{if player }B\text{ won}\\
+			\frac{1}{2} & \text{if draw}
+			\end{cases}\\
+		\delta R_B &=& -\delta R_A
+		\end{eqnarray*}
+		Update the hot values of player ratings with these values. Also, save the value of $\delta R_A$ to the column R\_A\_ADJUSTMENT in the recorded game's datarow.
+		\item Calculate the new expected value of the handicap and its standard deviation:
+		\begin{eqnarray*}
+		\langle h\rangle &=& \iint h P(h,\kappa\mid\text{data}) \dd h\dd\kappa\\
+		\langle h^2\rangle &=& \iint h^2 P(h,\kappa\mid\text{data}) \dd h\dd\kappa\\
+		\sigma_h &=& \sqrt{\langle h^2\rangle - \langle h\rangle^2}
+		\end{eqnarray*}
+		Calculate the new expected value of $\kappa$:
+		\begin{equation*}
+		\langle \kappa\rangle = \iint \kappa P(h,\kappa\mid\text{data}) \dd h\dd\kappa
+		\end{equation*}
+		Update the hot values to be equal to these newly calculated values. This includes the new step size $K$.
+		\item Unless the freezing condition is satisfied ($N>N_\text{freeze}$), note down the date of the earliest game played on this board, and overwrite the global earliest date scheduled for recalculation.
+		\end{enumerate}
+	\item \textbf{Housekeeping}. Regularly:
+		\begin{enumerate}
+		\item Reset the values of RATING\_HOT for every user to the default value $R_0$.
+		\item Consider all games recorded \textit{earlier} than the date scheduled for readjustment. By summing up their values of R\_A\_ADJUSTMENT (with signs flipped according to the player's role) for each player, we calculate the hot values of player ratings for each player as they were right before the earliest game scheduled for readjustment.
+		\item Then, for each game, ordered by time of submission, we recalculate the rating adjustment for both players while taking the hot handicap, $\kappa$, and step size value as the \textit{true} values, like so:
+			\begin{enumerate}
+			\item Take the hot handicap for this board, $h^\text{hot}$, and interpret it as the true value $h$. Take the hot draw-parameter for this board, $\kappa^\text{hot}$, and also interpret it as the true value $\kappa$. Take the hot step size of the board, $K^\text{hot}$, and set the step size $K$ equal to it. Consider the hot ratings of the two players $R_{A/B}^\text{hot}$.
+			\item Calculate the effective rating difference $r$, which takes into account the handicap value:
+			\begin{equation*}
+			r=R_A-R_B+h
+			\end{equation*}
+			\item Calculate the expected score of player $A$ like so:
+			\begin{equation*}
+			\langle S_A \rangle = P(A\text{ wins})+\frac{1}{2}P(\text{draw})=\frac{10^{r/s}+\kappa/2}{10^{r/s}+10^{-r/s}+\kappa}
+			\end{equation*}
+			\item Calculate the rating adjustment for the players like so:
+			\begin{eqnarray*}
+			\delta R_A &=& S_A-\langle S_A \rangle\qq{where}S_A =
+				\begin{cases}
+				1 & \text{if player }A\text{ won}\\
+				0 & \text{if player }B\text{ won}\\
+				\frac{1}{2} & \text{if draw}
+				\end{cases}\\
+			\delta R_B &=& -\delta R_A
+			\end{eqnarray*}
+			Store the value of $\delta R_A$ into R\_A\_ADJUSTMENT and update the hot ratings of both players for the next game's recalculation.
+			\end{enumerate}
+		
+		\item After recalculating the rating adjustment for every game, we terminate the program without adjusting handicap or draw-parameter values.
+		\end{enumerate}
+	\end{itemize}
 	
 	
 \end{document}
