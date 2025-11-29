@@ -271,7 +271,7 @@ where $P_A(R_A - R_B)$ is the probability player $A$ wins the game\footnote{Equi
 	
 	As the model has a few arbitrary parameters, it is useful to have a table PARAMETERS: KEY, VALUE, in which we store the following values:
 	\begin{itemize}
-	\item Initial rating of a new player, $R_0$ (in my application $100$)
+	\item Initial rating of a new player, $R_0$ (in my application $1000$)
 	\item The rating difference scale, $s$ (in my application $400$)
 	\item Initial estimate of $\hat{p}_0$ (in my application $1/10$)
 	\item Initial estimate of $\sigma_{h,0}$ (in my application $120$)
@@ -289,10 +289,10 @@ where $P_A(R_A - R_B)$ is the probability player $A$ wins the game\footnote{Equi
 	\begin{itemize}
 	\item \textbf{Immediate updates}. On new submission of a concluded game:
 		\begin{enumerate}
-		\item Consider the hot handicap for the board, $h^\text{hot}$, its hot standard deviation, $\sigma_h^\text{hot}$, and the hot ratings for each of the two players, $R_{A/B}^\text{hot}$, as well as the total number of games played on this board $N$ and total number of drawn games on this board $N_d$ (both excluding the newly submitted datapoint).
+		\item Consider the hot handicap for the board, $h^\text{hot}$, its hot standard deviation, $\sigma_h^\text{hot}$, the hot draw factor for the board, $\kappa^\text{hot}$, and the hot ratings for each of the two players, $R_{A/B}^\text{hot}$, as well as the total number of games played on this board $N$ and total number of drawn games on this board $N_d$ (both excluding the newly submitted datapoint).
 		\item Find the prior estimate for the probability of drawing a game on this board, $\hat{p}^\text{prior}$, and the prior estimate for the handicap and its standard deviation for this board, $\sigma_h^\text{prior}$, using the model parameters and considered values like so:
 		\begin{eqnarray}
-		\hat{p}^\text{prior}&=&\frac{\nu_p\hat{p}_0+N_d}{\nu_p+N}\\
+		\hat{p}^\text{prior}&=&\frac{\hat{p}_0+\frac{N}{\nu}\hat{p}^\text{hot}}{1+\frac{N}{\nu}}\qq{where}\hat{p}^\text{hot}=\frac{\kappa^\text{hot}}{\kappa^\text{hot}+2}\\
 		\langle h\rangle^\text{prior} &=&\frac{N\langle h\rangle^\text{hot}}{\nu_h+N}\\
 	\sigma_h^\text{prior}&=&\frac{\sigma_{h,0}+\frac{N}{\nu_h}\sigma_h^\text{hot}}{1+\frac{N}{\nu_h}}
 		\end{eqnarray}
@@ -352,7 +352,7 @@ where $P_A(R_A - R_B)$ is the probability player $A$ wins the game\footnote{Equi
 		\end{equation*}
 		Then, calculate the rating adjustment for both players:
 		\begin{eqnarray*}
-		\delta R_A &=& S_A-\langle S_A \rangle\qq{where}S_A =
+		\delta R_A &=& K(S_A-\langle S_A \rangle)\qq{where}S_A =
 			\begin{cases}
 			1 & \text{if player }A\text{ won}\\
 			0 & \text{if player }B\text{ won}\\
@@ -391,7 +391,7 @@ where $P_A(R_A - R_B)$ is the probability player $A$ wins the game\footnote{Equi
 			\end{equation*}
 			\item Calculate the rating adjustment for the players like so:
 			\begin{eqnarray*}
-			\delta R_A &=& S_A-\langle S_A \rangle\qq{where}S_A =
+			\delta R_A &=& K(S_A-\langle S_A \rangle)\qq{where}S_A =
 				\begin{cases}
 				1 & \text{if player }A\text{ won}\\
 				0 & \text{if player }B\text{ won}\\

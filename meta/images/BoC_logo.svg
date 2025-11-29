@@ -27,9 +27,9 @@
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="mm"
      showgrid="false"
-     inkscape:zoom="1.3169155"
-     inkscape:cx="249.8262"
-     inkscape:cy="331.07667"
+     inkscape:zoom="7.221216"
+     inkscape:cx="148.31297"
+     inkscape:cy="535.64386"
      inkscape:window-width="1920"
      inkscape:window-height="1008"
      inkscape:window-x="0"
@@ -207,6 +207,66 @@
          d="M 5.77,0 -2.88,5 V -5 Z"
          id="path135-3" />
     </marker>
+    <marker
+       style="overflow:visible"
+       id="Dot-6"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="Dot"
+       markerWidth="2.6670001"
+       markerHeight="2.6670001"
+       viewBox="0 0 5.6666667 5.6666667"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         transform="scale(0.5)"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:1pt"
+         d="M 5,0 C 5,2.76 2.76,5 0,5 -2.76,5 -5,2.76 -5,0 c 0,-2.76 2.3,-5 5,-5 2.76,0 5,2.24 5,5 z"
+         id="Dot1-2"
+         sodipodi:nodetypes="sssss" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="Arrow1-9"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="Arrow1"
+       markerWidth="4.0609994"
+       markerHeight="6.7076669"
+       viewBox="0 0 4.0606602 6.7071068"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         style="fill:none;stroke:context-stroke;stroke-width:1;stroke-linecap:butt"
+         d="M 3,-3 0,0 3,3"
+         id="path5057-1"
+         transform="rotate(180,0.125,0)"
+         sodipodi:nodetypes="ccc" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="marker9466-9"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="Dot"
+       markerWidth="2.4000001"
+       markerHeight="2.4000001"
+       viewBox="0 0 5.4 5.4"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         transform="scale(0.45)"
+         style="fill:context-fill;fill-rule:evenodd;stroke:context-stroke;stroke-width:2"
+         d="M 5,0 C 5,2.76 2.76,5 0,5 -2.76,5 -5,2.76 -5,0 c 0,-2.76 2.3,-5 5,-5 2.76,0 5,2.24 5,5 z"
+         id="path9464-3"
+         sodipodi:nodetypes="sssss" />
+    </marker>
   </defs>
   <g
      inkscape:label="Layer 1"
@@ -366,5 +426,63 @@
          style="font-size:19.7556px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.8;stroke-opacity:1"
          x="55.840332"
          y="78.184731">Battle of</tspan></text>
+    <g
+       id="g28589-3"
+       transform="translate(-86.440658,43.703491)">
+      <g
+         id="g28480-6"
+         transform="matrix(1.1493841,0,0,1.1493841,41.48019,-14.030717)">
+        <text
+           xml:space="preserve"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:22.5778px;font-family:sans-serif;-inkscape-font-specification:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.5;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+           x="60.240273"
+           y="101.3903"
+           id="text28474-7"
+           transform="scale(0.96301698,1.0384033)"><tspan
+             sodipodi:role="line"
+             id="tspan28472-5"
+             style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:22.5778px;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans';fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.5;stroke-dasharray:none;stroke-opacity:1"
+             x="60.240273"
+             y="101.3903">I</tspan></text>
+        <text
+           xml:space="preserve"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:22.5778px;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans';display:inline;fill:none;fill-opacity:1;stroke:#ffffff;stroke-width:1;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+           x="60.240273"
+           y="101.3903"
+           id="text28478-3"
+           transform="scale(0.96301698,1.0384033)"><tspan
+             sodipodi:role="line"
+             id="tspan28476-5"
+             style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:22.5778px;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans';fill:none;fill-opacity:1;stroke:#ffffff;stroke-width:1;stroke-dasharray:none;stroke-opacity:1"
+             x="60.240273"
+             y="101.3903">I</tspan><tspan
+             sodipodi:role="line"
+             style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:22.5778px;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans';fill:none;fill-opacity:1;stroke:#ffffff;stroke-width:1;stroke-dasharray:none;stroke-opacity:1"
+             x="60.240273"
+             y="129.61255"
+             id="tspan669" /></text>
+      </g>
+    </g>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.86;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;marker-start:url(#Dot-6);marker-end:url(#Arrow1-9)"
+       d="m 25.449265,141.38881 c 7.932654,-0.98777 7.688945,3.6678 7.785364,4.50254"
+       id="path7803-2"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:1;stroke-dasharray:2, 1;stroke-dashoffset:0;stroke-opacity:1;marker-mid:;marker-end:url(#marker9466-9)"
+       d="m 25.298348,149.58757 c 3.031173,0.0231 5.562077,-0.11081 6.054909,-0.21611 0.531876,-0.11365 1.7132,-1.51346 1.934335,-3.315"
+       id="path2747-6"
+       sodipodi:nodetypes="csc" />
+    <text
+       xml:space="preserve"
+       style="font-size:15.7014px;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans';fill:#000000;stroke-width:0.683513;stroke-dasharray:none"
+       x="35.56348"
+       y="149.94234"
+       id="text2944"><tspan
+         sodipodi:role="line"
+         id="tspan2942"
+         style="stroke-width:0.683513;stroke-dasharray:none"
+         x="35.56348"
+         y="149.94234">atil</tspan></text>
   </g>
 </svg>

@@ -1,0 +1,25 @@
+Welcome
+    Navigating the Batil web app
+        Sign-up and Login
+        Home
+            Play
+            Your boards
+            Public boards
+            Users
+            Profile
+        User
+        Game
+            Viewing the game
+                Using the board viewer
+                Using the inspectors
+                Using the action bar (time control etc)
+            Submitting a new turn
+                Selection mode: board
+                Selection mode: inspectors
+        Board
+            List of keyboard actions
+            Editing the board
+                Adding and removing stones and bases
+                Changing board dimensions
+    Rules of the game
+        List of all tutorials
